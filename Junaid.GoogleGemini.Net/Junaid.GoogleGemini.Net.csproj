@@ -12,6 +12,7 @@
     <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
     <PackageTags>GoogleGemini; Gemini; Gemini.Net; GeminiDotNet; Google.NET;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageReleaseNotes>Added a service to use Gemini Content API using Text-only input.</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>
