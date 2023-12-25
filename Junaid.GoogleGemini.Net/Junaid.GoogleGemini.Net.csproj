@@ -12,8 +12,8 @@
     <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
     <PackageTags>GoogleGemini; Gemini; Gemini.Net; GeminiDotNet; Google.NET;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Added vision service to use Gemini Content API using Text-and-image input.</PackageReleaseNotes>
-    <Version>1.0.1</Version>
+    <PackageReleaseNotes>Added chat service to use Gemini Content API using Text input to build freeform conversations across multiple turns.</PackageReleaseNotes>
+    <Version>1.0.2</Version>
   </PropertyGroup>
 
   <ItemGroup>
