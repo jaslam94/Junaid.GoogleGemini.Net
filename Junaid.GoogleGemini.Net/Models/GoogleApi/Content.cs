@@ -2,7 +2,7 @@
 {
     public class Content
     {
-        public Part[] parts { get; set; }
+        public List<object> parts { get; set; }
         public string role { get; set; }
     }
 }

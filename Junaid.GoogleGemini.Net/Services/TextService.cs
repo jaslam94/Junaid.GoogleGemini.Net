@@ -20,9 +20,9 @@ namespace Junaid.GoogleGemini.Net.Services
                 {
                     new Content
                     {
-                        parts = new Part[]
+                        parts = new List<object>
                         {
-                            new Part
+                            new
                             {
                                 text = text
                             }
