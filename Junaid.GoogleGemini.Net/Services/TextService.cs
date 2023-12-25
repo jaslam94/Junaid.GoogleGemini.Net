@@ -14,15 +14,21 @@ namespace Junaid.GoogleGemini.Net.Services
 
         public async Task<GenerateContentResponse> GenereateContentAsync(string text)
         {
-            var model = new GenerateContentRequest
+            GenerateContentRequest model = CreateRequestModel(text);
+            return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
+        }
+
+        private static GenerateContentRequest CreateRequestModel(string text)
+        {
+            return new GenerateContentRequest
             {
                 contents = new Content[]
                 {
                     new Content
                     {
-                        parts = new Part[]
+                        parts = new List<object>
                         {
-                            new Part
+                            new
                             {
                                 text = text
                             }
@@ -30,8 +36,6 @@ namespace Junaid.GoogleGemini.Net.Services
                     }
                 }
             };
-
-            return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
     }
 }
