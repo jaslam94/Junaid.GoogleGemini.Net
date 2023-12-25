@@ -60,6 +60,24 @@ var service = new VisionService();
 var result = await service.GenereateContentAsync("Explain this image?", new Junaid.GoogleGemini.Net.Models.Requests.FileObject(fileBytes, fileName));
 ```
 
+### ChatService
+
+`ChatService` is used to generate freeform conversations across multiple turns with chat history as input. The `GenereateContentAsync` method takes an array of `MessageObject` as an argument. 
+
+Each `MessageObject` contains two fields i.e. a `string` named role (value can be either of "model" or "user" only) and another `string` named text (text prompt).
+
+```csharp
+var chat = new MessageObject[]
+{
+    new MessageObject( "user", "Write the first line of a story about a magic backpack." ),
+    new MessageObject( "model", "In the bustling city of Meadow brook, lived a young girl named Sophie. She was a bright and curious soul with an imaginative mind." ),
+    new MessageObject( "user", "Write one more line." ),
+};
+
+var service = new ChatService();
+var result = await service.GenereateContentAsync(chat);
+```
+
 ## Contributing
 
 Feel free to improve the library by adding new functionality, removing outdated functionality, updating broken functionality and refactoring code by using better Software Engineering practices, styles and patterns.
