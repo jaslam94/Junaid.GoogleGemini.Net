@@ -26,11 +26,38 @@ Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/
 
 ### TextService
 
-`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes the text prompt as an argument and returns the textual data.
+`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes a `string` (text prompt) as an argument and returns the textual data.
 
 ```csharp
 var service = new TextService();
-var result = await service.GenereateContentAsync("Say Hi to me!");`
+var result = await service.GenereateContentAsync("Say Hi to me!");
+```
+
+### VisionService
+
+`VisionService` is used to generate content with both text and image inputs. The `GenereateContentAsync` method takes a `string` (text prompt) and `FileObject` (file bytes and file name) as an argument and returns the textual data.
+
+```csharp
+string filePath = "path/<imageName.imageExtension>";
+var fileName = Path.GetFileName(filePath);
+byte[] fileBytes = Array.Empty<byte>();
+try
+{
+    using (var imageStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+    using (var memoryStream = new MemoryStream())
+    {
+        imageStream.CopyTo(memoryStream);
+        fileBytes = memoryStream.ToArray();
+    }
+    Console.WriteLine($"Image loaded successfully. Byte array length: {fileBytes.Length}");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"Error: {ex.Message}");
+}
+
+var service = new VisionService();
+var result = await service.GenereateContentAsync("Explain this image?", new Junaid.GoogleGemini.Net.Models.Requests.FileObject(fileBytes, fileName));
 ```
 
 ## Contributing
