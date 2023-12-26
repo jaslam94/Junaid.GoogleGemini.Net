@@ -13,9 +13,14 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat)
+        public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat,
+                                                                         GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(chat);
+            if (configuration != null)
+            {
+                model.ApplyConfiguration(configuration);
+            }
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
 
@@ -38,10 +43,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 });
             }
 
-            return new GenerateContentRequest
-            {
-                contents = contents.ToArray()
-            };
+            return new GenerateContentRequest(contents.ToArray());
         }
     }
 }

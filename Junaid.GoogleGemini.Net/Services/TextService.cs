@@ -12,30 +12,33 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(string text)
+        public async Task<GenerateContentResponse> GenereateContentAsync(string text,
+                                                                         GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(text);
+            if (configuration != null)
+            {
+                model.ApplyConfiguration(configuration);
+            }
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
 
         private static GenerateContentRequest CreateRequestModel(string text)
         {
-            return new GenerateContentRequest
+            var contents = new Content[]
             {
-                contents = new Content[]
+                new Content
                 {
-                    new Content
+                    parts = new List<object>
                     {
-                        parts = new List<object>
+                        new
                         {
-                            new
-                            {
-                                text = text
-                            }
+                            text = text
                         }
                     }
                 }
             };
+            return new GenerateContentRequest(contents);
         }
     }
 }

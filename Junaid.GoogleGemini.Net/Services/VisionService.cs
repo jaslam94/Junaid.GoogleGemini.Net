@@ -14,38 +14,42 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(string text, FileObject fileObject)
+        public async Task<GenerateContentResponse> GenereateContentAsync(string text,
+                                                                         FileObject fileObject,
+                                                                         GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(text, fileObject);
+            if (configuration != null)
+            {
+                model.ApplyConfiguration(configuration);
+            }
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro-vision:generateContent", model);
         }
 
         private static GenerateContentRequest CreateRequestModel(string text, FileObject fileObject)
         {
-            return new GenerateContentRequest
+            var contents = new[]
             {
-                contents = new[]
+                new Content
                 {
-                    new Content
+                    parts = new List<object>
                     {
-                        parts = new List<object>
+                        new
                         {
-                            new 
+                            text = text
+                        },
+                        new
+                        {
+                            inline_data = new Inline_Data
                             {
-                                text = text
-                            },
-                            new 
-                            {
-                                inline_data = new Inline_Data
-                                {
-                                    mime_type = MimeTypeHelper.GetMimeType(fileObject.FileName),
-                                    data = Convert.ToBase64String(fileObject.FileContent)
-                                }
+                                mime_type = MimeTypeHelper.GetMimeType(fileObject.FileName),
+                                data = Convert.ToBase64String(fileObject.FileContent)
                             }
                         }
                     }
                 }
             };
+            return new GenerateContentRequest(contents);
         }
     }
 }
