@@ -1,8 +1,8 @@
 # Junaid.GoogleGemini.Net
 
-An open-source .NET library to use [Gemini API](https://ai.google.dev/tutorials/rest_quickstart) based on Google’s largest and most capable AI model yet. 
+An open-source .NET library to use [Gemini API](https://ai.google.dev/tutorials/rest_quickstart) based on Google’s largest and most capable AI model yet.
 
-## Installation
+## Installation of [Nuget Package](https://www.nuget.org/packages/Junaid.GoogleGemini.Net)
 
 .NET CLI:
 
@@ -26,12 +26,14 @@ Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/
 
 ### TextService
 
-`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes a `string` (text prompt) as an argument and returns the textual data.
+`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as an argument and returns the textual data.
 
 ```csharp
 var service = new TextService();
 var result = await service.GenereateContentAsync("Say Hi to me!");
 ```
+
+An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
 
 ### VisionService
 
@@ -57,8 +59,10 @@ catch (Exception ex)
 }
 
 var service = new VisionService();
-var result = await service.GenereateContentAsync("Explain this image?", new Junaid.GoogleGemini.Net.Models.Requests.FileObject(fileBytes, fileName));
+var result = await service.GenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName));
 ```
+
+An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
 
 ### ChatService
 
@@ -77,6 +81,41 @@ var chat = new MessageObject[]
 var service = new ChatService();
 var result = await service.GenereateContentAsync(chat);
 ```
+
+An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. More information is given below.
+
+### Configuration
+
+Configuration input can be used to control the content generation by configuring [model parameters](https://ai.google.dev/docs/concepts#model_parameters) and by using [safety settings](https://ai.google.dev/docs/safety_setting_gemini).
+
+An example of setting `configuration` parameter of type `GenerateContentConfiguration` and passing it to the `GenereateContentAsync` method of `TextService` is as follows:
+
+```csharp
+var configuration = new GenerateContentConfiguration
+{
+    safetySettings = new List<SafetySetting>
+    {
+        new SafetySetting
+        {
+            category = CategoryConstants.DangerousContent,
+            threshold = ThresholdConstants.BlockOnlyHigh
+        }
+    },
+    generationConfig = new GenerationConfig
+    {
+        stopSequences = new List<string> { "Title" },
+        temperature = 1.0,
+        maxOutputTokens = 800,
+        topP = 0.8,
+        topK = 10
+    }
+};
+
+var service = new TextService();
+var result = await service.GenereateContentAsync("Write a quote by Aristotle.", configuration);
+```
+
+ The usage of the `configuration` parameter is similar in both the `ChatService` and `VisionService`.
 
 ## Contributing
 
