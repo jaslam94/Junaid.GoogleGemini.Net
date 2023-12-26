@@ -15,15 +15,11 @@ namespace Junaid.GoogleGemini.Net.Services
         public async Task<GenerateContentResponse> GenereateContentAsync(string text, GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(text);
-            if (configuration == null)
+            if (configuration != null)
             {
-                return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
+                ApplyConfiguration(model, configuration);
             }
-            else
-            {
-                GenerateContentRequestWithConfiguration modelWithConfiguration = CreateRequestModelWithConfiguration(model, configuration);
-                return await GeminiClient.PostAsync<GenerateContentRequestWithConfiguration, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", modelWithConfiguration);
-            }
+            return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
 
         private static GenerateContentRequest CreateRequestModel(string text)
@@ -46,26 +42,23 @@ namespace Junaid.GoogleGemini.Net.Services
             };
         }
 
-        private static GenerateContentRequestWithConfiguration CreateRequestModelWithConfiguration(GenerateContentRequest model, GenerateContentConfiguration configuration)
+        private static void ApplyConfiguration(GenerateContentRequest model, GenerateContentConfiguration configuration)
         {
-            var modelWithConfiguration = new GenerateContentRequestWithConfiguration
+            if (configuration.safetySettings != null)
             {
-                contents = model.contents,
-                safetySettings = new List<object>(),
-                generationConfig = configuration.generationConfig
-            };
-
-            foreach (var safetySetting in configuration.safetySettings)
-            {
-                modelWithConfiguration.safetySettings.Add(
-                    new
-                    {
-                        safetySetting.category,
-                        safetySetting.threshold
-                    });
+                model.safetySettings = new List<object>();
+                foreach (var safetySetting in configuration.safetySettings)
+                {
+                    model.safetySettings.Add(
+                        new
+                        {
+                            safetySetting.category,
+                            safetySetting.threshold
+                        });
+                }
             }
 
-            return modelWithConfiguration;
+            model.generationConfig = configuration.generationConfig;
         }
     }
 }
