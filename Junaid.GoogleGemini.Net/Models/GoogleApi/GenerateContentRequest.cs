@@ -11,13 +11,6 @@
             this.contents = contents;
         }
 
-        public GenerateContentRequest(Content[] contents, List<object> safetySettings, GenerationConfig generationConfig)
-        {
-            this.contents = contents;
-            this.safetySettings = safetySettings;
-            this.generationConfig = generationConfig;
-        }
-
         public void ApplyConfiguration(GenerateContentConfiguration configuration)
         {
             if (configuration.safetySettings != null)
