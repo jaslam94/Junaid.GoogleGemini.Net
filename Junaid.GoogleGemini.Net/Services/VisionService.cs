@@ -14,9 +14,13 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(string text, FileObject fileObject)
+        public async Task<GenerateContentResponse> GenereateContentAsync(string text, FileObject fileObject, GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(text, fileObject);
+            if (configuration != null)
+            {
+                ApplyConfiguration(model, configuration);
+            }
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro-vision:generateContent", model);
         }
 
@@ -30,11 +34,11 @@ namespace Junaid.GoogleGemini.Net.Services
                     {
                         parts = new List<object>
                         {
-                            new 
+                            new
                             {
                                 text = text
                             },
-                            new 
+                            new
                             {
                                 inline_data = new Inline_Data
                                 {
@@ -46,6 +50,25 @@ namespace Junaid.GoogleGemini.Net.Services
                     }
                 }
             };
+        }
+
+        private static void ApplyConfiguration(GenerateContentRequest model, GenerateContentConfiguration configuration)
+        {
+            if (configuration.safetySettings != null)
+            {
+                model.safetySettings = new List<object>();
+                foreach (var safetySetting in configuration.safetySettings)
+                {
+                    model.safetySettings.Add(
+                        new
+                        {
+                            safetySetting.category,
+                            safetySetting.threshold
+                        });
+                }
+            }
+
+            model.generationConfig = configuration.generationConfig;
         }
     }
 }
