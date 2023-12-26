@@ -12,53 +12,33 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(string text, GenerateContentConfiguration configuration = null)
+        public async Task<GenerateContentResponse> GenereateContentAsync(string text,
+                                                                         GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(text);
             if (configuration != null)
             {
-                ApplyConfiguration(model, configuration);
+                model.ApplyConfiguration(configuration);
             }
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
 
         private static GenerateContentRequest CreateRequestModel(string text)
         {
-            return new GenerateContentRequest
+            var contents = new Content[]
             {
-                contents = new Content[]
+                new Content
                 {
-                    new Content
+                    parts = new List<object>
                     {
-                        parts = new List<object>
+                        new
                         {
-                            new
-                            {
-                                text = text
-                            }
+                            text = text
                         }
                     }
                 }
             };
-        }
-
-        private static void ApplyConfiguration(GenerateContentRequest model, GenerateContentConfiguration configuration)
-        {
-            if (configuration.safetySettings != null)
-            {
-                model.safetySettings = new List<object>();
-                foreach (var safetySetting in configuration.safetySettings)
-                {
-                    model.safetySettings.Add(
-                        new
-                        {
-                            safetySetting.category,
-                            safetySetting.threshold
-                        });
-                }
-            }
-
-            model.generationConfig = configuration.generationConfig;
+            return new GenerateContentRequest(contents);
         }
     }
 }

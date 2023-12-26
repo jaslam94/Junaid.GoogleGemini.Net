@@ -13,12 +13,13 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat, GenerateContentConfiguration configuration = null)
+        public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat,
+                                                                         GenerateContentConfiguration configuration = null)
         {
             GenerateContentRequest model = CreateRequestModel(chat);
             if (configuration != null)
             {
-                ApplyConfiguration(model, configuration);
+                model.ApplyConfiguration(configuration);
             }
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
@@ -42,29 +43,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 });
             }
 
-            return new GenerateContentRequest
-            {
-                contents = contents.ToArray()
-            };
-        }
-
-        private static void ApplyConfiguration(GenerateContentRequest model, GenerateContentConfiguration configuration)
-        {
-            if (configuration.safetySettings != null)
-            {
-                model.safetySettings = new List<object>();
-                foreach (var safetySetting in configuration.safetySettings)
-                {
-                    model.safetySettings.Add(
-                        new
-                        {
-                            safetySetting.category,
-                            safetySetting.threshold
-                        });
-                }
-            }
-
-            model.generationConfig = configuration.generationConfig;
+            return new GenerateContentRequest(contents.ToArray());
         }
     }
 }
