@@ -2,6 +2,7 @@
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
@@ -34,8 +35,11 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
         public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            var jsonContent = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json");
-
+            var serializedContent = JsonSerializer.Serialize(data, options: new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+            var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
             var response = await HttpClient.PostAsync(endpoint, jsonContent);
             return await HandleResponse<TResponse>(response);
         }

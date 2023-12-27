@@ -33,9 +33,9 @@ namespace Junaid.GoogleGemini.Net.Services
                 contents.Add(new Content
                 {
                     role = message.Role,
-                    parts = new List<object>
+                    parts = new[]
                     {
-                        new
+                        new Part
                         {
                             text = message.Text
                         }

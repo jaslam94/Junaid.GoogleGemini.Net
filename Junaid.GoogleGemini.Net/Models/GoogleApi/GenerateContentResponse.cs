@@ -4,6 +4,11 @@
     {
         public Candidate[] candidates { get; set; }
         public Promptfeedback promptFeedback { get; set; }
+
+        public string Text()
+        {
+            return this.candidates?[0].content?.parts?[0]?.text;
+        }
     }
 
     public class Promptfeedback
