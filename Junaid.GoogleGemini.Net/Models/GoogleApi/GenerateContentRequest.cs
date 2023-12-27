@@ -11,19 +11,7 @@
 
         public void ApplyConfiguration(GenerateContentConfiguration configuration)
         {
-            if (configuration.safetySettings != null)
-            {
-                foreach (var safetySetting in configuration.safetySettings)
-                {
-                    this.safetySettings.Append(
-                        new SafetySetting
-                        {
-                            category = safetySetting.category,
-                            threshold = safetySetting.threshold
-                        });
-                }
-            }
-
+            this.safetySettings = configuration.safetySettings;
             this.generationConfig = configuration.generationConfig;
         }
     }
