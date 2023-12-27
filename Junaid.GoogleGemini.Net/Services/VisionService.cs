@@ -32,13 +32,13 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 new Content
                 {
-                    parts = new List<object>
+                    parts = new[]
                     {
-                        new
+                        new Part
                         {
                             text = text
                         },
-                        new
+                        new Part
                         {
                             inline_data = new Inline_Data
                             {

@@ -2,6 +2,7 @@
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
@@ -12,9 +13,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         private readonly HttpClient HttpClient;
 
         public static string DefaultBaseUri => "https://generativelanguage.googleapis.com";
-        public string BaseUri { get; }
 
-        public GeminiClient(string apiKey, string baseUri)
+        public GeminiClient(string apiKey)
         {
             if (apiKey != null && apiKey.Length == 0)
             {
@@ -22,9 +22,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
 
             this.ApiKey = apiKey;
-            this.BaseUri = baseUri ?? DefaultBaseUri;
 
-            this.HttpClient = new HttpClient { BaseAddress = new Uri(BaseUri) };
+            this.HttpClient = new HttpClient { BaseAddress = new Uri(DefaultBaseUri) };
             this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
         }
 
@@ -36,8 +35,11 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
         public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
-            var jsonContent = new StringContent(JsonSerializer.Serialize(data), Encoding.UTF8, "application/json");
-
+            var serializedContent = JsonSerializer.Serialize(data, options: new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+            var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
             var response = await HttpClient.PostAsync(endpoint, jsonContent);
             return await HandleResponse<TResponse>(response);
         }

@@ -20,24 +20,48 @@ PM > Install-Package Junaid.GoogleGemini.Net
 
 ### Authentication
 
-Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey). Use `GeminiConfiguration.ApiKey` property to set the secret key.
+Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey). 
 
-`GeminiConfiguration.ApiKey = "xxxxxxxxxxxxxxxxx";`
+There are three ways of setting the API key. 
+
+- Use `GeminiConfiguration.ApiKey` property to set the secret API key directly in your application code.
+
+```csharp
+GeminiConfiguration.ApiKey = "xxxxxxxxxxxxxxxxx";
+``` 
+
+- You can pass the API key as an envrionment variable named "GeminiApiKey" as well.
+
+- If you are using an `App.config` file, you can pass the API key as "GeminiApiKey" field as well.
+
+```csharp
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+	<appSettings>
+		<add key="GeminiApiKey" value="xxxxxxxxxxxxxxxxx" />
+	</appSettings>
+</configuration>
+``` 
 
 ### TextService
 
-`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as an argument and returns the textual data.
+`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as an argument and returns the textual data. 
+
+An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
 
 ```csharp
 var service = new TextService();
 var result = await service.GenereateContentAsync("Say Hi to me!");
+Console.WriteLine(result.Text());
 ```
 
-An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
+The `GenereateContentAsync` method returns `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippet above.
 
 ### VisionService
 
-`VisionService` is used to generate content with both text and image inputs. The `GenereateContentAsync` method takes a `string` (text prompt) and `FileObject` (file bytes and file name) as an argument and returns the textual data.
+`VisionService` is used to generate content with both text and image inputs. The `GenereateContentAsync` method takes a `string` (text prompt) and `FileObject` (file bytes and file name) as an argument and returns the textual data. 
+
+An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
 
 ```csharp
 string filePath = "path/<imageName.imageExtension>";
@@ -60,15 +84,18 @@ catch (Exception ex)
 
 var service = new VisionService();
 var result = await service.GenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName));
+Console.WriteLine(result.Text());
 ```
 
-An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
+The `GenereateContentAsync` method returns `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippet above.
 
 ### ChatService
 
 `ChatService` is used to generate freeform conversations across multiple turns with chat history as input. The `GenereateContentAsync` method takes an array of `MessageObject` as an argument. 
 
 Each `MessageObject` contains two fields i.e. a `string` named role (value can be either of "model" or "user" only) and another `string` named text (text prompt).
+
+An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. For information on its usage navigate to [configuration section](#configuration) of this page.
 
 ```csharp
 var chat = new MessageObject[]
@@ -80,9 +107,10 @@ var chat = new MessageObject[]
 
 var service = new ChatService();
 var result = await service.GenereateContentAsync(chat);
+Console.WriteLine(result.Text());
 ```
 
-An optional argument named `configuration` of `GenerateContentConfiguration` type can also be passed to the above method `GenereateContentAsync`. More information is given below.
+The `GenereateContentAsync` method returns `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippet above.
 
 ### Configuration
 
@@ -93,7 +121,7 @@ An example of setting `configuration` parameter of type `GenerateContentConfigur
 ```csharp
 var configuration = new GenerateContentConfiguration
 {
-    safetySettings = new List<SafetySetting>
+    safetySettings = new []
     {
         new SafetySetting
         {
@@ -113,6 +141,7 @@ var configuration = new GenerateContentConfiguration
 
 var service = new TextService();
 var result = await service.GenereateContentAsync("Write a quote by Aristotle.", configuration);
+result.Text();
 ```
 
  The usage of the `configuration` parameter is similar in both the `ChatService` and `VisionService`.
@@ -138,4 +167,4 @@ Feel free to improve the library by adding new functionality, removing outdated 
 
 ## 
 
-Feel free to open an issue or contact me if you have any questions or suggestions.
+Feel free to open an issue or contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.

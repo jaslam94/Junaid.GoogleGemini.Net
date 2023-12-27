@@ -12,10 +12,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         {
             get
             {
-                if (string.IsNullOrEmpty(apiKey) &&
-                    !string.IsNullOrEmpty(ConfigurationManager.AppSettings["GeminiApiKey"]))
+                if (string.IsNullOrEmpty(apiKey))
                 {
-                    apiKey = ConfigurationManager.AppSettings["GeminiApiKey"];
+                    if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["GeminiApiKey"]))
+                    {
+                        apiKey = ConfigurationManager.AppSettings["GeminiApiKey"];
+                    }
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GeminiApiKey")))
+                    {
+                        apiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
+                    }
                 }
 
                 return apiKey;
@@ -55,7 +61,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 throw new GeminiException(message);
             }
 
-            return new GeminiClient(ApiKey, "https://generativelanguage.googleapis.com");
+            return new GeminiClient(ApiKey);
         }
     }
 }
