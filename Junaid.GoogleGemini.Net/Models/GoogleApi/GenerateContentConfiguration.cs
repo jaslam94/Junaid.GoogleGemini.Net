@@ -2,7 +2,7 @@
 {
     public class GenerateContentConfiguration
     {
-        public List<SafetySetting> safetySettings { get; set; }
+        public SafetySetting[] safetySettings { get; set; }
         public GenerationConfig generationConfig { get; set; }
     }
 

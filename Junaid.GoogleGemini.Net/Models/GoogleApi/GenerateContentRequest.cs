@@ -1,10 +1,8 @@
 ﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi
 {
-    public class GenerateContentRequest
+    public class GenerateContentRequest : GenerateContentConfiguration
     {
         public Content[] contents { get; set; }
-        public List<object> safetySettings { get; set; }
-        public GenerationConfig generationConfig { get; set; }
 
         public GenerateContentRequest(Content[] contents)
         {
@@ -15,14 +13,13 @@
         {
             if (configuration.safetySettings != null)
             {
-                this.safetySettings = new List<object>();
                 foreach (var safetySetting in configuration.safetySettings)
                 {
-                    this.safetySettings.Add(
-                        new
+                    this.safetySettings.Append(
+                        new SafetySetting
                         {
-                            safetySetting.category,
-                            safetySetting.threshold
+                            category = safetySetting.category,
+                            threshold = safetySetting.threshold
                         });
                 }
             }
