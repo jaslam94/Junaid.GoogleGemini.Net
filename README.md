@@ -22,15 +22,26 @@ PM > Install-Package Junaid.GoogleGemini.Net
 
 Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey). 
 
-There are three ways of setting the API key. Use `GeminiConfiguration.ApiKey` property to set the secret API key directly in your application code.
+There are three ways of setting the API key. 
+
+- Use `GeminiConfiguration.ApiKey` property to set the secret API key directly in your application code.
 
 ```csharp
 GeminiConfiguration.ApiKey = "xxxxxxxxxxxxxxxxx";
 ``` 
 
-You can pass the API key as an envrionment variable named "GeminiApiKey" as well.
+- You can pass the API key as an envrionment variable named "GeminiApiKey" as well.
 
-If you are using an App.config file, you can pass the API key as "GeminiApiKey" field as well.
+- If you are using an `App.config` file, you can pass the API key as "GeminiApiKey" field as well.
+
+```csharp
+<?xml version="1.0" encoding="utf-8" ?>
+<configuration>
+	<appSettings>
+		<add key="GeminiApiKey" value="xxxxxxxxxxxxxxxxx" />
+	</appSettings>
+</configuration>
+``` 
 
 ### TextService
 
