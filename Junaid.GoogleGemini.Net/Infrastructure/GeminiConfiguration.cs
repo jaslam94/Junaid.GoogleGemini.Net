@@ -14,7 +14,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 if (string.IsNullOrEmpty(apiKey))
                 {
-                    apiKey = ConfigurationManager.AppSettings["GeminiApiKey"] ?? Environment.GetEnvironmentVariable("GeminiApiKey");
+                    if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["GeminiApiKey"]))
+                    {
+                        apiKey = ConfigurationManager.AppSettings["GeminiApiKey"];
+                    }
+                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GeminiApiKey")))
+                    {
+                        apiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
+                    }
                 }
 
                 return apiKey;
