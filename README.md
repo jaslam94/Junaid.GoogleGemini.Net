@@ -110,7 +110,7 @@ An example of setting `configuration` parameter of type `GenerateContentConfigur
 ```csharp
 var configuration = new GenerateContentConfiguration
 {
-    safetySettings = new List<SafetySetting>
+    safetySettings = new []
     {
         new SafetySetting
         {
@@ -156,4 +156,4 @@ Feel free to improve the library by adding new functionality, removing outdated 
 
 ## 
 
-Feel free to open an issue or contact me via [email](aslam.junaid786@hotmail.com) if you have any questions or suggestions.
+Feel free to open an issue or contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
