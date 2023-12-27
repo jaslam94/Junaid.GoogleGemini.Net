@@ -55,7 +55,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 throw new GeminiException(message);
             }
 
-            return new GeminiClient(ApiKey, "https://generativelanguage.googleapis.com");
+            return new GeminiClient(ApiKey);
         }
     }
 }
