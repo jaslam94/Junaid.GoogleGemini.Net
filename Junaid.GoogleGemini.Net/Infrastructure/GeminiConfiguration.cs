@@ -52,10 +52,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
         private static GeminiClient BuildDefaultGeminiClient()
         {
+            if (string.IsNullOrEmpty(ApiKey))
+            {
+                throw new GeminiException("API key cannot be the empty string.");
+            }
+
             if (ApiKey != null && ApiKey.Length == 0)
             {
-                var message = $"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).";
-                throw new GeminiException(message);
+                throw new GeminiException($"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
             }
             return new GeminiClient(ApiKey);
         }
