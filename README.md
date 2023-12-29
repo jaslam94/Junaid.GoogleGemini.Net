@@ -181,5 +181,5 @@ var textServiceResult = await textService.GenereateContentAsync("Write a short p
 ```
 
 ## 
-- Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/CONTRIBUTING.md).
+- Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
 - Feel free to contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
