@@ -20,11 +20,32 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 throw new ArgumentException("API key cannot be the empty string.", nameof(apiKey));
             }
-
             this.ApiKey = apiKey;
-
             this.HttpClient = new HttpClient { BaseAddress = new Uri(DefaultBaseUri) };
             this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
+        }
+
+        public GeminiClient(HttpClient httpClient)
+        {
+            this.HttpClient = httpClient;
+            if (!this.HttpClient.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
+            {
+                this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
+            }
+        }
+
+        public GeminiClient(HttpClient httpClient, string apiKey)
+        {
+            if (apiKey != null && apiKey.Length == 0)
+            {
+                throw new ArgumentException("API key cannot be the empty string.", nameof(apiKey));
+            }
+            this.ApiKey = apiKey;
+            this.HttpClient = httpClient;
+            if (!this.HttpClient.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
+            {
+                this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", this.ApiKey);
+            }
         }
 
         public async Task<TResponse> GetAsync<TResponse>(string endpoint)
@@ -47,7 +68,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         private async Task<T> HandleResponse<T>(HttpResponseMessage response)
         {
             var content = await response.Content.ReadAsStringAsync();
-
             if (response.IsSuccessStatusCode)
             {
                 return JsonSerializer.Deserialize<T>(content);
