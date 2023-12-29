@@ -13,6 +13,11 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
+        public ChatService(GeminiClient geminiClient)
+        {
+            GeminiClient = geminiClient;
+        }
+
         public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat,
                                                                          GenerateContentConfiguration configuration = null)
         {

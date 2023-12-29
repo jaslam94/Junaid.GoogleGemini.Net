@@ -23,7 +23,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                         apiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
                     }
                 }
-
                 return apiKey;
             }
 
@@ -33,7 +32,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 {
                     GeminiClient = null;
                 }
-
                 apiKey = value;
             }
         }
@@ -46,7 +44,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 {
                     geminiClient = BuildDefaultGeminiClient();
                 }
-
                 return geminiClient;
             }
 
@@ -55,12 +52,15 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
         private static GeminiClient BuildDefaultGeminiClient()
         {
-            if (ApiKey != null && ApiKey.Length == 0)
+            if (string.IsNullOrEmpty(ApiKey))
             {
-                var message = $"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).";
-                throw new GeminiException(message);
+                throw new GeminiException("API key cannot be the empty string.");
             }
 
+            if (ApiKey != null && ApiKey.Length == 0)
+            {
+                throw new GeminiException($"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
+            }
             return new GeminiClient(ApiKey);
         }
     }
