@@ -14,6 +14,11 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiClient = GeminiConfiguration.GeminiClient;
         }
 
+        public VisionService(GeminiClient geminiClient)
+        {
+            GeminiClient = geminiClient;
+        }
+
         public async Task<GenerateContentResponse> GenereateContentAsync(string text,
                                                                          FileObject fileObject,
                                                                          GenerateContentConfiguration configuration = null)
