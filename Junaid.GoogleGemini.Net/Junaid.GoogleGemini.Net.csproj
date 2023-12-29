@@ -12,8 +12,8 @@
     <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
     <PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Added configuration paramater to content generation method. It will be used to configure model and apply safety setting while generating content. Removed the unused Newtonsoft.Json package from the project.</PackageReleaseNotes>
-    <Version>1.0.3</Version>
+    <PackageReleaseNotes>Use custom HttpClient instance with services and configuration object.</PackageReleaseNotes>
+    <Version>2.0.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
