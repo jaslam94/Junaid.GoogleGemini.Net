@@ -1,5 +1,8 @@
 ﻿# Release Notes
 
+## v3.1.1
+Internal refactoring for the stream content method to reduce memory consumption and improving performance.
+
 ## v3.1.0
 Added count tokens method to all services.
 
