@@ -28,6 +28,21 @@ namespace Junaid.GoogleGemini.Net.Services
             return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
         }
 
+        public async Task StreamGenereateContentAsync(string text,
+                                                      Action<string> handleStreamResponse,
+                                                      GenerateContentConfiguration configuration = null)
+        {
+            GenerateContentRequest model = CreateRequestModel(text);
+            if (configuration != null)
+            {
+                model.ApplyConfiguration(configuration);
+            }
+            await foreach (var data in GeminiClient.PostAsync($"/v1beta/models/gemini-pro:streamGenerateContent", model))
+            {
+                handleStreamResponse(data);
+            }
+        }
+
         private static GenerateContentRequest CreateRequestModel(string text)
         {
             var contents = new Content[]
