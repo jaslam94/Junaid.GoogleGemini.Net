@@ -12,8 +12,8 @@
     <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
     <PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Added count tokens method to all services.</PackageReleaseNotes>
-    <Version>3.1.0</Version>
+    <PackageReleaseNotes>Internal refactoring for the stream content method.</PackageReleaseNotes>
+    <Version>3.1.1</Version>
   </PropertyGroup>
 
   <ItemGroup>
