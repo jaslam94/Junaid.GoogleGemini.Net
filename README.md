@@ -16,9 +16,7 @@ Package Manager:
 PM > Install-Package Junaid.GoogleGemini.Net
 ```
 
-## Usage
-
-### Authentication
+## Authentication
 
 Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey). 
 
@@ -43,17 +41,25 @@ Either of the following three ways can be used to set the API key:
     </configuration>
     ```
 
-### Services
+## Services
 
-All of the services contain the `GenereateContentAsync` method that is used to generate content in textual form. The input parameters to this method vary from service to service, however, an optional parameter named `configuration` of type `GenerateContentConfiguration` is common in all services. For information on its usage navigate to the [configuration section](#configuration) of this page.
+There are three services named `TextService`, `VisionService` and `ChatService`. All of the services contain the `GenereateContentAsync` method to generate text only content and `StreamGenereateContentAsync` method to provide a stream of text only output.
 
-The `GenereateContentAsync` method returns the `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippet below.
+`GenereateContentAsync` is used to generate content in textual form. The input parameters to this method vary from service to service, however, an optional input parameter named `configuration` of type `GenerateContentConfiguration` is common among all services. For information on its usage navigate to the [configuration section](#configuration) of this page.
+
+The `GenereateContentAsync` method returns the `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippets given below.
+
+The `StreamGenereateContentAsync` takes the same parameters as `GenereateContentAsync` in their respective service, with an additional delegate `Action<string>`.
 
 There are two ways of initializing a service instance. Either create an instance with the default constructor or pass in a custom `GeminiClient` object to the parameterized constructor. For information on `GeminiClient` and its usage navigate to the [GeminiClient section](#geminiclient) of this page.
 
-#### TextService
+The following sections show example code snippets that highlight how to use these services.
 
-`TextService` is used to generate text-only content. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as an argument, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
+### TextService
+
+`TextService` is used to generate content with text-only input.
+
+The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as input, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
 ```csharp
 var service = new TextService();
@@ -61,9 +67,22 @@ var result = await service.GenereateContentAsync("Say Hi to me!");
 Console.WriteLine(result.Text());
 ```
 
-#### VisionService
+The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
 
-`VisionService` is used to generate content with both text and image inputs. The `GenereateContentAsync` method takes mandatory `string` (text prompt) and `FileObject` (file bytes and file name), an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
+```csharp
+var service = new TextService();
+Action<string> handleStreamData = (data) =>
+{
+    Console.WriteLine(data);
+};
+await service.StreamGenereateContentAsync("Write a story on Google AI.", handleStreamData);
+```
+
+### VisionService
+
+`VisionService` is used to generate content with both text and image inputs. 
+
+The `GenereateContentAsync` method takes mandatory `string` (text prompt) and `FileObject` (file bytes and file name), an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
 ```csharp
 string filePath = "path/<imageName.imageExtension>";
@@ -89,9 +108,23 @@ var result = await service.GenereateContentAsync("Explain this image?", new File
 Console.WriteLine(result.Text());
 ```
 
-#### ChatService
+The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
 
-`ChatService` is used to generate freeform conversations across multiple turns with chat history as input. The `GenereateContentAsync` method takes an array of `MessageObject` as an argument, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
+```csharp
+......
+var service = new VisionService();
+Action<string> handleStreamData = (data) =>
+{
+    Console.WriteLine(data);
+};
+await service.StreamGenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName), handleStreamData);
+```
+
+### ChatService
+
+`ChatService` is used to generate freeform conversations across multiple turns with chat history as input.
+
+The `GenereateContentAsync` method takes an array of `MessageObject` as an argument, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
 Each `MessageObject` contains two fields i.e. a `string` named role (value can be either of "model" or "user" only) and another `string` named text (text prompt).
 
@@ -108,7 +141,19 @@ var result = await service.GenereateContentAsync(chat);
 Console.WriteLine(result.Text());
 ```
 
-#### Configuration
+The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
+
+```csharp
+......
+var service = new ChatService();
+Action<string> handleStreamData = (data) =>
+{
+    Console.WriteLine(data);
+};
+await service.StreamGenereateContentAsync(chat, handleStreamData);
+```
+
+### Configuration
 
 Configuration input can be used to control the content generation by configuring [model parameters](https://ai.google.dev/docs/concepts#model_parameters) and by using [safety settings](https://ai.google.dev/docs/safety_setting_gemini).
 
@@ -140,7 +185,7 @@ var result = await service.GenereateContentAsync("Write a quote by Aristotle.", 
 Console.WriteLine(result.Text());
 ```
 
-#### GeminiClient
+### GeminiClient
 
 `GeminiClient` contains the `ApiKey` and `HttpClient` objects. The default instance of `GeminiClient` is automatically created with the initialization of the service object. However, a case may arise where a custom `GeminiClient` is needed.
 
@@ -180,6 +225,6 @@ var textService = new TextService(new GeminiClient(httpClient));
 var textServiceResult = await textService.GenereateContentAsync("Write a short poem on friendship.");
 ```
 
-## 
-- Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
-- Feel free to contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
+##
+Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
+Feel free to contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
