@@ -2,6 +2,7 @@
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
@@ -75,6 +76,39 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             else
             {
                 var geminiError = JsonSerializer.Deserialize<ErrorResponse>(content);
+                throw new GeminiException(geminiError, geminiError.error.message);
+            }
+        }
+
+        public async IAsyncEnumerable<string> PostAsync<TRequest>(string endpoint, TRequest data)
+        {
+            var serializedContent = JsonSerializer.Serialize(data, options: new JsonSerializerOptions
+            {
+                DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
+            });
+            var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
+            var response = await HttpClient.PostAsync(endpoint, jsonContent);
+            if (response.IsSuccessStatusCode)
+            {
+                using (var responseStream = await response.Content.ReadAsStreamAsync())
+                using (var streamReader = new StreamReader(responseStream))
+                {
+                    string line = string.Empty;
+                    while ((line = await streamReader.ReadLineAsync()) != null)
+                    {
+                        if (line.Contains(@"""text"""))
+                        {
+                            var jsonString = "{" + line + "}";
+                            var jsonObject = JsonSerializer.Deserialize<JsonObject>(jsonString);
+                            yield return jsonObject?["text"]?.ToString();
+                        }
+                    }
+                }
+            }
+            else
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                var geminiError = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(content);
                 throw new GeminiException(geminiError, geminiError.error.message);
             }
         }

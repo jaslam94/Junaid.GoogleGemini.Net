@@ -12,8 +12,8 @@
     <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
     <PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Use custom HttpClient instance with services and configuration object.</PackageReleaseNotes>
-    <Version>2.0.0</Version>
+    <PackageReleaseNotes>Added stream generate content method to all services.</PackageReleaseNotes>
+    <Version>2.1.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
