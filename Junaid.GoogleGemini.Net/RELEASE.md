@@ -1,5 +1,8 @@
 ﻿# Release Notes
 
+## v3.0.0
+Now targets .Net 6.0 and .Net 8.0 as well.
+
 ## v2.1.0
 Added stream generate content method to all services.
 
