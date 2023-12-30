@@ -1,5 +1,6 @@
 ﻿using Junaid.GoogleGemini.Net.Models;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -80,36 +81,47 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
         }
 
-        public async IAsyncEnumerable<string> PostAsync<TRequest>(string endpoint, TRequest data)
+        public async IAsyncEnumerable<string> SendAsync<TRequest>(string endpoint, TRequest data)
         {
-            var serializedContent = JsonSerializer.Serialize(data, options: new JsonSerializerOptions
+            var ms = new MemoryStream();
+            await JsonSerializer.SerializeAsync(ms, data, options: new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
-            var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
-            var response = await HttpClient.PostAsync(endpoint, jsonContent);
-            if (response.IsSuccessStatusCode)
+            ms.Seek(0, SeekOrigin.Begin);
+
+            var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+            request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+            using (var requestContent = new StreamContent(ms))
             {
-                using (var responseStream = await response.Content.ReadAsStreamAsync())
-                using (var streamReader = new StreamReader(responseStream))
+                request.Content = requestContent;
+                requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                using (var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
                 {
-                    string line = string.Empty;
-                    while ((line = await streamReader.ReadLineAsync()) != null)
+                    if (response.IsSuccessStatusCode)
                     {
-                        if (line.Contains(@"""text"""))
+                        using (var responseStream = await response.Content.ReadAsStreamAsync())
+                        using (var streamReader = new StreamReader(responseStream))
                         {
-                            var jsonString = "{" + line + "}";
-                            var jsonObject = JsonSerializer.Deserialize<JsonObject>(jsonString);
-                            yield return jsonObject?["text"]?.ToString();
+                            string line = string.Empty;
+                            while ((line = await streamReader.ReadLineAsync()) != null)
+                            {
+                                if (line.Contains(@"""text"""))
+                                {
+                                    var jsonString = "{" + line + "}";
+                                    var jsonObject = JsonSerializer.Deserialize<JsonObject>(jsonString);
+                                    yield return jsonObject?["text"]?.ToString();
+                                }
+                            }
                         }
                     }
+                    else
+                    {
+                        var content = await response.Content.ReadAsStringAsync();
+                        var geminiError = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(content);
+                        throw new GeminiException(geminiError, geminiError.error.message);
+                    }
                 }
-            }
-            else
-            {
-                var content = await response.Content.ReadAsStringAsync();
-                var geminiError = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(content);
-                throw new GeminiException(geminiError, geminiError.error.message);
             }
         }
     }

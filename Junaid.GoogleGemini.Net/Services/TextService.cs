@@ -37,7 +37,7 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 model.ApplyConfiguration(configuration);
             }
-            await foreach (var data in GeminiClient.PostAsync($"/v1beta/models/gemini-pro:streamGenerateContent", model))
+            await foreach (var data in GeminiClient.SendAsync($"/v1beta/models/gemini-pro:streamGenerateContent", model))
             {
                 handleStreamResponse(data);
             }
