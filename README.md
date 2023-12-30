@@ -43,13 +43,15 @@ Either of the following three ways can be used to set the API key:
 
 ## Services
 
-There are three services named `TextService`, `VisionService` and `ChatService`. All of the services contain the `GenereateContentAsync` method to generate text-only content and the `StreamGenereateContentAsync` method to provide a stream of text-only output.
+There are three services named `TextService`, `VisionService` and `ChatService`. All of the services contain the `GenereateContentAsync` method to generate text-only content, the `StreamGenereateContentAsync` method to provide a stream of text-only output and the `CountTokensAsync` method to count tokens.
 
 `GenereateContentAsync` is used to generate content in textual form. The input parameters to this method vary from service to service, however, an optional input parameter named `configuration` of type `GenerateContentConfiguration` is common among all services. For information on its usage navigate to the [configuration section](#configuration) of this page.
 
 The `GenereateContentAsync` method returns the `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippets given below.
 
 The `StreamGenereateContentAsync` takes the same parameters as `GenereateContentAsync` in their respective service, with an additional delegate `Action<string>`.
+
+The `CountTokensAsync` method takes the same parameters as `GenereateContentAsync` in their respective service. It does not take the optional `configuration` parameter.
 
 There are two ways of initializing a service instance. Either create an instance with the default constructor or pass in a custom `GeminiClient` object to the parameterized constructor. For information on `GeminiClient` and its usage navigate to the [GeminiClient section](#geminiclient) of this page.
 
@@ -76,6 +78,14 @@ Action<string> handleStreamData = (data) =>
     Console.WriteLine(data);
 };
 await service.StreamGenereateContentAsync("Write a story on Google AI.", handleStreamData);
+```
+
+The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
+
+```csharp
+var service = new TextService();
+var result = await service.CountTokensAsync("Write a story on Google AI.");
+Console.WriteLine(result.totalTokens);
 ```
 
 ### VisionService
@@ -120,6 +130,15 @@ Action<string> handleStreamData = (data) =>
 await service.StreamGenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName), handleStreamData);
 ```
 
+The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
+
+```csharp
+......
+var service = new VisionService();
+var result = await service.CountTokensAsync("Explain this image?", new FileObject(fileBytes, fileName));
+Console.WriteLine(result.totalTokens);
+```
+
 ### ChatService
 
 `ChatService` is used to generate freeform conversations across multiple turns with chat history as input.
@@ -151,6 +170,15 @@ Action<string> handleStreamData = (data) =>
     Console.WriteLine(data);
 };
 await service.StreamGenereateContentAsync(chat, handleStreamData);
+```
+
+The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
+
+```csharp
+......
+var service = new ChatService();
+var result = await service.CountTokensAsync(chat);
+Console.WriteLine(result.totalTokens);
 ```
 
 ### Configuration
