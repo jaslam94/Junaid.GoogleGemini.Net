@@ -44,6 +44,12 @@ namespace Junaid.GoogleGemini.Net.Services
             }
         }
 
+        public async Task<CountTokensResponse> CountTokensAsync(MessageObject[] chat)
+        {
+            GenerateContentRequest model = CreateRequestModel(chat);
+            return await GeminiClient.PostAsync<GenerateContentRequest, CountTokensResponse>($"/v1beta/models/gemini-pro:countTokens", model);
+        }
+
         private static GenerateContentRequest CreateRequestModel(MessageObject[] chat)
         {
             var contents = new List<Content>();

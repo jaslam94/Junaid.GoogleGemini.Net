@@ -47,6 +47,13 @@ namespace Junaid.GoogleGemini.Net.Services
             }
         }
 
+        public async Task<CountTokensResponse> CountTokensAsync(string text,
+                                                                FileObject fileObject)
+        {
+            GenerateContentRequest model = CreateRequestModel(text, fileObject);
+            return await GeminiClient.PostAsync<GenerateContentRequest, CountTokensResponse>($"/v1beta/models/gemini-pro-vision:countTokens", model);
+        }
+
         private static GenerateContentRequest CreateRequestModel(string text, FileObject fileObject)
         {
             var contents = new[]
