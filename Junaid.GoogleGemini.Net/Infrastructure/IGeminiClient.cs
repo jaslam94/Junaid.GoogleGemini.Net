@@ -6,6 +6,6 @@
 
         Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data);
 
-        IAsyncEnumerable<string> PostAsync<TRequest>(string endpoint, TRequest data);
+        IAsyncEnumerable<string> SendAsync<TRequest>(string endpoint, TRequest data);
     }
 }
