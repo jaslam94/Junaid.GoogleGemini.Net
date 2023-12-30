@@ -1,5 +1,8 @@
 ﻿# Release Notes
 
+## v2.1.0
+Added stream generate content method to all services.
+
 ## v2.0.0
 - Read API key from Environment variables. 
 - Refactored services and models. 
