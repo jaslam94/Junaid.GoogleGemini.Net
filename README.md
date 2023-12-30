@@ -43,7 +43,7 @@ Either of the following three ways can be used to set the API key:
 
 ## Services
 
-There are three services named `TextService`, `VisionService` and `ChatService`. All of the services contain the `GenereateContentAsync` method to generate text only content and `StreamGenereateContentAsync` method to provide a stream of text only output.
+There are three services named `TextService`, `VisionService` and `ChatService`. All of the services contain the `GenereateContentAsync` method to generate text-only content and the `StreamGenereateContentAsync` method to provide a stream of text-only output.
 
 `GenereateContentAsync` is used to generate content in textual form. The input parameters to this method vary from service to service, however, an optional input parameter named `configuration` of type `GenerateContentConfiguration` is common among all services. For information on its usage navigate to the [configuration section](#configuration) of this page.
 
@@ -157,7 +157,7 @@ await service.StreamGenereateContentAsync(chat, handleStreamData);
 
 Configuration input can be used to control the content generation by configuring [model parameters](https://ai.google.dev/docs/concepts#model_parameters) and by using [safety settings](https://ai.google.dev/docs/safety_setting_gemini).
 
-An example of setting `configuration` parameter of type `GenerateContentConfiguration` and passing it to the `GenereateContentAsync` method of `TextService` is as follows:
+An example of setting the `configuration` parameter of type `GenerateContentConfiguration` and passing it to the `GenereateContentAsync` method of `TextService` is as follows:
 
 ```csharp
 var configuration = new GenerateContentConfiguration
@@ -217,7 +217,7 @@ In the above example, the `GeminiClient` instance is assigned to the static `Gem
 GeminiConfiguration.GeminiClient = new GeminiClient(httpClient);
 ```
 
-`GeminiClient` instance can also be set at service level. With this different instances can be used with different services.
+The `GeminiClient` instance can also be set at the service level. With this different instances can be used with different services.
 
 ```csharp
 ......
@@ -226,5 +226,11 @@ var textServiceResult = await textService.GenereateContentAsync("Write a short p
 ```
 
 ##
-Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
-Feel free to contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
+
+Thanks for using this library.
+
+- Contributions are welcome. Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
+
+- The API is being manually released on Nuget.org. The [release notes file](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/RELEASE.md) lists down the release notes.
+
+- Feel free to contact me via [email](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
