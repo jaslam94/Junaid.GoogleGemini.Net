@@ -296,7 +296,8 @@ The `GeminiClient` instance can also be set at the service level. With this diff
 var textService = new TextService(new GeminiClient(httpClient));
 var textServiceResult = await textService.GenereateContentAsync("Write a short poem on friendship.");
 ```
-<hr />
+
+##
 
 Thanks for using this library.
 
