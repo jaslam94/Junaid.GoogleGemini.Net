@@ -43,145 +43,152 @@ Either of the following three ways can be used to set the API key:
 
 ## Services
 
-There are three services named `TextService`, `VisionService` and `ChatService`. All of the services contain the `GenereateContentAsync` method to generate text-only content, the `StreamGenereateContentAsync` method to provide a stream of text-only output and the `CountTokensAsync` method to count tokens.
+There are five services:
+1. TextService
+2. VisionService
+3. ChatService
+4. ModelInfoService
+5. EmbeddingService
 
-`GenereateContentAsync` is used to generate content in textual form. The input parameters to this method vary from service to service, however, an optional input parameter named `configuration` of type `GenerateContentConfiguration` is common among all services. For information on its usage navigate to the [configuration section](#configuration) of this page.
+A service instance needs to be created first and then its methods should be called. There are two ways of initializing a service instance. Either create an instance with the default constructor or pass in a custom `GeminiClient` object to the parameterized constructor. For information on `GeminiClient` and its usage navigate to the [GeminiClient section](#geminiclient) of this page.
 
-The `GenereateContentAsync` method returns the `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippets given below.
+The first three services from the above list contain the `GenereateContentAsync` method to generate text-only content, the `StreamGenereateContentAsync` method to provide a stream of text-only output and the `CountTokensAsync` method to count tokens.
 
-The `StreamGenereateContentAsync` takes the same parameters as `GenereateContentAsync` in their respective service, with an additional delegate `Action<string>`.
+- `GenereateContentAsync` is used to generate content in textual form. The input parameters to this method vary from service to service, however, an optional input parameter named `configuration` of type `GenerateContentConfiguration` is common among all services. For information on its usage navigate to the [configuration section](#configuration) of this page.
 
-The `CountTokensAsync` method takes the same parameters as `GenereateContentAsync` in their respective service. It does not take the optional `configuration` parameter.
+    The `GenereateContentAsync` method returns the `GenerateContentResponse` object. To just get the text string inside this object, use the method `Text()` as shown in the code snippets given below.
 
-There are two ways of initializing a service instance. Either create an instance with the default constructor or pass in a custom `GeminiClient` object to the parameterized constructor. For information on `GeminiClient` and its usage navigate to the [GeminiClient section](#geminiclient) of this page.
+- The `StreamGenereateContentAsync` takes the same parameters as `GenereateContentAsync` in their respective service, with an additional delegate `Action<string>`.
+
+- The `CountTokensAsync` method takes the same parameters as `GenereateContentAsync` in their respective service. It does not take the optional `configuration` parameter.
 
 The following sections show example code snippets that highlight how to use these services.
 
-### TextService
+### 1. TextService
 
-`TextService` is used to generate content with text-only input.
+`TextService` is used to generate content with text-only input. It has three methods.
 
-The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as input, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
+1. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as input, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
-```csharp
-var service = new TextService();
-var result = await service.GenereateContentAsync("Say Hi to me!");
-Console.WriteLine(result.Text());
-```
+    ```csharp
+    var service = new TextService();
+    var result = await service.GenereateContentAsync("Say Hi to me!");
+    Console.WriteLine(result.Text());
+    ```
 
-The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
+2. The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
 
-```csharp
-var service = new TextService();
-Action<string> handleStreamData = (data) =>
-{
-    Console.WriteLine(data);
-};
-await service.StreamGenereateContentAsync("Write a story on Google AI.", handleStreamData);
-```
-
-The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
-
-```csharp
-var service = new TextService();
-var result = await service.CountTokensAsync("Write a story on Google AI.");
-Console.WriteLine(result.totalTokens);
-```
-
-### VisionService
-
-`VisionService` is used to generate content with both text and image inputs. 
-
-The `GenereateContentAsync` method takes mandatory `string` (text prompt) and `FileObject` (file bytes and file name), an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
-
-```csharp
-string filePath = "path/<imageName.imageExtension>";
-var fileName = Path.GetFileName(filePath);
-byte[] fileBytes = Array.Empty<byte>();
-try
-{
-    using (var imageStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
-    using (var memoryStream = new MemoryStream())
+    ```csharp
+    var service = new TextService();
+    Action<string> handleStreamData = (data) =>
     {
-        imageStream.CopyTo(memoryStream);
-        fileBytes = memoryStream.ToArray();
+        Console.WriteLine(data);
+    };
+    await service.StreamGenereateContentAsync("Write a story on Google AI.", handleStreamData);
+    ```
+
+3. The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
+
+    ```csharp
+    var service = new TextService();
+    var result = await service.CountTokensAsync("Write a story on Google AI.");
+    Console.WriteLine(result.totalTokens);
+    ```
+
+### 2. VisionService
+
+`VisionService` is used to generate content with both text and image inputs. It has three methods.
+
+1. The `GenereateContentAsync` method takes mandatory `string` (text prompt) and `FileObject` (file bytes and file name), an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
+
+    ```csharp
+    string filePath = "path/<imageName.imageExtension>";
+    var fileName = Path.GetFileName(filePath);
+    byte[] fileBytes = Array.Empty<byte>();
+    try
+    {
+        using (var imageStream = new FileStream(filePath, FileMode.Open, FileAccess.Read))
+        using (var memoryStream = new MemoryStream())
+        {
+            imageStream.CopyTo(memoryStream);
+            fileBytes = memoryStream.ToArray();
+        }
+        Console.WriteLine($"Image loaded successfully. Byte array length: {fileBytes.Length}");
     }
-    Console.WriteLine($"Image loaded successfully. Byte array length: {fileBytes.Length}");
-}
-catch (Exception ex)
-{
-    Console.WriteLine($"Error: {ex.Message}");
-}
+    catch (Exception ex)
+    {
+        Console.WriteLine($"Error: {ex.Message}");
+    }
 
-var service = new VisionService();
-var result = await service.GenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName));
-Console.WriteLine(result.Text());
-```
+    var service = new VisionService();
+    var result = await service.GenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName));
+    Console.WriteLine(result.Text());
+    ```
 
-The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
+2. The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
 
-```csharp
-......
-var service = new VisionService();
-Action<string> handleStreamData = (data) =>
-{
-    Console.WriteLine(data);
-};
-await service.StreamGenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName), handleStreamData);
-```
+    ```csharp
+    ......
+    var service = new VisionService();
+    Action<string> handleStreamData = (data) =>
+    {
+        Console.WriteLine(data);
+    };
+    await service.StreamGenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName), handleStreamData);
+    ```
 
-The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
+3. The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
 
-```csharp
-......
-var service = new VisionService();
-var result = await service.CountTokensAsync("Explain this image?", new FileObject(fileBytes, fileName));
-Console.WriteLine(result.totalTokens);
-```
+    ```csharp
+    ......
+    var service = new VisionService();
+    var result = await service.CountTokensAsync("Explain this image?", new FileObject(fileBytes, fileName));
+    Console.WriteLine(result.totalTokens);
+    ```
 
-### ChatService
+### 3. ChatService
 
-`ChatService` is used to generate freeform conversations across multiple turns with chat history as input.
+`ChatService` is used to generate freeform conversations across multiple turns with chat history as input. It has three methods.
 
-The `GenereateContentAsync` method takes an array of `MessageObject` as an argument, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
+1. The `GenereateContentAsync` method takes an array of `MessageObject` as an argument, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
-Each `MessageObject` contains two fields i.e. a `string` named role (value can be either of "model" or "user" only) and another `string` named text (text prompt).
+    Each `MessageObject` contains two fields i.e. a `string` named role (value can be either of "model" or "user" only) and another `string` named text (text prompt).
 
-```csharp
-var chat = new MessageObject[]
-{
-    new MessageObject( "user", "Write the first line of a story about a magic backpack." ),
-    new MessageObject( "model", "In the bustling city of Meadow brook, lived a young girl named Sophie. She was a bright and curious soul with an imaginative mind." ),
-    new MessageObject( "user", "Write one more line." ),
-};
+    ```csharp
+    var chat = new MessageObject[]
+    {
+        new MessageObject( "user", "Write the first line of a story about a magic backpack." ),
+        new MessageObject( "model", "In the bustling city of Meadow brook, lived a young girl named Sophie. She was a bright and curious soul with an imaginative mind." ),
+        new MessageObject( "user", "Write one more line." ),
+    };
 
-var service = new ChatService();
-var result = await service.GenereateContentAsync(chat);
-Console.WriteLine(result.Text());
-```
+    var service = new ChatService();
+    var result = await service.GenereateContentAsync(chat);
+    Console.WriteLine(result.Text());
+    ```
 
-The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
+2. The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
 
-```csharp
-......
-var service = new ChatService();
-Action<string> handleStreamData = (data) =>
-{
-    Console.WriteLine(data);
-};
-await service.StreamGenereateContentAsync(chat, handleStreamData);
-```
+    ```csharp
+    ......
+    var service = new ChatService();
+    Action<string> handleStreamData = (data) =>
+    {
+        Console.WriteLine(data);
+    };
+    await service.StreamGenereateContentAsync(chat, handleStreamData);
+    ```
 
-The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
+3. The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
 
-```csharp
-......
-var service = new ChatService();
-var result = await service.CountTokensAsync(chat);
-Console.WriteLine(result.totalTokens);
-```
+    ```csharp
+    ......
+    var service = new ChatService();
+    var result = await service.CountTokensAsync(chat);
+    Console.WriteLine(result.totalTokens);
+    ```
 
-### Configuration
+#### Configuration
 
 Configuration input can be used to control the content generation by configuring [model parameters](https://ai.google.dev/docs/concepts#model_parameters) and by using [safety settings](https://ai.google.dev/docs/safety_setting_gemini).
 
@@ -212,6 +219,43 @@ var service = new TextService();
 var result = await service.GenereateContentAsync("Write a quote by Aristotle.", configuration);
 Console.WriteLine(result.Text());
 ```
+##
+
+### 4. ModelInfoService
+
+`ModelInfoService` is used to return information about the model being used to generate content. It has two methods.
+
+1. The `ListModelsAsync` method lists all of the models available through the API, including both the Gemini and PaLM family models.
+
+    ```csharp
+    var service = new ModelInfoService();
+    var result = await service.ListModelsAsync();
+    ```
+
+2. The `GetModelAsync` takes `string` (model name) as input and returns information about that model such as version, display name, input token limit, etc.
+
+    ```csharp
+    var service = new ModelInfoService();
+    var result = await modelInfoService.GetModelAsync("gemini-pro-vision");
+    ```
+
+### 5. EmbeddingService
+
+`EmbeddingService` is used to represent information as a list of floating point numbers in an array. It has two methods.
+
+1. `EmbedContentAsync` takes a `string` (model name) and another `string` (text prompt) as arguments. It returns the `EmbedContentResponse` object.
+
+    ```csharp
+    var service = new EmbeddingService();
+    var result = await service.EmbedContentAsync("embedding-001", "Write a story about a magic backpack.");
+    ```
+2.  `BatchEmbedContentAsync` takes a `string` (model name) and a `string[]` (array of text prompts) as arguments. It returns the `BatchEmbedContentResponse` object.
+
+    ```csharp
+    var service = new EmbeddingService();
+    var result = await service.BatchEmbedContentAsync("embedding-001", new[] { "Write a story about a magic backpack.", "Say Hi to me!" });
+    ```
+##
 
 ### GeminiClient
 
@@ -252,8 +296,7 @@ The `GeminiClient` instance can also be set at the service level. With this diff
 var textService = new TextService(new GeminiClient(httpClient));
 var textServiceResult = await textService.GenereateContentAsync("Write a short poem on friendship.");
 ```
-
-##
+<hr />
 
 Thanks for using this library.
 
