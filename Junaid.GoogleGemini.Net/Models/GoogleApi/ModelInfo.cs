@@ -11,6 +11,6 @@ public class ModelInfo
     public int outputTokenLimit { get; set; }
     public string[] supportedGenerationMethods { get; set; }
     public float temperature { get; set; }
-    public int topP { get; set; }
+    public double topP { get; set; }
     public int topK { get; set; }
 }

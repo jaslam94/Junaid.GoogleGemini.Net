@@ -26,14 +26,14 @@ namespace Junaid.GoogleGemini.Net.Services
         public async Task<BatchEmbedContentResponse> BatchEmbedContentAsync(string model, string[] texts)
         {
             BatchEmbedContentRequest request = CreateBatchRequestModel(model, texts);
-            return await GeminiClient.PostAsync<BatchEmbedContentRequest, BatchEmbedContentResponse>($"/v1beta/models/{model}:batchEmbedContent", request);
+            return await GeminiClient.PostAsync<BatchEmbedContentRequest, BatchEmbedContentResponse>($"/v1beta/models/{model}:batchEmbedContents", request);
         }
 
         private static EmbedContentRequest CreateRequestModel(string model, string text)
         {
             return new EmbedContentRequest
             {
-                model = model,
+                model = $"models/{model}",
                 content = new Content
                 {
                     parts = new[]
@@ -49,12 +49,12 @@ namespace Junaid.GoogleGemini.Net.Services
 
         private static BatchEmbedContentRequest CreateBatchRequestModel(string model, string[] texts)
         {
-            var requests = new EmbedContentRequest[] { };
+            var requests = new List<EmbedContentRequest>();
             foreach (var text in texts)
             {
-                requests.Append(new EmbedContentRequest
+                requests.Add(new EmbedContentRequest
                 {
-                    model = model,
+                    model = $"models/{model}",
                     content = new Content
                     {
                         parts = new[]
@@ -67,7 +67,7 @@ namespace Junaid.GoogleGemini.Net.Services
                     }
                 });
             }
-            return new BatchEmbedContentRequest { requests = requests };
+            return new BatchEmbedContentRequest { requests = requests.ToArray() };
         }
     }
 }

@@ -30,9 +30,9 @@ namespace Junaid.GoogleGemini.Net.Services
         /// 
         /// </summary>
         /// <returns></returns>
-        public async Task<List<ModelInfo>> ListModelsAsync()
+        public async Task<ListModelInfoResponse> ListModelsAsync()
         {
-            return await GeminiClient.GetAsync<List<ModelInfo>>($"/v1beta/models");
+            return await GeminiClient.GetAsync<ListModelInfoResponse>($"/v1beta/models");
         }
 
         /// <summary>
