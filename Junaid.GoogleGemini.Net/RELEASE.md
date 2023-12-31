@@ -1,5 +1,8 @@
 ﻿# Release Notes
 
+## v3.2.0
+Added Model Info service and Embedding service.
+
 ## v3.1.1
 Internal refactoring for the stream content method to reduce memory consumption and improving performance.
 
@@ -13,6 +16,9 @@ Now targets .Net 6.0 and .Net 8.0 as well.
 Added stream generate content method to all services.
 
 ## v2.0.0
+Use custom HttpClient instance with services and configuration object.
+
+## v1.0.4
 - Read API key from Environment variables. 
 - Refactored services and models. 
 - Added Text method to just read the string "text" from the API response.
