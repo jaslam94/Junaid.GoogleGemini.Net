@@ -12,8 +12,8 @@
     <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
     <PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageReleaseNotes>Internal refactoring for the stream content method to reduce memory consumption and improving performance.</PackageReleaseNotes>
-    <Version>3.1.1</Version>
+    <PackageReleaseNotes>Added Model Info service and Embedding service.</PackageReleaseNotes>
+    <Version>3.2.0</Version>
   </PropertyGroup>
 
   <ItemGroup>
