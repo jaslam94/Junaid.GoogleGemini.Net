@@ -6,12 +6,10 @@ namespace Junaid.GoogleGemini.Net.Services
     public class Service
     {
         protected readonly IGeminiClient GeminiClient;
-        protected readonly IOptionsSnapshot<GeminiConfiguration> OptionsSnapshot;
 
-        public Service(IOptionsSnapshot<GeminiConfiguration> optionsSnapshot)
+        public Service(IGeminiClient geminiClient)
         {
-            OptionsSnapshot = optionsSnapshot;
-            GeminiClient = new GeminiClient(optionsSnapshot);
+            GeminiClient = geminiClient;
         }
     }
 }

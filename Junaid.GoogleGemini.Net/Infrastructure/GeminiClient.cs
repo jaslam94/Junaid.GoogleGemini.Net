@@ -1,6 +1,5 @@
 ﻿using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
-using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -11,25 +10,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 {
     public class GeminiClient : IGeminiClient
     {
-        public string ApiKey { get; }
+        private readonly HttpClient _httpClient;
 
-        public HttpClient HttpClient { get; }
-
-        public GeminiClient(IOptionsSnapshot<GeminiConfiguration> options)
+        public GeminiClient(HttpClient httpClient)
         {
-            this.ApiKey = options.Value.ApiKey;
-            this.HttpClient = options.Value.HttpClient;
-        }
-
-        public GeminiClient(string apiKey, HttpClient httpClient)
-        {
-            this.ApiKey = apiKey;
-            this.HttpClient = httpClient;
+            _httpClient = httpClient;
         }
 
         public async Task<TResponse> GetAsync<TResponse>(string endpoint)
         {
-            var response = await HttpClient.GetAsync(endpoint);
+            var response = await _httpClient.GetAsync(endpoint);
             return await HandleResponse<TResponse>(response);
         }
 
@@ -40,7 +30,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
             var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
-            var response = await HttpClient.PostAsync(endpoint, jsonContent);
+            var response = await _httpClient.PostAsync(endpoint, jsonContent);
             return await HandleResponse<TResponse>(response);
         }
 
@@ -73,7 +63,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 request.Content = requestContent;
                 requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                using (var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+                using (var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
                 {
                     if (response.IsSuccessStatusCode)
                     {

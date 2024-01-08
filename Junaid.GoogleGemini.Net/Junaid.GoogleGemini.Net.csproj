@@ -17,6 +17,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Remove="Services\ChatService.cs" />
+    <Compile Remove="Services\EmbeddingService.cs" />
+    <Compile Remove="Services\ModelInfoService.cs" />
+    <Compile Remove="Services\VisionService.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
@@ -25,6 +32,7 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
   </ItemGroup>
 
