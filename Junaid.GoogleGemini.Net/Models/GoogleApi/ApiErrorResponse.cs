@@ -1,6 +1,6 @@
 ﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi
 {
-    public class ErrorResponse
+    public class ApiErrorResponse
     {
         public Error error { get; set; }
     }

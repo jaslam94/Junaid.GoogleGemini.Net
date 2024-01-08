@@ -7,12 +7,7 @@ namespace Junaid.GoogleGemini.Net.Services
     {
         private readonly IGeminiClient GeminiClient;
 
-        public EmbeddingService()
-        {
-            GeminiClient = GeminiConfiguration.GeminiClient;
-        }
-
-        public EmbeddingService(GeminiClient geminiClient)
+        public EmbeddingService(IGeminiClient geminiClient)
         {
             GeminiClient = geminiClient;
         }

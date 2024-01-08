@@ -1,26 +1,27 @@
-﻿using Junaid.GoogleGemini.Net.Models;
-using System.Configuration;
+﻿using Junaid.GoogleGemini.Net.Exceptions;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
     public class GeminiConfiguration
     {
-        private static string apiKey;
-        private static IGeminiClient geminiClient;
+        private string apiKey;
+        private HttpClient httpClient;
 
-        public static string ApiKey
+        public GeminiConfiguration()
+        {
+            apiKey = string.Empty;
+            httpClient = new HttpClient();
+        }
+
+        public string ApiKey
         {
             get
             {
                 if (string.IsNullOrEmpty(apiKey))
                 {
-                    if (!string.IsNullOrEmpty(ConfigurationManager.AppSettings["GeminiApiKey"]))
-                    {
-                        apiKey = ConfigurationManager.AppSettings["GeminiApiKey"];
-                    }
                     if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GeminiApiKey")))
                     {
-                        apiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
+                        apiKey = Environment.GetEnvironmentVariable("GeminiApiKey") ?? string.Empty;
                     }
                 }
                 return apiKey;
@@ -28,40 +29,36 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
             set
             {
-                if (value != apiKey)
+                if (string.IsNullOrEmpty(value) || string.IsNullOrWhiteSpace(value))
                 {
-                    GeminiClient = null;
+                    throw new GeminiException($"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
                 }
                 apiKey = value;
             }
         }
 
-        public static IGeminiClient GeminiClient
+        public HttpClient HttpClient
         {
             get
             {
-                if (geminiClient == null)
+                if (httpClient == null)
                 {
-                    geminiClient = BuildDefaultGeminiClient();
+                    httpClient = new HttpClient();
+                    httpClient = new HttpClient { BaseAddress = new Uri("https://generativelanguage.googleapis.com") };
+                    httpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", apiKey);
                 }
-                return geminiClient;
+                return httpClient;
             }
 
-            set => geminiClient = value;
-        }
-
-        private static GeminiClient BuildDefaultGeminiClient()
-        {
-            if (string.IsNullOrEmpty(ApiKey))
+            set
             {
-                throw new GeminiException("API key cannot be the empty string.");
-            }
+                if (!value.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
+                {
+                    value.DefaultRequestHeaders.Add("X-Goog-Api-Key", apiKey);
+                }
 
-            if (ApiKey != null && ApiKey.Length == 0)
-            {
-                throw new GeminiException($"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
+                httpClient = value;
             }
-            return new GeminiClient(ApiKey);
         }
     }
 }

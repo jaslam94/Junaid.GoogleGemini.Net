@@ -10,7 +10,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
         public ChatService()
         {
-            GeminiClient = GeminiConfiguration.GeminiClient;
+            GeminiClient = GeminiConfiguration.HttpClient;
         }
 
         public ChatService(GeminiClient geminiClient)

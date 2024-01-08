@@ -1,5 +1,6 @@
-﻿using Junaid.GoogleGemini.Net.Models;
+﻿using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Microsoft.Extensions.Options;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
@@ -10,44 +11,20 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 {
     public class GeminiClient : IGeminiClient
     {
-        private readonly string ApiKey;
+        public string ApiKey { get; }
 
-        private readonly HttpClient HttpClient;
+        public HttpClient HttpClient { get; }
 
-        public static string DefaultBaseUri => "https://generativelanguage.googleapis.com";
-
-        public GeminiClient(string apiKey)
+        public GeminiClient(IOptionsSnapshot<GeminiConfiguration> options)
         {
-            if (apiKey != null && apiKey.Length == 0)
-            {
-                throw new ArgumentException("API key cannot be the empty string.", nameof(apiKey));
-            }
-            this.ApiKey = apiKey;
-            this.HttpClient = new HttpClient { BaseAddress = new Uri(DefaultBaseUri) };
-            this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
+            this.ApiKey = options.Value.ApiKey;
+            this.HttpClient = options.Value.HttpClient;
         }
 
-        public GeminiClient(HttpClient httpClient)
+        public GeminiClient(string apiKey, HttpClient httpClient)
         {
-            this.HttpClient = httpClient;
-            if (!this.HttpClient.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
-            {
-                this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
-            }
-        }
-
-        public GeminiClient(HttpClient httpClient, string apiKey)
-        {
-            if (apiKey != null && apiKey.Length == 0)
-            {
-                throw new ArgumentException("API key cannot be the empty string.", nameof(apiKey));
-            }
             this.ApiKey = apiKey;
             this.HttpClient = httpClient;
-            if (!this.HttpClient.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
-            {
-                this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", this.ApiKey);
-            }
         }
 
         public async Task<TResponse> GetAsync<TResponse>(string endpoint)
@@ -76,7 +53,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
             else
             {
-                var geminiError = JsonSerializer.Deserialize<ErrorResponse>(content);
+                var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content);
                 throw new GeminiException(geminiError, geminiError.error.message);
             }
         }
@@ -118,7 +95,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                     else
                     {
                         var content = await response.Content.ReadAsStringAsync();
-                        var geminiError = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(content);
+                        var geminiError = System.Text.Json.JsonSerializer.Deserialize<ApiErrorResponse>(content);
                         throw new GeminiException(geminiError, geminiError.error.message);
                     }
                 }

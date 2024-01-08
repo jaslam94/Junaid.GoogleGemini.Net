@@ -11,7 +11,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
         public VisionService()
         {
-            GeminiClient = GeminiConfiguration.GeminiClient;
+            GeminiClient = GeminiConfiguration.HttpClient;
         }
 
         public VisionService(GeminiClient geminiClient)

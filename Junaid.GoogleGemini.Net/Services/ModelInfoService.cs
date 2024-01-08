@@ -14,14 +14,14 @@ namespace Junaid.GoogleGemini.Net.Services
         /// </summary>
         public ModelInfoService()
         {
-            GeminiClient = GeminiConfiguration.GeminiClient;
+            GeminiClient = GeminiConfiguration.HttpClient;
         }
 
         /// <summary>
         /// 
         /// </summary>
         /// <param name="geminiClient"></param>
-        public ModelInfoService(GeminiClient geminiClient)
+        public ModelInfoService(IGeminiClient geminiClient)
         {
             GeminiClient = geminiClient;
         }

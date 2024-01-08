@@ -1,14 +1,10 @@
 ﻿using Junaid.GoogleGemini.Net.Models.GoogleApi;
 
-namespace Junaid.GoogleGemini.Net.Models
+namespace Junaid.GoogleGemini.Net.Exceptions
 {
     public class GeminiException : Exception
     {
-        public ErrorResponse ErrorResponse { get; set; }
-
-        public GeminiException()
-        {
-        }
+        public ApiErrorResponse? ErrorResponse { get; set; }
 
         public GeminiException(string message) : base(message)
         {
@@ -18,7 +14,7 @@ namespace Junaid.GoogleGemini.Net.Models
         {
         }
 
-        public GeminiException(ErrorResponse geminiError, string message) : base(message)
+        public GeminiException(ApiErrorResponse geminiError, string message) : base(message)
         {
             ErrorResponse = geminiError;
         }
