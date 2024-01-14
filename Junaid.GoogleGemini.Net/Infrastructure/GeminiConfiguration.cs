@@ -1,9 +1,9 @@
-﻿using Junaid.GoogleGemini.Net.Exceptions;
-
-namespace Junaid.GoogleGemini.Net.Infrastructure
+﻿namespace Junaid.GoogleGemini.Net.Infrastructure
 {
     public class GeminiConfiguration
     {
+        public const string Scheme = "x-goog-api-key";
+
         private string apiKey;
 
         public GeminiConfiguration()
@@ -29,7 +29,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 if (string.IsNullOrEmpty(value) || string.IsNullOrWhiteSpace(value))
                 {
-                    throw new GeminiException($"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
+                    throw new ArgumentNullException(nameof(ApiKey), $"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
                 }
                 apiKey = value;
             }

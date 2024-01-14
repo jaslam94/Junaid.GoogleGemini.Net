@@ -1,13 +1,12 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
-using Microsoft.Extensions.Options;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
     public class Service
     {
-        protected readonly IGeminiClient GeminiClient;
+        protected readonly GeminiClient GeminiClient;
 
-        public Service(IGeminiClient geminiClient)
+        public Service(GeminiClient geminiClient)
         {
             GeminiClient = geminiClient;
         }

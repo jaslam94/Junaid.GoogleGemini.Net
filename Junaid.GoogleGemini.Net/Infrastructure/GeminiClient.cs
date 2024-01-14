@@ -8,7 +8,7 @@ using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
-    public class GeminiClient : IGeminiClient
+    public class GeminiClient
     {
         private readonly HttpClient _httpClient;
 
@@ -17,13 +17,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             _httpClient = httpClient;
         }
 
-        public async Task<TResponse> GetAsync<TResponse>(string endpoint)
+        public async Task<TResponse?> GetAsync<TResponse>(string endpoint)
         {
             var response = await _httpClient.GetAsync(endpoint);
-            return await HandleResponse<TResponse>(response);
+            return await HandleResponse<TResponse?>(response);
         }
 
-        public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<TResponse?> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
             var serializedContent = JsonSerializer.Serialize(data, options: new JsonSerializerOptions
             {
@@ -31,10 +31,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             });
             var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync(endpoint, jsonContent);
-            return await HandleResponse<TResponse>(response);
+            return await HandleResponse<TResponse?>(response);
         }
 
-        private async Task<T> HandleResponse<T>(HttpResponseMessage response)
+        private static async Task<T?> HandleResponse<T>(HttpResponseMessage response)
         {
             var content = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
@@ -43,12 +43,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
             else
             {
-                var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content);
+                var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content)
+                                  ?? throw new GeminiException("The API has returned a null response.");
                 throw new GeminiException(geminiError, geminiError.error.message);
             }
         }
 
-        public async IAsyncEnumerable<string> SendAsync<TRequest>(string endpoint, TRequest data)
+        public async IAsyncEnumerable<string?> SendAsync<TRequest>(string endpoint, TRequest data)
         {
             var ms = new MemoryStream();
             await JsonSerializer.SerializeAsync(ms, data, options: new JsonSerializerOptions
@@ -85,7 +86,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                     else
                     {
                         var content = await response.Content.ReadAsStringAsync();
-                        var geminiError = System.Text.Json.JsonSerializer.Deserialize<ApiErrorResponse>(content);
+                        var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content)
+                                          ?? throw new GeminiException("The API has returned a null response."); ;
                         throw new GeminiException(geminiError, geminiError.error.message);
                     }
                 }

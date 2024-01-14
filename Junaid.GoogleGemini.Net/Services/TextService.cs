@@ -1,13 +1,12 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
-using Microsoft.Extensions.Options;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
     public class TextService : Service, ITextService
     {
-        public TextService(IGeminiClient geminiClient) : base(geminiClient)
+        public TextService(GeminiClient geminiClient) : base(geminiClient)
         {
         }
 
