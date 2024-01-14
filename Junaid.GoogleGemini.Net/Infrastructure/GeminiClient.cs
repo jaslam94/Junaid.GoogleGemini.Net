@@ -17,13 +17,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             _httpClient = httpClient;
         }
 
-        public async Task<TResponse?> GetAsync<TResponse>(string endpoint)
+        public async Task<TResponse> GetAsync<TResponse>(string endpoint)
         {
             var response = await _httpClient.GetAsync(endpoint);
-            return await HandleResponse<TResponse?>(response);
+            return await HandleResponse<TResponse>(response)
+                   ?? throw new GeminiException("The API has returned a null response.");
         }
 
-        public async Task<TResponse?> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
+        public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
         {
             var serializedContent = JsonSerializer.Serialize(data, options: new JsonSerializerOptions
             {
@@ -31,15 +32,17 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             });
             var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
             var response = await _httpClient.PostAsync(endpoint, jsonContent);
-            return await HandleResponse<TResponse?>(response);
+            return await HandleResponse<TResponse>(response)
+                   ?? throw new GeminiException("The API has returned a null response.");
         }
 
-        private static async Task<T?> HandleResponse<T>(HttpResponseMessage response)
+        private static async Task<T> HandleResponse<T>(HttpResponseMessage response)
         {
             var content = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Deserialize<T>(content);
+                return JsonSerializer.Deserialize<T>(content)
+                       ?? throw new GeminiException("The API has returned a null response.");
             }
             else
             {
@@ -49,7 +52,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
         }
 
-        public async IAsyncEnumerable<string?> SendAsync<TRequest>(string endpoint, TRequest data)
+        public async IAsyncEnumerable<string> SendAsync<TRequest>(string endpoint, TRequest data)
         {
             var ms = new MemoryStream();
             await JsonSerializer.SerializeAsync(ms, data, options: new JsonSerializerOptions

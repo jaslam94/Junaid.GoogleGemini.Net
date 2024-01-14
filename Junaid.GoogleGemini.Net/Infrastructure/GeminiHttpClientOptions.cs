@@ -2,13 +2,15 @@
 {
     public interface IGeminiAuthHttpClientOptions
     {
-        Uri Url { get; set; }
+        Uri Url { get; }
         GeminiConfiguration Credentials { get; set; }
     }
 
     public class GeminiHttpClientOptions : IGeminiAuthHttpClientOptions
     {
-        private Uri? url;
+        private const string DefaultBaseAddress = "https://generativelanguage.googleapis.com";
+
+        private readonly Uri url = new Uri(DefaultBaseAddress);
 
         private GeminiConfiguration? credentials;
 
@@ -16,16 +18,7 @@
         {
             get
             {
-                if (url == null)
-                {
-                    throw new ArgumentNullException(nameof(Url));
-                }
                 return url;
-            }
-
-            set
-            {
-                url = value ?? throw new ArgumentNullException(nameof(Url));
             }
         }
 
