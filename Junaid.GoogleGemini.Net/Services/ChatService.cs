@@ -1,21 +1,14 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;
+using Junaid.GoogleGemini.Net.Services.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    public class ChatService
+    public class ChatService : Service, IChatService
     {
-        private readonly IGeminiClient GeminiClient;
-
-        public ChatService()
+        public ChatService(GeminiClient geminiClient) : base(geminiClient)
         {
-            GeminiClient = GeminiConfiguration.HttpClient;
-        }
-
-        public ChatService(GeminiClient geminiClient)
-        {
-            GeminiClient = geminiClient;
         }
 
         public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat,

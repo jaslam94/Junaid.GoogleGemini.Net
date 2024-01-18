@@ -17,7 +17,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Services\ChatService.cs" />
     <Compile Remove="Services\EmbeddingService.cs" />
     <Compile Remove="Services\ModelInfoService.cs" />
     <Compile Remove="Services\VisionService.cs" />
