@@ -26,6 +26,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             .AddHttpMessageHandler<GeminiAuthHandler<THttpClientOptions>>();
 
             services.AddTransient<ITextService, TextService>();
+            services.AddTransient<IChatService, ChatService>();
 
             return services;
         }
