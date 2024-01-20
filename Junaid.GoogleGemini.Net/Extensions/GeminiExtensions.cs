@@ -8,22 +8,16 @@ namespace Junaid.GoogleGemini.Net.Extensions
 {
     public static class GeminiExtensions
     {
-        public static IServiceCollection AddGemini<THttpClient, THttpClientOptions>(
-            this IServiceCollection services,
-            Action<THttpClientOptions> configure) where THttpClient : class where THttpClientOptions : class, IGeminiAuthHttpClientOptions
+        public static IServiceCollection AddGemini(this IServiceCollection services)
         {
-            services
-                .AddOptions<THttpClientOptions>()
-                .Configure(configure);
+            services.AddTransient<GeminiAuthHandler<GeminiHttpClientOptions>>();
 
-            services.AddTransient<GeminiAuthHandler<THttpClientOptions>>();
-
-            services.AddHttpClient<THttpClient>((sp, client) =>
+            services.AddHttpClient<GeminiClient>((sp, client) =>
             {
-                var options = sp.GetRequiredService<IOptions<THttpClientOptions>>().Value;
+                var options = sp.GetRequiredService<IOptions<GeminiHttpClientOptions>>().Value;
                 client.BaseAddress = options.Url;
             })
-            .AddHttpMessageHandler<GeminiAuthHandler<THttpClientOptions>>();
+            .AddHttpMessageHandler<GeminiAuthHandler<GeminiHttpClientOptions>>();
 
             services.AddTransient<ITextService, TextService>();
             services.AddTransient<IChatService, ChatService>();
