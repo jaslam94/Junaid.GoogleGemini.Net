@@ -40,7 +40,7 @@ Configure the `GeminiHttpClientOptions` first.
 builder.Services.Configure<GeminiHttpClientOptions>(builder.Configuration.GetSection("Gemini"));
 ```
 
-Then call `AddGemini` extension method which configures a typed http client named `GeminiClient` and services.
+Then call `AddGemini` extension method which configures a typed http client named `GeminiClient` and library services.
 
 ```charp
 builder.Services.AddGemini();
@@ -55,7 +55,7 @@ There are five services:
 4. ModelInfoService
 5. EmbeddingService
 
-Each service has an interface. Obtain service instances through their interfaces from the DI container.
+Each service has an interface. Obtain service instances by using their interfaces from the DI container.
 
 The first three services from the above list contain the `GenereateContentAsync` method to generate text-only content, the `StreamGenereateContentAsync` method to provide a stream of text-only output and the `CountTokensAsync` method to count tokens.
 
@@ -76,9 +76,9 @@ The following sections show example code snippets that highlight how to use thes
 1. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as input, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
     ```csharp
-    app.MapGet("/", async (ITextService textService) =>
+    app.MapGet("/", async (ITextService service) =>
     {
-        var result = await textService.GenereateContentAsync("Say hello to me.");
+        var result = await service.GenereateContentAsync("Say hello to me.");
         return result.Text();
     });
     ```
@@ -266,11 +266,11 @@ Console.WriteLine(result.Text());
 
 ### GeminiClient
 
-`GeminiClient` is a "Typed HttpClient". The `GeminiAuthHandler` is used to set the request headers. However, a case may arise where a custom `GeminiClient` is needed.
+`GeminiClient` is a "Typed HttpClient". A case may arise where a custom `GeminiClient` is needed.
 
 For example: **Using proxy**
 
-In such a scenario, a custom `HttpClient` object will be used to set proxy parameters. This object will then be used to initialize the `GeminiClient`. To do so, several steps need to be perfromed:
+In such a scenario, a custom `HttpClient` object will be used to set proxy parameters. This object will then be used to initialize the `GeminiClient`. To do so, several steps need to be performed:
 
 1. Created a new Typed HttpClient
 
