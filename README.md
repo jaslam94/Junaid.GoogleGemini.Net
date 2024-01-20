@@ -286,7 +286,7 @@ In such a scenario, a custom `HttpClient` object will be used to set proxy param
 2. Add relevant configuration to the Typed HttpClient and register it with the DI container.
 
     ```csharp
-    builder.Services.AddHttpClient<CustomClient>((sp, client) =>
+    builder.Services.AddHttpClient<GeminiClient, CustomClient>((sp, client) =>
     {
         var options = sp.GetRequiredService<IOptions<GeminiHttpClientOptions>>().Value;
         client.BaseAddress = options.Url;
@@ -308,14 +308,10 @@ In such a scenario, a custom `HttpClient` object will be used to set proxy param
     .AddHttpMessageHandler<GeminiAuthHandler<GeminiHttpClientOptions>>();
     ```
 
-3. Register the service instance to use the Typed HttpClient:
+3. Register the required service:
 
     ```csharp
-    builder.Services.AddTransient<ITextService, TextService>((sp) =>
-    {
-        var client = sp.GetRequiredService<CustomClient>();
-        return new TextService(client);
-    });
+    builder.Services.AddTransient<ITextService, TextService>();
     ```
 ##
 
