@@ -1,5 +1,10 @@
 ﻿# Release Notes
 
+## v4.0.0
+- Using Dependency Injection.
+- Using Typed HttpClient.
+- Changed the way services are configured and consumed.
+
 ## v3.2.0
 Added Model Info service and Embedding service.
 
