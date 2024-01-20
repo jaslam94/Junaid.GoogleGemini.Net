@@ -15,13 +15,6 @@
         {
             get
             {
-                if (string.IsNullOrEmpty(apiKey))
-                {
-                    if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("GeminiApiKey")))
-                    {
-                        apiKey = Environment.GetEnvironmentVariable("GeminiApiKey") ?? string.Empty;
-                    }
-                }
                 return apiKey;
             }
 

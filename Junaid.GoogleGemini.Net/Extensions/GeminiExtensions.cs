@@ -20,7 +20,10 @@ namespace Junaid.GoogleGemini.Net.Extensions
             .AddHttpMessageHandler<GeminiAuthHandler<GeminiHttpClientOptions>>();
 
             services.AddTransient<ITextService, TextService>();
+            services.AddTransient<IVisionService, VisionService>();
             services.AddTransient<IChatService, ChatService>();
+            services.AddTransient<IEmbeddingService, EmbeddingService>();
+            services.AddTransient<IModelInfoService, ModelInfoService>();
 
             return services;
         }
