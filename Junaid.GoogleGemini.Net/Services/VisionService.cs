@@ -2,26 +2,19 @@
 using Junaid.GoogleGemini.Net.Infrastructure.Helpers;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;
+using Junaid.GoogleGemini.Net.Services.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    public class VisionService
+    public class VisionService : Service, IVisionService
     {
-        private readonly IGeminiClient GeminiClient;
-
-        public VisionService()
+        public VisionService(GeminiClient geminiClient) : base(geminiClient)
         {
-            GeminiClient = GeminiConfiguration.GeminiClient;
-        }
-
-        public VisionService(GeminiClient geminiClient)
-        {
-            GeminiClient = geminiClient;
         }
 
         public async Task<GenerateContentResponse> GenereateContentAsync(string text,
                                                                          FileObject fileObject,
-                                                                         GenerateContentConfiguration configuration = null)
+                                                                         GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(text, fileObject);
             if (configuration != null)
@@ -34,7 +27,7 @@ namespace Junaid.GoogleGemini.Net.Services
         public async Task StreamGenereateContentAsync(string text,
                                                       FileObject fileObject,
                                                       Action<string> handleStreamResponse,
-                                                      GenerateContentConfiguration configuration = null)
+                                                      GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(text, fileObject);
             if (configuration != null)

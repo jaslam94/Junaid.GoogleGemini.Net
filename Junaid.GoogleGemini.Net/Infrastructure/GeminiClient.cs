@@ -1,4 +1,4 @@
-﻿using Junaid.GoogleGemini.Net.Models;
+﻿using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using System.Net.Http.Headers;
 using System.Text;
@@ -8,52 +8,20 @@ using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
-    public class GeminiClient : IGeminiClient
+    public class GeminiClient
     {
-        private readonly string ApiKey;
-
-        private readonly HttpClient HttpClient;
-
-        public static string DefaultBaseUri => "https://generativelanguage.googleapis.com";
-
-        public GeminiClient(string apiKey)
-        {
-            if (apiKey != null && apiKey.Length == 0)
-            {
-                throw new ArgumentException("API key cannot be the empty string.", nameof(apiKey));
-            }
-            this.ApiKey = apiKey;
-            this.HttpClient = new HttpClient { BaseAddress = new Uri(DefaultBaseUri) };
-            this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
-        }
+        private readonly HttpClient _httpClient;
 
         public GeminiClient(HttpClient httpClient)
         {
-            this.HttpClient = httpClient;
-            if (!this.HttpClient.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
-            {
-                this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", ApiKey);
-            }
-        }
-
-        public GeminiClient(HttpClient httpClient, string apiKey)
-        {
-            if (apiKey != null && apiKey.Length == 0)
-            {
-                throw new ArgumentException("API key cannot be the empty string.", nameof(apiKey));
-            }
-            this.ApiKey = apiKey;
-            this.HttpClient = httpClient;
-            if (!this.HttpClient.DefaultRequestHeaders.Contains("X-Goog-Api-Key"))
-            {
-                this.HttpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", this.ApiKey);
-            }
+            _httpClient = httpClient;
         }
 
         public async Task<TResponse> GetAsync<TResponse>(string endpoint)
         {
-            var response = await HttpClient.GetAsync(endpoint);
-            return await HandleResponse<TResponse>(response);
+            var response = await _httpClient.GetAsync(endpoint);
+            return await HandleResponse<TResponse>(response)
+                   ?? throw new GeminiException("The API has returned a null response.");
         }
 
         public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data)
@@ -63,20 +31,23 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             });
             var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
-            var response = await HttpClient.PostAsync(endpoint, jsonContent);
-            return await HandleResponse<TResponse>(response);
+            var response = await _httpClient.PostAsync(endpoint, jsonContent);
+            return await HandleResponse<TResponse>(response)
+                   ?? throw new GeminiException("The API has returned a null response.");
         }
 
-        private async Task<T> HandleResponse<T>(HttpResponseMessage response)
+        private static async Task<T> HandleResponse<T>(HttpResponseMessage response)
         {
             var content = await response.Content.ReadAsStringAsync();
             if (response.IsSuccessStatusCode)
             {
-                return JsonSerializer.Deserialize<T>(content);
+                return JsonSerializer.Deserialize<T>(content)
+                       ?? throw new GeminiException("The API has returned a null response.");
             }
             else
             {
-                var geminiError = JsonSerializer.Deserialize<ErrorResponse>(content);
+                var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content)
+                                  ?? throw new GeminiException("The API has returned a null response.");
                 throw new GeminiException(geminiError, geminiError.error.message);
             }
         }
@@ -96,7 +67,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 request.Content = requestContent;
                 requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-                using (var response = await HttpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
+                using (var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead))
                 {
                     if (response.IsSuccessStatusCode)
                     {
@@ -118,7 +89,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                     else
                     {
                         var content = await response.Content.ReadAsStringAsync();
-                        var geminiError = System.Text.Json.JsonSerializer.Deserialize<ErrorResponse>(content);
+                        var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content)
+                                          ?? throw new GeminiException("The API has returned a null response."); ;
                         throw new GeminiException(geminiError, geminiError.error.message);
                     }
                 }

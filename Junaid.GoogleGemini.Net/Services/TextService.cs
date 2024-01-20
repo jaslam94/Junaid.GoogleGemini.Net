@@ -1,24 +1,17 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Services.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    public class TextService
+    public class TextService : Service, ITextService
     {
-        private readonly IGeminiClient GeminiClient;
-
-        public TextService()
+        public TextService(GeminiClient geminiClient) : base(geminiClient)
         {
-            GeminiClient = GeminiConfiguration.GeminiClient;
-        }
-
-        public TextService(GeminiClient geminiClient)
-        {
-            GeminiClient = geminiClient;
         }
 
         public async Task<GenerateContentResponse> GenereateContentAsync(string text,
-                                                                         GenerateContentConfiguration configuration = null)
+                                                                         GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(text);
             if (configuration != null)
@@ -30,7 +23,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
         public async Task StreamGenereateContentAsync(string text,
                                                       Action<string> handleStreamResponse,
-                                                      GenerateContentConfiguration configuration = null)
+                                                      GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(text);
             if (configuration != null)

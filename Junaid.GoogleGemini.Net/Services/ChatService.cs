@@ -1,25 +1,18 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;
+using Junaid.GoogleGemini.Net.Services.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    public class ChatService
+    public class ChatService : Service, IChatService
     {
-        private readonly IGeminiClient GeminiClient;
-
-        public ChatService()
+        public ChatService(GeminiClient geminiClient) : base(geminiClient)
         {
-            GeminiClient = GeminiConfiguration.GeminiClient;
-        }
-
-        public ChatService(GeminiClient geminiClient)
-        {
-            GeminiClient = geminiClient;
         }
 
         public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat,
-                                                                         GenerateContentConfiguration configuration = null)
+                                                                         GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(chat);
             if (configuration != null)
@@ -31,7 +24,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
         public async Task StreamGenereateContentAsync(MessageObject[] chat,
                                                       Action<string> handleStreamResponse,
-                                                      GenerateContentConfiguration configuration = null)
+                                                      GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(chat);
             if (configuration != null)

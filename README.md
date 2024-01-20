@@ -18,28 +18,33 @@ PM > Install-Package Junaid.GoogleGemini.Net
 
 ## Authentication
 
-Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey). 
+Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey).
 
-Either of the following three ways can be used to set the API key: 
+Add the API key to `appsettings.json` like this:
 
-1. Use the `GeminiConfiguration.ApiKey` property to set the secret API key directly in your application code.
-    
-    ```csharp
-    GeminiConfiguration.ApiKey = "xxxxxxxxxxxxxxxxx";
-    ``` 
+```json
+  "Gemini": {
+    "Credentials": {
+      "ApiKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    }
+  }
+```
 
-2. Or pass the API key as an environment variable named "GeminiApiKey".
+Or pass the API key as an environment variable named "GeminiApiKey".
 
-3. Or pass the API key as the "GeminiApiKey" field inside an `App.config` file.
-    
-    ```csharp
-    <?xml version="1.0" encoding="utf-8" ?>
-    <configuration>
-	    <appSettings>
-		    <add key="GeminiApiKey" value="xxxxxxxxxxxxxxxxx" />
-	    </appSettings>
-    </configuration>
-    ```
+## Configuration
+
+Configure the `GeminiHttpClientOptions` first. 
+
+```charp
+builder.Services.Configure<GeminiHttpClientOptions>(builder.Configuration.GetSection("Gemini"));
+```
+
+Then call `AddGemini` extension method which configures a typed http client named `GeminiClient` and library services.
+
+```charp
+builder.Services.AddGemini();
+```
 
 ## Services
 
@@ -50,7 +55,7 @@ There are five services:
 4. ModelInfoService
 5. EmbeddingService
 
-A service instance needs to be created first and then its methods should be called. There are two ways of initializing a service instance. Either create an instance with the default constructor or pass in a custom `GeminiClient` object to the parameterized constructor. For information on `GeminiClient` and its usage navigate to the [GeminiClient section](#geminiclient) of this page.
+Each service has an interface. Obtain service instances by using their interfaces from the DI container.
 
 The first three services from the above list contain the `GenereateContentAsync` method to generate text-only content, the `StreamGenereateContentAsync` method to provide a stream of text-only output and the `CountTokensAsync` method to count tokens.
 
@@ -71,15 +76,17 @@ The following sections show example code snippets that highlight how to use thes
 1. The `GenereateContentAsync` method takes a mandatory `string` (text prompt) as input, an optional `GenerateContentConfiguration` (model parameters and safety settings) argument and returns the `GenerateContentResponse` response object.
 
     ```csharp
-    var service = new TextService();
-    var result = await service.GenereateContentAsync("Say Hi to me!");
-    Console.WriteLine(result.Text());
+    app.MapGet("/", async (ITextService service) =>
+    {
+        var result = await service.GenereateContentAsync("Say hello to me.");
+        return result.Text();
+    });
     ```
 
 2. The `StreamGenereateContentAsync` method is used to generate the stream of text-only content.
 
     ```csharp
-    var service = new TextService();
+    ......
     Action<string> handleStreamData = (data) =>
     {
         Console.WriteLine(data);
@@ -90,7 +97,7 @@ The following sections show example code snippets that highlight how to use thes
 3. The `CountTokensAsync` method is used to get the total tokens count. When using long prompts, it might be useful to count tokens before sending any content to the model. 
 
     ```csharp
-    var service = new TextService();
+    ......
     var result = await service.CountTokensAsync("Write a story on Google AI.");
     Console.WriteLine(result.totalTokens);
     ```
@@ -120,7 +127,7 @@ The following sections show example code snippets that highlight how to use thes
         Console.WriteLine($"Error: {ex.Message}");
     }
 
-    var service = new VisionService();
+    var service = serviceProvider.GetService<IVisionService>();
     var result = await service.GenereateContentAsync("Explain this image?", new FileObject(fileBytes, fileName));
     Console.WriteLine(result.Text());
     ```
@@ -129,7 +136,6 @@ The following sections show example code snippets that highlight how to use thes
 
     ```csharp
     ......
-    var service = new VisionService();
     Action<string> handleStreamData = (data) =>
     {
         Console.WriteLine(data);
@@ -141,7 +147,6 @@ The following sections show example code snippets that highlight how to use thes
 
     ```csharp
     ......
-    var service = new VisionService();
     var result = await service.CountTokensAsync("Explain this image?", new FileObject(fileBytes, fileName));
     Console.WriteLine(result.totalTokens);
     ```
@@ -162,7 +167,7 @@ The following sections show example code snippets that highlight how to use thes
         new MessageObject( "user", "Write one more line." ),
     };
 
-    var service = new ChatService();
+    var service = serviceProvider.GetService<IChatService>();
     var result = await service.GenereateContentAsync(chat);
     Console.WriteLine(result.Text());
     ```
@@ -171,7 +176,6 @@ The following sections show example code snippets that highlight how to use thes
 
     ```csharp
     ......
-    var service = new ChatService();
     Action<string> handleStreamData = (data) =>
     {
         Console.WriteLine(data);
@@ -183,7 +187,6 @@ The following sections show example code snippets that highlight how to use thes
 
     ```csharp
     ......
-    var service = new ChatService();
     var result = await service.CountTokensAsync(chat);
     Console.WriteLine(result.totalTokens);
     ```
@@ -215,7 +218,6 @@ var configuration = new GenerateContentConfiguration
     }
 };
 
-var service = new TextService();
 var result = await service.GenereateContentAsync("Write a quote by Aristotle.", configuration);
 Console.WriteLine(result.Text());
 ```
@@ -228,15 +230,17 @@ Console.WriteLine(result.Text());
 1. The `ListModelsAsync` method lists all of the models available through the API, including both the Gemini and PaLM family models.
 
     ```csharp
-    var service = new ModelInfoService();
-    var result = await service.ListModelsAsync();
+    app.MapGet("/", async (IModelInfoService service) =>
+    {
+        var result = await service.ListModelsAsync();
+    });
     ```
 
 2. The `GetModelAsync` takes `string` (model name) as input and returns information about that model such as version, display name, input token limit, etc.
 
     ```csharp
-    var service = new ModelInfoService();
-    var result = await modelInfoService.GetModelAsync("gemini-pro-vision");
+    ......
+    var result = await service.GetModelAsync("gemini-pro-vision");
     ```
 
 ### 5. EmbeddingService
@@ -246,62 +250,74 @@ Console.WriteLine(result.Text());
 1. `EmbedContentAsync` takes a `string` (model name) and another `string` (text prompt) as arguments. It returns the `EmbedContentResponse` object.
 
     ```csharp
-    var service = new EmbeddingService();
-    var result = await service.EmbedContentAsync("embedding-001", "Write a story about a magic backpack.");
+    app.MapGet("/", async (IEmbeddingService service) =>
+    {
+        var result = await service.EmbedContentAsync("embedding-001", "Write a story about a magic backpack.");
+    });
     ```
+
 2.  `BatchEmbedContentAsync` takes a `string` (model name) and a `string[]` (array of text prompts) as arguments. It returns the `BatchEmbedContentResponse` object.
 
     ```csharp
-    var service = new EmbeddingService();
+    ......
     var result = await service.BatchEmbedContentAsync("embedding-001", new[] { "Write a story about a magic backpack.", "Say Hi to me!" });
     ```
 ##
 
 ### GeminiClient
 
-`GeminiClient` contains the `ApiKey` and `HttpClient` objects. The default instance of `GeminiClient` is automatically created with the initialization of the service object. However, a case may arise where a custom `GeminiClient` is needed.
+`GeminiClient` is a "Typed HttpClient". A case may arise where a custom `GeminiClient` is needed.
 
 For example: **Using proxy**
 
-In such a scenario, a custom `HttpClient` object will be used to set proxy parameters. This object will then be used to initialize the `GeminiClient`.
+In such a scenario, a custom `HttpClient` object will be used to set proxy parameters. This object will then be used to initialize the `GeminiClient`. To do so, several steps need to be performed:
 
-```csharp
-using HttpClientHandler httpClientHandler = new HttpClientHandler()
-{
-    Proxy = new WebProxy()
+1. Created a new Typed HttpClient
+
+    ```csharp
+    public class CustomClient : GeminiClient
     {
-            Address = new Uri("xxxxxxxxxxxx"),
-    },
-    UseProxy = true,
-};
+        public CustomClient(HttpClient httpClient) : base(httpClient)
+        {
+        }
+    }
+    ```
 
-using HttpClient httpClient = new HttpClient(httpClientHandler, false);
-httpClient.BaseAddress = new Uri("https://generativelanguage.googleapis.com");
-httpClient.DefaultRequestHeaders.Add("X-Goog-Api-Key", "xxxxxxxxxxxx");
+2. Add relevant configuration to the Typed HttpClient and register it with the DI container.
 
-GeminiConfiguration.GeminiClient = new GeminiClient(httpClient);
-```
+    ```csharp
+    builder.Services.AddHttpClient<GeminiClient, CustomClient>((sp, client) =>
+    {
+        var options = sp.GetRequiredService<IOptions<GeminiHttpClientOptions>>().Value;
+        client.BaseAddress = options.Url;
+    })
+    .ConfigurePrimaryHttpMessageHandler(() =>
+    {
+        var proxy = new WebProxy
+        {
+            Address = new Uri("http://localhost:1080/")
+        };
 
-In the above example, the `GeminiClient` instance is assigned to the static `GeminiClient` property of the `GeminiConfiguration` object. This can then be used with all instances of the different services. 
+        var httpClientHandler = new HttpClientHandler { Proxy = proxy, UseProxy = true };
 
-```csharp
-......
-GeminiConfiguration.GeminiClient = new GeminiClient(httpClient);
-```
+        //Not recommended for production
+        httpClientHandler.ServerCertificateCustomValidationCallback = HttpClientHandler.DangerousAcceptAnyServerCertificateValidator;
 
-The `GeminiClient` instance can also be set at the service level. With this different instances can be used with different services.
+        return httpClientHandler;
+    })
+    .AddHttpMessageHandler<GeminiAuthHandler<GeminiHttpClientOptions>>();
+    ```
 
-```csharp
-......
-var textService = new TextService(new GeminiClient(httpClient));
-var textServiceResult = await textService.GenereateContentAsync("Write a short poem on friendship.");
-```
+3. Register the required service:
 
+    ```csharp
+    builder.Services.AddTransient<ITextService, TextService>();
+    ```
 ##
 
 Thanks for using this library.
 
-- Contributions are welcome. Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
+- Library needs improvements and the contributions are highly welcomed. Please read the [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
 
 - The API is being manually released on Nuget.org. The [release notes file](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/RELEASE.md) lists down the release notes.
 
