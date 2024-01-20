@@ -12,7 +12,7 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         public async Task<GenerateContentResponse> GenereateContentAsync(MessageObject[] chat,
-                                                                         GenerateContentConfiguration configuration = null)
+                                                                         GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(chat);
             if (configuration != null)
@@ -24,7 +24,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
         public async Task StreamGenereateContentAsync(MessageObject[] chat,
                                                       Action<string> handleStreamResponse,
-                                                      GenerateContentConfiguration configuration = null)
+                                                      GenerateContentConfiguration? configuration)
         {
             GenerateContentRequest model = CreateRequestModel(chat);
             if (configuration != null)

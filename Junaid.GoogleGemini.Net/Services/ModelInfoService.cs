@@ -1,33 +1,16 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
+using Junaid.GoogleGemini.Net.Services.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    /// <summary>
-    /// 
-    /// </summary>
-    public class ModelInfoService
+    public class ModelInfoService : Service, IModelInfoService
     {
-        private readonly IGeminiClient GeminiClient;
-
-        /// <summary>
-        /// 
-        /// </summary>
-        public ModelInfoService()
+        public ModelInfoService(GeminiClient geminiClient) : base(geminiClient)
         {
-            GeminiClient = GeminiConfiguration.HttpClient;
         }
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="geminiClient"></param>
-        public ModelInfoService(IGeminiClient geminiClient)
-        {
-            GeminiClient = geminiClient;
-        }
-
-        /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <returns></returns>
         public async Task<ListModelInfoResponse> ListModelsAsync()
@@ -36,7 +19,7 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <summary>
-        /// 
+        ///
         /// </summary>
         /// <param name="name"></param>
         /// <returns></returns>

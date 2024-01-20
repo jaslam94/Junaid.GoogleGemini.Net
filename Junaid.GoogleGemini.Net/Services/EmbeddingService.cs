@@ -1,15 +1,13 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Services.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    public class EmbeddingService
+    public class EmbeddingService : Service, IEmbeddingService
     {
-        private readonly IGeminiClient GeminiClient;
-
-        public EmbeddingService(IGeminiClient geminiClient)
+        public EmbeddingService(GeminiClient geminiClient) : base(geminiClient)
         {
-            GeminiClient = geminiClient;
         }
 
         public async Task<EmbedContentResponse> EmbedContentAsync(string model, string text)

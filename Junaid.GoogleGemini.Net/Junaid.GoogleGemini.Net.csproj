@@ -17,12 +17,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Remove="Services\EmbeddingService.cs" />
-    <Compile Remove="Services\ModelInfoService.cs" />
-    <Compile Remove="Services\VisionService.cs" />
-  </ItemGroup>
-
-  <ItemGroup>
     <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
