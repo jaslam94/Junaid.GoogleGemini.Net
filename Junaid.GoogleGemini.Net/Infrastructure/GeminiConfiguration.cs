@@ -1,6 +1,8 @@
-﻿namespace Junaid.GoogleGemini.Net.Infrastructure
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
+
+namespace Junaid.GoogleGemini.Net.Infrastructure
 {
-    public class GeminiConfiguration
+    public class GeminiConfiguration : IGeminiConfiguration
     {
         public const string Scheme = "x-goog-api-key";
 

@@ -1,14 +1,15 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
+using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
-    public class Service
+    public abstract class Service
     {
-        protected readonly GeminiClient GeminiClient;
+        protected readonly IGeminiClient GeminiClient;
 
-        public Service(GeminiClient geminiClient)
+        protected Service(IGeminiClient geminiClient)
         {
-            GeminiClient = geminiClient;
+            GeminiClient = geminiClient ?? throw new ArgumentNullException(nameof(geminiClient));
         }
     }
 }

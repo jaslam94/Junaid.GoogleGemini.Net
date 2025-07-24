@@ -1,4 +1,5 @@
 ﻿using Junaid.GoogleGemini.Net.Exceptions;
+using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using System.Net.Http.Headers;
 using System.Text;
@@ -8,7 +9,7 @@ using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
-    public class GeminiClient
+    public class GeminiClient : IGeminiClient
     {
         private readonly HttpClient _httpClient;
 
@@ -74,14 +75,18 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                         using (var responseStream = await response.Content.ReadAsStreamAsync())
                         using (var streamReader = new StreamReader(responseStream))
                         {
-                            string line = string.Empty;
-                            while ((line = await streamReader.ReadLineAsync()) != null)
+                            string? line;
+                            while ((line = await streamReader.ReadLineAsync()) is not null)
                             {
                                 if (line.Contains(@"""text"""))
                                 {
                                     var jsonString = "{" + line + "}";
                                     var jsonObject = JsonSerializer.Deserialize<JsonObject>(jsonString);
-                                    yield return jsonObject?["text"]?.ToString();
+                                    var text = jsonObject?["text"]?.ToString();
+                                    if (text is not null)
+                                    {
+                                        yield return text;
+                                    }
                                 }
                             }
                         }
