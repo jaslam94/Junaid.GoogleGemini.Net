@@ -1,11 +1,10 @@
-using Junaid.GoogleGemini.Net.Models.GoogleApi;
+namespace Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 
-namespace Junaid.GoogleGemini.Net.Infrastructure.Interfaces
+public interface IGeminiClient
 {
-    public interface IGeminiClient
-    {
-        Task<TResponse> GetAsync<TResponse>(string endpoint);
-        Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data);
-        IAsyncEnumerable<string> SendAsync<TRequest>(string endpoint, TRequest data);
-    }
+    Task<TResponse> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default);
+
+    Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data, CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<string> SendAsync<TRequest>(string endpoint, TRequest data, CancellationToken cancellationToken = default);
 }

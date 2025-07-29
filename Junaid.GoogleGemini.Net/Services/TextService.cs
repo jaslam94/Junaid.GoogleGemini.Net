@@ -1,63 +1,124 @@
-﻿using Junaid.GoogleGemini.Net.Infrastructure;
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Builders;
+using Junaid.GoogleGemini.Net.Infrastructure.Extensions;
+using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
+using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
+    /// <summary>
+    /// Service for text-only operations using Gemini API
+    /// </summary>
     public class TextService : Service, ITextService
     {
-        public TextService(GeminiClient geminiClient) : base(geminiClient)
+        /// <summary>
+        /// Initializes a new instance of the TextService
+        /// </summary>
+        public TextService(
+            IGeminiClient geminiClient,
+            ILogger<TextService> logger,
+            IOptions<GeminiOptions> options,
+            ISafetyService safetyService) : base(geminiClient, logger, options, safetyService)
         {
         }
 
-        public async Task<GenerateContentResponse> GenereateContentAsync(string text,
-                                                                         GenerateContentConfiguration? configuration)
+        /// <inheritdoc/>
+        public async Task<GenerateContentResponse> GenereateContentAsync(
+            string text,
+            CancellationToken cancellationToken = default)
         {
-            GenerateContentRequest model = CreateRequestModel(text);
-            if (configuration != null)
+            ValidateTextInput(text, nameof(text));
+
+            try
             {
-                model.ApplyConfiguration(configuration);
+                LogOperationStart("text content generation", new { TextLength = text.Length });
+
+                var request = GeminiClient.CreateTextRequest(text).Build();
+                var endpoint = $"/models/{Options.DefaultModel}:generateContent";
+                
+                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+                    endpoint,
+                    request,
+                    cancellationToken);
+
+                ValidateResponse(response, "text content generation");
+                LogOperationSuccess("text content generation");
+                
+                return response;
             }
-            return await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>($"/v1beta/models/gemini-pro:generateContent", model);
-        }
-
-        public async Task StreamGenereateContentAsync(string text,
-                                                      Action<string> handleStreamResponse,
-                                                      GenerateContentConfiguration? configuration)
-        {
-            GenerateContentRequest model = CreateRequestModel(text);
-            if (configuration != null)
+            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
             {
-                model.ApplyConfiguration(configuration);
-            }
-            await foreach (var data in GeminiClient.SendAsync($"/v1beta/models/gemini-pro:streamGenerateContent", model))
-            {
-                handleStreamResponse(data);
+                LogOperationError(ex, "text content generation");
+                throw;
             }
         }
 
-        public async Task<CountTokensResponse> CountTokensAsync(string text)
+        /// <inheritdoc/>
+        public async Task StreamGenereateContentAsync(
+            string text,
+            Action<string> handleStreamResponse,
+            CancellationToken cancellationToken = default)
         {
-            GenerateContentRequest model = CreateRequestModel(text);
-            return await GeminiClient.PostAsync<GenerateContentRequest, CountTokensResponse>($"/v1beta/models/gemini-pro:countTokens", model);
-        }
+            ValidateTextInput(text, nameof(text));
+            ValidateStreamHandler(handleStreamResponse);
 
-        private static GenerateContentRequest CreateRequestModel(string text)
-        {
-            var contents = new Content[]
+            try
             {
-                new Content
+                LogOperationStart("text content streaming", new { TextLength = text.Length });
+
+                var request = GeminiClient.CreateStreamingRequest(
+                    GeminiClient.CreateTextRequest(text)
+                ).Build();
+
+                var endpoint = $"/models/{Options.DefaultModel}:streamGenerateContent";
+                await foreach (var data in GeminiClient.SendAsync(endpoint, request).WithCancellation(cancellationToken))
                 {
-                    parts = new[]
-                    {
-                        new Part
-                        {
-                            text = text
-                        }
-                    }
+                    handleStreamResponse(data);
                 }
-            };
-            return new GenerateContentRequest(contents);
+
+                LogOperationSuccess("text content streaming");
+            }
+            catch (Exception ex)
+            {
+                LogOperationError(ex, "text content streaming");
+                throw;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task<CountTokensResponse> CountTokensAsync(
+            string text,
+            CancellationToken cancellationToken = default)
+        {
+            ValidateTextInput(text, nameof(text));
+
+            try
+            {
+                LogOperationStart("token counting", new { TextLength = text.Length });
+
+                var request = new ContentRequestBuilder()
+                    .WithRole("user")
+                    .AddText(text)
+                    .AddMessage()
+                    .Build();
+
+                var endpoint = $"/models/{Options.DefaultModel}:countTokens";
+                var response = await GeminiClient.PostAsync<GenerateContentRequest, CountTokensResponse>(
+                    endpoint,
+                    request,
+                    cancellationToken);
+
+                LogOperationSuccess("token counting", new { TokenCount = response.totalTokens });
+                return response;
+            }
+            catch (Exception ex)
+            {
+                LogOperationError(ex, "token counting");
+                throw;
+            }
         }
     }
 }

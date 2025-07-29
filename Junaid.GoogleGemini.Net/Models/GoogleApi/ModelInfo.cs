@@ -1,6 +1,5 @@
-﻿/// <summary>
-/// 
-/// </summary>
+﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+
 public class ModelInfo
 {
     public string name { get; set; }
