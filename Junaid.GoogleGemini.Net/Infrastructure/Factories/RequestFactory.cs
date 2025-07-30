@@ -1,4 +1,3 @@
-using Junaid.GoogleGemini.Net.Infrastructure.Constants;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;

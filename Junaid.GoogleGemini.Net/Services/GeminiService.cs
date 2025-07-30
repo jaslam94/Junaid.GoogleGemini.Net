@@ -20,11 +20,6 @@ namespace Junaid.GoogleGemini.Net.Services
         IOptions<GeminiOptions> options,
         ISafetyService safetyService) : Service(geminiClient, logger, options, safetyService), IGeminiService
     {
-        private const int MAX_TEXT_LENGTH = 100000;
-        private const int MAX_IMAGE_SIZE = 20 * 1024 * 1024; // 20MB
-        private const int MAX_MESSAGES = 50;
-        private const int MAX_MESSAGE_LENGTH = 10000;
-
         private static readonly string[] SupportedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
 
         /// <inheritdoc/>
@@ -116,9 +111,9 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            ValidateTextInput(prompt, nameof(prompt), MAX_TEXT_LENGTH);
-            ValidateImageFile(image);
-            ValidateStreamHandler(handleResponse);
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+            ValidationUtilities.ValidateFileObject(image, nameof(image));
+            ValidationUtilities.ValidateStreamHandler(handleResponse, nameof(handleResponse));
 
             var request = CreateVisionRequest(prompt, image, options, streaming: true);
             var endpoint = GetStreamEndpoint(options?.Model ?? "gemini-1.5-pro");
@@ -139,8 +134,8 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            ValidateMessages(messages);
-            ValidateStreamHandler(handleResponse);
+            ValidationUtilities.ValidateMessages(messages, nameof(messages));
+            ValidationUtilities.ValidateStreamHandler(handleResponse, nameof(handleResponse));
 
             var request = CreateChatRequest(messages, options, streaming: true);
             var endpoint = GetStreamEndpoint(options?.Model);
@@ -159,7 +154,7 @@ namespace Junaid.GoogleGemini.Net.Services
             string prompt,
             CancellationToken cancellationToken = default)
         {
-            ValidateTextInput(prompt, nameof(prompt), MAX_TEXT_LENGTH);
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
 
             var request = CreateTextRequest(prompt, null);
             var endpoint = GetCountTokensEndpoint(null);
@@ -178,8 +173,8 @@ namespace Junaid.GoogleGemini.Net.Services
             FileObject image,
             CancellationToken cancellationToken = default)
         {
-            ValidateTextInput(prompt, nameof(prompt), MAX_TEXT_LENGTH);
-            ValidateImageFile(image);
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+            ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = CreateVisionRequest(prompt, image, null);
             var endpoint = GetCountTokensEndpoint("gemini-1.5-pro");
@@ -197,7 +192,7 @@ namespace Junaid.GoogleGemini.Net.Services
             MessageObject[] messages,
             CancellationToken cancellationToken = default)
         {
-            ValidateMessages(messages);
+            ValidationUtilities.ValidateMessages(messages, nameof(messages));
 
             var request = CreateChatRequest(messages, null);
             var endpoint = GetCountTokensEndpoint(null);
@@ -311,56 +306,6 @@ namespace Junaid.GoogleGemini.Net.Services
 
         private string GetCountTokensEndpoint(string? model) =>
             $"/models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:countTokens";
-
-        private static void ValidateImageFile(FileObject image)
-        {
-            ArgumentNullException.ThrowIfNull(image);
-
-            if (string.IsNullOrWhiteSpace(image.FileName))
-                throw new ArgumentException("File name cannot be null or empty", nameof(image));
-
-            if (image.FileContent == null || image.FileContent.Length == 0)
-                throw new ArgumentException("File content cannot be null or empty", nameof(image));
-
-            if (image.FileContent.Length > MAX_IMAGE_SIZE)
-                throw new ArgumentException($"Image size exceeds maximum limit of {MAX_IMAGE_SIZE / (1024 * 1024)}MB", nameof(image));
-
-            var extension = Path.GetExtension(image.FileName).ToLowerInvariant();
-            if (!SupportedImageTypes.Contains(extension))
-                throw new ArgumentException($"Unsupported image type: {extension}. Supported types: {string.Join(", ", SupportedImageTypes)}", nameof(image));
-        }
-
-        private static void ValidateMessages(MessageObject[] messages)
-        {
-            if (messages == null)
-                throw new ArgumentNullException(nameof(messages));
-
-            if (messages.Length == 0)
-                throw new ArgumentException("Messages array cannot be empty", nameof(messages));
-
-            if (messages.Length > MAX_MESSAGES)
-                throw new ArgumentException($"Too many messages. Maximum allowed: {MAX_MESSAGES}", nameof(messages));
-
-            var validRoles = new[] { "user", "model" };
-            for (int i = 0; i < messages.Length; i++)
-            {
-                var message = messages[i];
-                if (message == null)
-                    throw new ArgumentException($"Message at index {i} cannot be null", nameof(messages));
-
-                if (string.IsNullOrWhiteSpace(message.Role))
-                    throw new ArgumentException($"Message role at index {i} cannot be null or empty", nameof(messages));
-
-                if (!validRoles.Contains(message.Role.ToLowerInvariant()))
-                    throw new ArgumentException($"Invalid message role '{message.Role}' at index {i}. Must be 'user' or 'model'", nameof(messages));
-
-                if (string.IsNullOrWhiteSpace(message.Text))
-                    throw new ArgumentException($"Message text at index {i} cannot be null or empty", nameof(messages));
-
-                if (message.Text.Length > MAX_MESSAGE_LENGTH)
-                    throw new ArgumentException($"Message at index {i} exceeds maximum length of {MAX_MESSAGE_LENGTH:N0} characters", nameof(messages));
-            }
-        }
 
         #endregion Private Helper Methods
     }

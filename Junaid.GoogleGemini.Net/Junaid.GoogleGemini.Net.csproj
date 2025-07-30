@@ -13,13 +13,15 @@
 		<PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReleaseNotes>
-			- Updated to target .NET 8 LTS only
-			- Removed .NET 6 support (end of life November 2024)
-			- Removed .NET 7 support (end of life May 2024)
-			- Enhanced configuration system with proper validation
-			- Improved rate limiting and error handling
+			- MAJOR CLEANUP: Removed all legacy and obsolete services
+			- Removed TextService, VisionService, ChatService, CodeService, and AnalysisService
+			- Removed legacy ServiceCollectionExtensions and GeminiConfiguration
+			- Consolidated to unified IGeminiService + 4 specialized services only
+			- 50% reduction in API surface area achieved
+			- Enhanced performance and maintainability
+			- Targets .NET 8 LTS only for optimal performance
 		</PackageReleaseNotes>
-		<Version>6.0.0</Version>
+		<Version>7.0.0</Version>
 	</PropertyGroup>
 
 	<ItemGroup>

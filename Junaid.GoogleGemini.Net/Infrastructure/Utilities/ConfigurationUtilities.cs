@@ -5,7 +5,7 @@ using Junaid.GoogleGemini.Net.Models.Requests;
 namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 {
     /// <summary>
-    /// Utility class for configuration management and migration
+    /// Utility class for configuration management
     /// </summary>
     public static class ConfigurationUtilities
     {
@@ -113,30 +113,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         #region Legacy Migration Support
 
         /// <summary>
-        /// Converts legacy GeminiConfiguration to modern GeminiOptions
-        /// </summary>
-        /// <param name="legacyConfig">Legacy configuration</param>
-        /// <returns>Modern options</returns>
-        [Obsolete("This method helps migrate from legacy configuration. Use GeminiOptions directly instead.")]
-        public static GeminiOptions ToGeminiOptions(this GeminiConfiguration legacyConfig)
-        {
-            return new GeminiOptions
-            {
-                ApiKey = legacyConfig.ApiKey,
-                BaseUrl = new Uri(GeminiConstants.DefaultBaseUrl),
-                TimeoutSeconds = GeminiConstants.Defaults.TimeoutSeconds,
-                MaxRetries = GeminiConstants.Defaults.MaxRetries,
-                DefaultModel = GeminiConstants.Defaults.Model,
-                RateLimit = new RateLimitOptions
-                {
-                    Enabled = true,
-                    RequestsPerMinute = GeminiConstants.Limits.DefaultRequestsPerMinute,
-                    TokensPerMinute = GeminiConstants.Limits.DefaultTokensPerMinute
-                }
-            };
-        }
-
-        /// <summary>
         /// Converts legacy GenerateContentConfiguration to modern GeminiRequestOptions
         /// </summary>
         /// <param name="legacyConfig">Legacy request configuration</param>
@@ -165,7 +141,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 # Configuration Migration Guide
 
 ## Service Registration
-? OLD (deprecated):
+? OLD (removed in v7.0.0):
 services.AddGeminiServices(config => 
 {
     config.ApiKey = ""your-api-key"";
@@ -195,13 +171,13 @@ var options = new GeminiRequestOptions
 };
 
 ## Using Utilities
-? Default configuration:
+?? Default configuration:
 var options = ConfigurationUtilities.CreateDefaultOptions();
 
-? Production configuration:
+?? Production configuration:
 var options = ConfigurationUtilities.CreateProductionOptions(""your-api-key"");
 
-? Development configuration:
+??? Development configuration:
 var options = ConfigurationUtilities.CreateDevelopmentOptions(""your-api-key"");
 ";
         }

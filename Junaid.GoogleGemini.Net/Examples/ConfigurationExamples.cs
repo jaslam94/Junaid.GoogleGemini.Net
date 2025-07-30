@@ -1,4 +1,3 @@
-using Junaid.GoogleGemini.Net.Infrastructure.Helpers;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.Requests;
@@ -137,12 +136,7 @@ namespace Junaid.GoogleGemini.Net.Examples
         /// </summary>
         public static void ConfigurationComparison()
         {
-            // Before: Scattered helper classes and constants
-            // - MimeTypeHelper, ImageHelper, ConfigurationMigrationHelper
-            // - SafetyConstants, CategoryConstants, ThresholdConstants, GeminiModels
-            // - Manual validation, no utilities
-            // - Inconsistent patterns
-
+            // Before: Scattered helper classes and constants (REMOVED in v6.0.0)
             // After: Unified utility system
             // - FileUtilities (file handling, MIME types, validation)
             // - GeminiConstants (all constants in one place)
@@ -153,27 +147,27 @@ namespace Junaid.GoogleGemini.Net.Examples
             Console.WriteLine("? Helper classes consolidated successfully!");
             Console.WriteLine("?? Reduced from 7+ helper classes to 4 utility classes");
             Console.WriteLine("?? Better organization and discoverability");
-            Console.WriteLine("??? Enhanced validation and error handling");
+            Console.WriteLine("?? Enhanced validation and error handling");
             Console.WriteLine("? Improved performance with optimized implementations");
             Console.WriteLine("?? Comprehensive documentation and examples");
         }
 
         /// <summary>
-        /// Migration example for developers updating from old helpers
+        /// Migration example for developers updating from old helpers (removed in v6.0.0)
         /// </summary>
         public static void MigrationExample()
         {
             Console.WriteLine("Migration Guide:");
             Console.WriteLine("================");
             
-            Console.WriteLine("? OLD:");
+            Console.WriteLine("? OLD (removed in v6.0.0):");
             Console.WriteLine("  MimeTypeHelper.GetMimeType(fileName)");
             Console.WriteLine("  image.IsImage()");
             Console.WriteLine("  SafetyCategory.Harassment");
             Console.WriteLine("  GeminiModels.Recommended");
             Console.WriteLine();
             
-            Console.WriteLine("? NEW:");
+            Console.WriteLine("? NEW (unified utilities):");
             Console.WriteLine("  FileUtilities.GetMimeType(fileName)");
             Console.WriteLine("  FileUtilities.IsImageContent(image)");
             Console.WriteLine("  GeminiConstants.SafetyCategories.Harassment");

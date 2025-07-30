@@ -1,4 +1,4 @@
-using Junaid.GoogleGemini.Net.Infrastructure.Constants;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 
@@ -9,14 +9,7 @@ namespace Junaid.GoogleGemini.Net.Services
     /// </summary>
     public class SafetyService : ISafetyService
     {
-        private readonly string[] _allCategories = new[]
-        {
-            SafetyCategory.Harassment,
-            SafetyCategory.HateSpeech,
-            SafetyCategory.SexuallyExplicit,
-            SafetyCategory.DangerousContent,
-            SafetyCategory.Deceptive
-        };
+        private static readonly string[] _allCategories = GeminiConstants.SafetyCategories.All;
 
         /// <inheritdoc/>
         public List<SafetySetting> CreateSafetySettings(string threshold)
@@ -83,11 +76,11 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             return CreateSafetySettings(new Dictionary<string, string>
             {
-                { SafetyCategory.Harassment, SafetyThreshold.Low },
-                { SafetyCategory.HateSpeech, SafetyThreshold.Low },
-                { SafetyCategory.SexuallyExplicit, SafetyThreshold.Low },
-                { SafetyCategory.DangerousContent, SafetyThreshold.Low },
-                { SafetyCategory.Deceptive, SafetyThreshold.Low }
+                { GeminiConstants.SafetyCategories.Harassment, GeminiConstants.SafetyThresholds.Low },
+                { GeminiConstants.SafetyCategories.HateSpeech, GeminiConstants.SafetyThresholds.Low },
+                { GeminiConstants.SafetyCategories.SexuallyExplicit, GeminiConstants.SafetyThresholds.Low },
+                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.Low },
+                { GeminiConstants.SafetyCategories.Deceptive, GeminiConstants.SafetyThresholds.Low }
             });
         }
 
@@ -96,11 +89,11 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             return CreateSafetySettings(new Dictionary<string, string>
             {
-                { SafetyCategory.Harassment, SafetyThreshold.Medium },
-                { SafetyCategory.HateSpeech, SafetyThreshold.Medium },
-                { SafetyCategory.SexuallyExplicit, SafetyThreshold.High },
-                { SafetyCategory.DangerousContent, SafetyThreshold.Medium },
-                { SafetyCategory.Deceptive, SafetyThreshold.Medium }
+                { GeminiConstants.SafetyCategories.Harassment, GeminiConstants.SafetyThresholds.Medium },
+                { GeminiConstants.SafetyCategories.HateSpeech, GeminiConstants.SafetyThresholds.Medium },
+                { GeminiConstants.SafetyCategories.SexuallyExplicit, GeminiConstants.SafetyThresholds.High },
+                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.Medium },
+                { GeminiConstants.SafetyCategories.Deceptive, GeminiConstants.SafetyThresholds.Medium }
             });
         }
 
@@ -109,11 +102,11 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             return CreateSafetySettings(new Dictionary<string, string>
             {
-                { SafetyCategory.Harassment, SafetyThreshold.High },
-                { SafetyCategory.HateSpeech, SafetyThreshold.High },
-                { SafetyCategory.SexuallyExplicit, SafetyThreshold.High },
-                { SafetyCategory.DangerousContent, SafetyThreshold.High },
-                { SafetyCategory.Deceptive, SafetyThreshold.High }
+                { GeminiConstants.SafetyCategories.Harassment, GeminiConstants.SafetyThresholds.High },
+                { GeminiConstants.SafetyCategories.HateSpeech, GeminiConstants.SafetyThresholds.High },
+                { GeminiConstants.SafetyCategories.SexuallyExplicit, GeminiConstants.SafetyThresholds.High },
+                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.High },
+                { GeminiConstants.SafetyCategories.Deceptive, GeminiConstants.SafetyThresholds.High }
             });
         }
 
@@ -129,10 +122,10 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             return level switch
             {
-                SafetyProbability.Negligible => 0,
-                SafetyProbability.Low => 1,
-                SafetyProbability.Medium => 2,
-                SafetyProbability.High => 3,
+                GeminiConstants.SafetyProbabilities.Negligible => 0,
+                GeminiConstants.SafetyProbabilities.Low => 1,
+                GeminiConstants.SafetyProbabilities.Medium => 2,
+                GeminiConstants.SafetyProbabilities.High => 3,
                 _ => -1
             };
         }

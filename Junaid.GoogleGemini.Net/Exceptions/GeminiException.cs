@@ -1,4 +1,4 @@
-﻿using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using System.Net;
 
 namespace Junaid.GoogleGemini.Net.Exceptions

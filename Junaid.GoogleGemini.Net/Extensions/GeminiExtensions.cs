@@ -103,12 +103,6 @@ namespace Junaid.GoogleGemini.Net.Extensions
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
 
-            // Legacy services for backward compatibility (OPTIONAL - can be removed in next major version)
-            services.AddTransient<ITextService, TextService>();
-            services.AddTransient<IVisionService, VisionService>();
-            services.AddTransient<IChatService, ChatService>();
-            services.AddTransient<ICodeService, CodeService>();
-
             return services;
         }
     }
