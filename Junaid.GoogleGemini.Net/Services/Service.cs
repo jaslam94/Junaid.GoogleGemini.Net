@@ -1,7 +1,6 @@
-﻿using Junaid.GoogleGemini.Net.Infrastructure;
-using Junaid.GoogleGemini.Net.Infrastructure.Constants;
-using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -37,17 +36,74 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <summary>
+        /// Common method to execute API requests with consistent error handling and logging
+        /// </summary>
+        protected async Task<TResponse> ExecuteRequestAsync<TRequest, TResponse>(
+            string operation,
+            string endpoint,
+            TRequest request,
+            object? logContext = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                LogOperationStart(operation, logContext);
+
+                var response = await GeminiClient.PostAsync<TRequest, TResponse>(
+                    endpoint,
+                    request,
+                    cancellationToken);
+
+                if (response is GenerateContentResponse contentResponse)
+                {
+                    ValidateResponse(contentResponse, operation);
+                }
+
+                LogOperationSuccess(operation);
+                return response;
+            }
+            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
+            {
+                LogOperationError(ex, operation);
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Common method to execute streaming requests with consistent error handling and logging
+        /// </summary>
+        protected async Task ExecuteStreamRequestAsync<TRequest>(
+            string operation,
+            string endpoint,
+            TRequest request,
+            Action<string> handleStreamResponse,
+            object? logContext = null,
+            CancellationToken cancellationToken = default)
+        {
+            try
+            {
+                LogOperationStart(operation, logContext);
+
+                await foreach (var data in GeminiClient.SendAsync(endpoint, request).WithCancellation(cancellationToken))
+                {
+                    handleStreamResponse(data);
+                }
+
+                LogOperationSuccess(operation);
+            }
+            catch (Exception ex)
+            {
+                LogOperationError(ex, operation);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets the default safety thresholds used across all services
         /// </summary>
         protected static Dictionary<string, string> GetDefaultSafetyThresholds()
         {
-            return new Dictionary<string, string>
-            {
-                { SafetyCategory.Harassment, SafetyThreshold.Medium },
-                { SafetyCategory.HateSpeech, SafetyThreshold.Medium },
-                { SafetyCategory.SexuallyExplicit, SafetyThreshold.High },
-                { SafetyCategory.DangerousContent, SafetyThreshold.Medium }
-            };
+            return ConfigurationUtilities.GetDefaultSafetyThresholds();
         }
 
         /// <summary>
@@ -55,10 +111,7 @@ namespace Junaid.GoogleGemini.Net.Services
         /// </summary>
         protected void ValidateResponse(GenerateContentResponse response, string operation = "operation")
         {
-            if (response?.candidates == null || response.candidates.Length == 0)
-            {
-                throw new InvalidOperationException($"No content was generated for {operation}");
-            }
+            ValidationUtilities.ValidateContentResponse(response, operation);
 
             if (SafetyService != null && !SafetyService.IsContentSafe(response, GetDefaultSafetyThresholds()))
             {
@@ -72,26 +125,15 @@ namespace Junaid.GoogleGemini.Net.Services
         /// </summary>
         protected static void ValidateStreamHandler(Action<string> handleStreamResponse)
         {
-            if (handleStreamResponse == null)
-            {
-                throw new ArgumentNullException(nameof(handleStreamResponse), "Stream response handler cannot be null");
-            }
+            ValidationUtilities.ValidateStreamHandler(handleStreamResponse);
         }
 
         /// <summary>
         /// Validates basic text input with optional length limits
         /// </summary>
-        protected static void ValidateTextInput(string text, string paramName = "text", int maxLength = 100000)
+        protected static void ValidateTextInput(string text, string paramName = "text", int maxLength = GeminiConstants.Limits.MaxTextLength)
         {
-            if (string.IsNullOrWhiteSpace(text))
-            {
-                throw new ArgumentException($"{paramName} cannot be null or empty", paramName);
-            }
-
-            if (text.Length > maxLength)
-            {
-                throw new ArgumentException($"{paramName} exceeds maximum length of {maxLength:N0} characters", paramName);
-            }
+            ValidationUtilities.ValidateTextInput(text, paramName, maxLength);
         }
 
         /// <summary>

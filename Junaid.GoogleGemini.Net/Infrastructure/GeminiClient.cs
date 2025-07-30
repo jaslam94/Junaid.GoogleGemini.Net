@@ -21,18 +21,20 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         private readonly ILogger<GeminiClient> _logger;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
-        private readonly GeminiRateLimiter _rateLimiter;
+        private readonly IRateLimiter _rateLimiter;
 
         /// <summary>
         /// Initializes a new instance of the GeminiClient
         /// </summary>
         /// <param name="httpClient">The HttpClient instance to use for API requests</param>
         /// <param name="logger">Logger for diagnostic information</param>
-        public GeminiClient(HttpClient httpClient, ILogger<GeminiClient> logger, GeminiRateLimiter? rateLimiter = null)
+        /// <param name="rateLimiter">Rate limiter for API requests</param>
+        public GeminiClient(HttpClient httpClient, ILogger<GeminiClient> logger, IRateLimiter rateLimiter)
         {
             _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-            _rateLimiter = rateLimiter ?? new GeminiRateLimiter();
+            _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
+            
             _jsonOptions = new JsonSerializerOptions
             {
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
@@ -65,7 +67,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                                 "Retry {RetryCount} after {RetryTime}ms due to {Exception}",
                                 retryCount,
                                 timeSpan.TotalMilliseconds,
-                                exception.Exception.Message);
+                                exception.Exception?.Message);
                         }
                     });
         }
@@ -85,6 +87,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             try
             {
                 _logger.LogInformation("Making GET request to endpoint: {Endpoint}", endpoint);
+
+                // Apply rate limiting
+                using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+                if (!lease.IsAcquired)
+                {
+                    throw new GeminiException("Rate limit exceeded. Please try again later.");
+                }
+
                 var response = await _retryPolicy.ExecuteAsync(async (ctx) =>
                 {
                     var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
@@ -119,6 +129,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             try
             {
                 _logger.LogInformation("Making POST request to endpoint: {Endpoint}", endpoint);
+                
+                // Apply rate limiting
+                using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+                if (!lease.IsAcquired)
+                {
+                    throw new GeminiException("Rate limit exceeded. Please try again later.");
+                }
+
                 var serializedContent = JsonSerializer.Serialize(data, _jsonOptions);
                 var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
 
@@ -209,8 +227,15 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
             _logger.LogInformation("Starting streaming request to endpoint: {Endpoint}", endpoint);
 
+            // Apply rate limiting
+            using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+            if (!lease.IsAcquired)
+            {
+                throw new GeminiException("Rate limit exceeded. Please try again later.");
+            }
+
             using var ms = new MemoryStream();
-            await JsonSerializer.SerializeAsync(ms, data, _jsonOptions);
+            await JsonSerializer.SerializeAsync(ms, data, _jsonOptions, cancellationToken);
             ms.Seek(0, SeekOrigin.Begin);
 
             var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
@@ -222,19 +247,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
             _logger.LogDebug("Sending streaming request with payload size: {Size} bytes", ms.Length);
 
-            using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
-            if (!lease.IsAcquired)
-            {
-                throw new GeminiException("Rate limit exceeded. Please try again later.");
-            }
-
             request.Headers.Add("X-Correlation-ID", correlationId);
             var response = await _retryPolicy.ExecuteAsync(async () =>
                 await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken));
 
             if (!response.IsSuccessStatusCode)
             {
-                var content = await response.Content.ReadAsStringAsync();
+                var content = await response.Content.ReadAsStringAsync(cancellationToken);
                 _logger.LogWarning("Stream request failed. Status: {StatusCode}. Content: {Content}",
                     response.StatusCode, content);
 
@@ -248,7 +267,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
 
             _logger.LogInformation("Stream connection established successfully");
-            var responseStream = await response.Content.ReadAsStreamAsync();
+            var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
             var streamReader = new StreamReader(responseStream);
             var messageCount = 0;
 

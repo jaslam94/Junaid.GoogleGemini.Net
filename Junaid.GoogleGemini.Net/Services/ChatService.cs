@@ -1,5 +1,4 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure.Builders;
-using Junaid.GoogleGemini.Net.Infrastructure.Extensions;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
@@ -37,28 +36,15 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateChat(chat);
 
-            try
-            {
-                LogOperationStart("chat response generation", new { MessageCount = chat.Length });
+            var endpoint = $"/models/{MODEL_NAME}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateChatRequest(chat);
 
-                var request = GeminiClient.CreateChatRequest(chat).Build();
-                var endpoint = $"/models/{MODEL_NAME}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                ValidateResponse(response, "chat response generation");
-                LogOperationSuccess("chat response generation");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "chat response generation");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "chat response generation",
+                endpoint,
+                request,
+                new { MessageCount = chat.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -70,27 +56,23 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidateChat(chat);
             ValidateStreamHandler(handleStreamResponse);
 
-            try
+            var request = new ContentRequestBuilder();
+            foreach (var message in chat)
             {
-                LogOperationStart("chat response streaming", new { MessageCount = chat.Length });
-
-                var request = GeminiClient.CreateStreamingRequest(
-                    GeminiClient.CreateChatRequest(chat)
-                ).Build();
-
-                var endpoint = $"/models/{MODEL_NAME}:streamGenerateContent";
-                await foreach (var data in GeminiClient.SendAsync(endpoint, request).WithCancellation(cancellationToken))
-                {
-                    handleStreamResponse(data);
-                }
-
-                LogOperationSuccess("chat response streaming");
+                request.WithRole(message.Role)
+                       .AddText(message.Text)
+                       .AddMessage();
             }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "chat response streaming");
-                throw;
-            }
+            request.EnableStreaming(true);
+
+            var endpoint = $"/models/{MODEL_NAME}:streamGenerateContent";
+            await ExecuteStreamRequestAsync(
+                "chat response streaming",
+                endpoint,
+                request.Build(),
+                handleStreamResponse,
+                new { MessageCount = chat.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -100,35 +82,15 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateChat(chat);
 
-            try
-            {
-                LogOperationStart("chat token counting", new { MessageCount = chat.Length });
+            var request = Infrastructure.Factories.RequestFactory.CreateChatRequest(chat);
+            var endpoint = $"/models/{MODEL_NAME}:countTokens";
 
-                var builder = new ContentRequestBuilder();
-                foreach (var message in chat)
-                {
-                    builder
-                        .WithRole(message.Role)
-                        .AddText(message.Text)
-                        .AddMessage();
-                }
-
-                var request = builder.Build();
-                var endpoint = $"/models/{MODEL_NAME}:countTokens";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, CountTokensResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                LogOperationSuccess("chat token counting", new { TokenCount = response.totalTokens });
-                return response;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "chat token counting");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, CountTokensResponse>(
+                "chat token counting",
+                endpoint,
+                request,
+                new { MessageCount = chat.Length },
+                cancellationToken);
         }
 
         private static void ValidateChat(MessageObject[] chat)

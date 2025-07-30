@@ -15,19 +15,31 @@ namespace Junaid.GoogleGemini.Net.Extensions
     public static class GeminiExtensions
     {
         /// <summary>
-        /// Adds Gemini services to the service collection with configuration
+        /// Adds Gemini services to the service collection with configuration section
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="configuration">The configuration section containing Gemini options</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddGemini(this IServiceCollection services, IConfiguration configuration)
+        public static IServiceCollection AddGemini(this IServiceCollection services, IConfigurationSection configuration)
         {
-            services.AddGemini(options => configuration.Bind(options));
-            return services;
+            return services.AddGemini(options => configuration.Bind(options));
         }
 
         /// <summary>
-        /// Adds Gemini services to the service collection with options
+        /// Adds Gemini services to the service collection with configuration
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="configuration">The configuration containing Gemini options</param>
+        /// <param name="sectionName">The section name to bind from (default: "Gemini")</param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddGemini(this IServiceCollection services, IConfiguration configuration, string sectionName = "Gemini")
+        {
+            var section = configuration.GetSection(sectionName);
+            return services.AddGemini(options => section.Bind(options));
+        }
+
+        /// <summary>
+        /// Adds Gemini services to the service collection with options configuration
         /// </summary>
         /// <param name="services">The service collection</param>
         /// <param name="configureOptions">Action to configure options</param>
@@ -41,7 +53,14 @@ namespace Junaid.GoogleGemini.Net.Extensions
                 .Services
                 .AddSingleton<IValidateOptions<GeminiOptions>, GeminiOptionsValidator>();
 
-            // Configure HTTP client
+            // Register rate limiter
+            services.AddSingleton<IRateLimiter>(serviceProvider =>
+            {
+                var options = serviceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                return new GeminiRateLimiter(options.RateLimit);
+            });
+
+            // Configure HTTP client with authentication
             services.AddHttpClient<GeminiClient>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
@@ -53,6 +72,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
                 var options = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
                 var handler = new HttpClientHandler();
 
+                // Configure proxy if specified
                 if (options.Proxy != null)
                 {
                     var proxy = new WebProxy(options.Proxy.Address);
@@ -71,26 +91,23 @@ namespace Junaid.GoogleGemini.Net.Extensions
             })
             .AddHttpMessageHandler<GeminiAuthHandler>();
 
-            // Register core services
+            // Register authentication handler
             services.AddTransient<GeminiAuthHandler>();
-            services.AddSingleton<IRateLimiter>(_ => 
-            {
-                var options = _.GetRequiredService<IOptions<GeminiOptions>>().Value;
-                return new GeminiRateLimiter(
-                    options.RateLimit.Enabled,
-                    options.RateLimit.RequestsPerMinute,
-                    options.RateLimit.TokensPerMinute);
-            });
+            
+            // Register unified service (replaces multiple specialized services)
+            services.AddTransient<IGeminiService, GeminiService>();
+            
+            // Keep specialized services that have unique functionality
+            services.AddTransient<IModelInfoService, ModelInfoService>();
+            services.AddTransient<IEmbeddingService, EmbeddingService>();
+            services.AddTransient<ISafetyService, SafetyService>();
+            services.AddSingleton<IFunctionService, FunctionService>();
 
-            // Register feature services
+            // Legacy services for backward compatibility (OPTIONAL - can be removed in next major version)
             services.AddTransient<ITextService, TextService>();
             services.AddTransient<IVisionService, VisionService>();
             services.AddTransient<IChatService, ChatService>();
-            services.AddTransient<IModelInfoService, ModelInfoService>();
-            services.AddTransient<IEmbeddingService, EmbeddingService>();
             services.AddTransient<ICodeService, CodeService>();
-            services.AddTransient<ISafetyService, SafetyService>();
-            services.AddSingleton<IFunctionService, FunctionService>();
 
             return services;
         }

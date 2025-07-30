@@ -1,57 +1,96 @@
 using System.Threading.RateLimiting;
+using Junaid.GoogleGemini.Net.Infrastructure.Options;
 
-namespace Junaid.GoogleGemini.Net.Infrastructure;
-
-/// <summary>
-/// Rate limiter for Gemini API requests using a token bucket algorithm.
-/// </summary>
-public class GeminiRateLimiter
+namespace Junaid.GoogleGemini.Net.Infrastructure
 {
-    private readonly TokenBucketRateLimiter _rateLimiter;
+    /// <summary>
+    /// Interface for rate limiting Gemini API requests
+    /// </summary>
+    public interface IRateLimiter : IDisposable
+    {
+        /// <summary>
+        /// Asynchronously acquires permission to make an API request
+        /// </summary>
+        ValueTask<RateLimitLease> AcquireAsync(CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Gets the current available permits (optional, may not be supported by all implementations)
+        /// </summary>
+        int? GetAvailablePermits();
+    }
 
     /// <summary>
-    /// Initializes a new instance of the <see cref="GeminiRateLimiter"/> class.
+    /// Rate limiter for Gemini API requests using a token bucket algorithm
     /// </summary>
-    /// <param name="tokensPerSecond">Number of allowed requests per second (default is 60).</param>
-    public GeminiRateLimiter(int tokensPerSecond = 60)
+    public class GeminiRateLimiter : IRateLimiter
     {
-        var options = new TokenBucketRateLimiterOptions
+        private readonly TokenBucketRateLimiter _rateLimiter;
+        private readonly bool _isEnabled;
+
+        /// <summary>
+        /// Initializes a new instance of the GeminiRateLimiter
+        /// </summary>
+        /// <param name="options">Rate limiting configuration options</param>
+        public GeminiRateLimiter(RateLimitOptions options)
         {
-            TokenLimit = tokensPerSecond,
-            QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-            QueueLimit = 100,
-            ReplenishmentPeriod = TimeSpan.FromSeconds(1),
-            TokensPerPeriod = tokensPerSecond,
-            AutoReplenishment = true
-        };
+            _isEnabled = options.Enabled;
 
-        _rateLimiter = new TokenBucketRateLimiter(options);
-    }
+            if (_isEnabled)
+            {
+                var tokensPerSecond = Math.Max(1, options.RequestsPerMinute / 60);
+                var bucketOptions = new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = tokensPerSecond * 2, // Allow burst of 2x the per-second rate
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 10, // Keep queue small to avoid long waits
+                    ReplenishmentPeriod = TimeSpan.FromSeconds(1),
+                    TokensPerPeriod = tokensPerSecond,
+                    AutoReplenishment = true
+                };
 
-    /// <summary>
-    /// Asynchronously acquires permission to make an API request.
-    /// </summary>
-    /// <param name="cancellationToken">A token to cancel the operation.</param>
-    /// <returns>A <see cref="RateLimitLease"/> indicating whether the request was permitted.</returns>
-    public ValueTask<RateLimitLease> AcquireAsync(CancellationToken cancellationToken = default)
-    {
-        return _rateLimiter.AcquireAsync(1, cancellationToken);
-    }
+                _rateLimiter = new TokenBucketRateLimiter(bucketOptions);
+            }
+            else
+            {
+                // Create a no-op rate limiter when disabled
+                _rateLimiter = new TokenBucketRateLimiter(new TokenBucketRateLimiterOptions
+                {
+                    TokenLimit = int.MaxValue,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                    QueueLimit = 0,
+                    ReplenishmentPeriod = TimeSpan.FromMilliseconds(1),
+                    TokensPerPeriod = int.MaxValue,
+                    AutoReplenishment = true
+                });
+            }
+        }
 
-    /// <summary>
-    /// Gets the current number of available tokens in the bucket.
-    /// </summary>
-    /// <returns>The number of tokens available for immediate use.</returns>
-    public int GetAvailableTokens()
-    {
-        return _rateLimiter.GetAvailableTokens();
-    }
+        /// <summary>
+        /// Creates a disabled rate limiter for testing or when rate limiting is not needed
+        /// </summary>
+        public static GeminiRateLimiter CreateDisabled()
+        {
+            return new GeminiRateLimiter(new RateLimitOptions { Enabled = false });
+        }
 
-    /// <summary>
-    /// Disposes the rate limiter.
-    /// </summary>
-    public void Dispose()
-    {
-        _rateLimiter.Dispose();
+        /// <inheritdoc/>
+        public ValueTask<RateLimitLease> AcquireAsync(CancellationToken cancellationToken = default)
+        {
+            return _rateLimiter.AcquireAsync(1, cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public int? GetAvailablePermits()
+        {
+            // TokenBucketRateLimiter doesn't expose available tokens in .NET 6/7/8
+            // Return null to indicate this information is not available
+            return _isEnabled ? null : int.MaxValue;
+        }
+
+        /// <inheritdoc/>
+        public void Dispose()
+        {
+            _rateLimiter?.Dispose();
+        }
     }
 }

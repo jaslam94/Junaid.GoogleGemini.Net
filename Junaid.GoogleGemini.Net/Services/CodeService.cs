@@ -1,7 +1,8 @@
-using Junaid.GoogleGemini.Net.Infrastructure.Extensions;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -9,13 +10,14 @@ using Microsoft.Extensions.Options;
 namespace Junaid.GoogleGemini.Net.Services
 {
     /// <summary>
+    /// DEPRECATED: Use IGeminiService with GeminiRequestOptions.Code() for code operations. Will be removed in v7.0.0
     /// Service for code-related operations using Gemini API
     /// </summary>
+    [Obsolete("Use IGeminiService with GeminiRequestOptions.Code() for code operations. This service will be removed in v7.0.0")]
     public class CodeService : Service, ICodeService
     {
-        private const string MODEL_NAME = "gemini-pro";
-        private const int MAX_CODE_LENGTH = 50000;
-        private const int MAX_PROMPT_LENGTH = 5000;
+        private const int MAX_CODE_LENGTH = GeminiConstants.Limits.MaxTextLength;
+        private const int MAX_PROMPT_LENGTH = GeminiConstants.Limits.MaxMessageLength;
         
         private static readonly string[] SupportedLanguages = 
         {
@@ -42,32 +44,19 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateCodeGenerationInputs(prompt, programmingLanguage);
 
-            try
-            {
-                LogOperationStart("code generation", new 
-                { 
-                    Language = programmingLanguage, 
-                    PromptLength = prompt.Length 
-                });
+            var fullPrompt = $"Generate {programmingLanguage} code for: {prompt}\n" +
+                           $"Only provide the code without any explanations. " +
+                           $"Make sure the code follows best practices and includes proper error handling.";
 
-                var request = GeminiClient.CreateCodeRequest(prompt, programmingLanguage).Build();
-                var endpoint = $"/models/{MODEL_NAME}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
+            var endpoint = $"/models/{GeminiConstants.Models.Recommended}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(fullPrompt, GeminiRequestOptions.Code());
 
-                ValidateResponse(response, "code generation");
-                LogOperationSuccess("code generation");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "code generation");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "code generation",
+                endpoint,
+                request,
+                new { Language = programmingLanguage, PromptLength = prompt.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -78,33 +67,16 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateCodeInputs(code, programmingLanguage);
 
-            try
-            {
-                LogOperationStart("code review", new 
-                { 
-                    Language = programmingLanguage, 
-                    CodeLength = code.Length 
-                });
+            var prompt = CreateCodeReviewPrompt(code, programmingLanguage);
+            var endpoint = $"/models/{GeminiConstants.Models.Recommended}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(prompt, GeminiRequestOptions.Factual());
 
-                var prompt = CreateCodeReviewPrompt(code, programmingLanguage);
-                var request = GeminiClient.CreateFactualRequest(prompt).Build();
-                var endpoint = $"/models/{MODEL_NAME}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                ValidateResponse(response, "code review");
-                LogOperationSuccess("code review");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "code review");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "code review",
+                endpoint,
+                request,
+                new { Language = programmingLanguage, CodeLength = code.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -115,33 +87,16 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateCodeInputs(code, programmingLanguage);
 
-            try
-            {
-                LogOperationStart("code explanation", new 
-                { 
-                    Language = programmingLanguage, 
-                    CodeLength = code.Length 
-                });
+            var prompt = CreateCodeExplanationPrompt(code, programmingLanguage);
+            var endpoint = $"/models/{GeminiConstants.Models.Recommended}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(prompt, GeminiRequestOptions.Factual());
 
-                var prompt = CreateCodeExplanationPrompt(code, programmingLanguage);
-                var request = GeminiClient.CreateFactualRequest(prompt).Build();
-                var endpoint = $"/models/{MODEL_NAME}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                ValidateResponse(response, "code explanation");
-                LogOperationSuccess("code explanation");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "code explanation");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "code explanation",
+                endpoint,
+                request,
+                new { Language = programmingLanguage, CodeLength = code.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -152,33 +107,16 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateCodeInputs(code, programmingLanguage);
 
-            try
-            {
-                LogOperationStart("code documentation", new 
-                { 
-                    Language = programmingLanguage, 
-                    CodeLength = code.Length 
-                });
+            var prompt = CreateCodeDocumentationPrompt(code, programmingLanguage);
+            var endpoint = $"/models/{GeminiConstants.Models.Recommended}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(prompt, GeminiRequestOptions.Factual());
 
-                var prompt = CreateCodeDocumentationPrompt(code, programmingLanguage);
-                var request = GeminiClient.CreateFactualRequest(prompt).Build();
-                var endpoint = $"/models/{MODEL_NAME}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                ValidateResponse(response, "code documentation");
-                LogOperationSuccess("code documentation");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "code documentation");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "code documentation",
+                endpoint,
+                request,
+                new { Language = programmingLanguage, CodeLength = code.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -191,45 +129,27 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidateCodeInputs(code, fromLanguage);
             ValidateLanguage(toLanguage, nameof(toLanguage));
 
-            try
-            {
-                LogOperationStart("code translation", new 
-                { 
-                    FromLanguage = fromLanguage, 
-                    ToLanguage = toLanguage, 
-                    CodeLength = code.Length 
-                });
+            var prompt = CreateCodeTranslationPrompt(code, fromLanguage, toLanguage);
+            var endpoint = $"/models/{GeminiConstants.Models.Recommended}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(prompt, GeminiRequestOptions.Code());
 
-                var prompt = CreateCodeTranslationPrompt(code, fromLanguage, toLanguage);
-                var request = GeminiClient.CreateCodeRequest(prompt, toLanguage).Build();
-                var endpoint = $"/models/{MODEL_NAME}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                ValidateResponse(response, "code translation");
-                LogOperationSuccess("code translation");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "code translation");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "code translation",
+                endpoint,
+                request,
+                new { FromLanguage = fromLanguage, ToLanguage = toLanguage, CodeLength = code.Length },
+                cancellationToken);
         }
 
         private void ValidateCodeGenerationInputs(string prompt, string programmingLanguage)
         {
-            ValidateTextInput(prompt, nameof(prompt), MAX_PROMPT_LENGTH);
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), MAX_PROMPT_LENGTH);
             ValidateLanguage(programmingLanguage, nameof(programmingLanguage));
         }
 
         private void ValidateCodeInputs(string code, string programmingLanguage)
         {
-            ValidateTextInput(code, nameof(code), MAX_CODE_LENGTH);
+            ValidationUtilities.ValidateTextInput(code, nameof(code), MAX_CODE_LENGTH);
             ValidateLanguage(programmingLanguage, nameof(programmingLanguage));
         }
 

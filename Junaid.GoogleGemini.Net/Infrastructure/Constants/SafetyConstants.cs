@@ -1,76 +1,115 @@
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
+
 namespace Junaid.GoogleGemini.Net.Infrastructure.Constants
 {
     /// <summary>
-    /// Constants for safety categories in the Gemini API
+    /// DEPRECATED: Use GeminiConstants.SafetyCategories and GeminiConstants.SafetyThresholds instead
     /// </summary>
+    [Obsolete("This class is deprecated. Use GeminiConstants.SafetyCategories and GeminiConstants.SafetyThresholds instead. Will be removed in v7.0.0")]
     public static class SafetyCategory
     {
         /// <summary>
-        /// Content intended to harass, bully, or abuse
+        /// DEPRECATED: Use GeminiConstants.SafetyCategories.Harassment instead
         /// </summary>
-        public const string Harassment = "HARM_CATEGORY_HARASSMENT";
+        [Obsolete("Use GeminiConstants.SafetyCategories.Harassment instead")]
+        public const string Harassment = GeminiConstants.SafetyCategories.Harassment;
 
         /// <summary>
-        /// Content expressing hate, bias, or identity attacks
+        /// DEPRECATED: Use GeminiConstants.SafetyCategories.HateSpeech instead
         /// </summary>
-        public const string HateSpeech = "HARM_CATEGORY_HATE_SPEECH";
+        [Obsolete("Use GeminiConstants.SafetyCategories.HateSpeech instead")]
+        public const string HateSpeech = GeminiConstants.SafetyCategories.HateSpeech;
 
         /// <summary>
-        /// Sexually explicit content
+        /// DEPRECATED: Use GeminiConstants.SafetyCategories.SexuallyExplicit instead
         /// </summary>
-        public const string SexuallyExplicit = "HARM_CATEGORY_SEXUALLY_EXPLICIT";
+        [Obsolete("Use GeminiConstants.SafetyCategories.SexuallyExplicit instead")]
+        public const string SexuallyExplicit = GeminiConstants.SafetyCategories.SexuallyExplicit;
 
         /// <summary>
-        /// Content promoting dangerous or illegal activities
+        /// DEPRECATED: Use GeminiConstants.SafetyCategories.DangerousContent instead
         /// </summary>
-        public const string DangerousContent = "HARM_CATEGORY_DANGEROUS_CONTENT";
+        [Obsolete("Use GeminiConstants.SafetyCategories.DangerousContent instead")]
+        public const string DangerousContent = GeminiConstants.SafetyCategories.DangerousContent;
 
         /// <summary>
-        /// Deceptive or manipulative content
+        /// DEPRECATED: Use GeminiConstants.SafetyCategories.Deceptive instead
         /// </summary>
-        public const string Deceptive = "HARM_CATEGORY_DECEPTIVE";
+        [Obsolete("Use GeminiConstants.SafetyCategories.Deceptive instead")]
+        public const string Deceptive = GeminiConstants.SafetyCategories.Deceptive;
     }
 
     /// <summary>
-    /// Constants for safety thresholds in the Gemini API
+    /// DEPRECATED: Use GeminiConstants.SafetyThresholds instead
     /// </summary>
+    [Obsolete("This class is deprecated. Use GeminiConstants.SafetyThresholds instead. Will be removed in v7.0.0")]
     public static class SafetyThreshold
     {
         /// <summary>
-        /// Block content if probability of category exceeds a very low threshold
+        /// DEPRECATED: Use GeminiConstants.SafetyThresholds.Unspecified instead
         /// </summary>
-        public const string Unspecified = "HARM_BLOCK_THRESHOLD_UNSPECIFIED";
+        [Obsolete("Use GeminiConstants.SafetyThresholds.Unspecified instead")]
+        public const string Unspecified = GeminiConstants.SafetyThresholds.Unspecified;
 
         /// <summary>
-        /// Block content with low probability of matching safety category
+        /// DEPRECATED: Use GeminiConstants.SafetyThresholds.Low instead
         /// </summary>
-        public const string Low = "BLOCK_LOW_AND_ABOVE";
+        [Obsolete("Use GeminiConstants.SafetyThresholds.Low instead")]
+        public const string Low = GeminiConstants.SafetyThresholds.Low;
 
         /// <summary>
-        /// Block content with medium or higher probability of matching safety category
+        /// DEPRECATED: Use GeminiConstants.SafetyThresholds.Medium instead
         /// </summary>
-        public const string Medium = "BLOCK_MEDIUM_AND_ABOVE";
+        [Obsolete("Use GeminiConstants.SafetyThresholds.Medium instead")]
+        public const string Medium = GeminiConstants.SafetyThresholds.Medium;
 
         /// <summary>
-        /// Block only content with high probability of matching safety category
+        /// DEPRECATED: Use GeminiConstants.SafetyThresholds.High instead
         /// </summary>
-        public const string High = "BLOCK_ONLY_HIGH";
+        [Obsolete("Use GeminiConstants.SafetyThresholds.High instead")]
+        public const string High = GeminiConstants.SafetyThresholds.High;
 
         /// <summary>
-        /// Do not block any content based on safety category
+        /// DEPRECATED: Use GeminiConstants.SafetyThresholds.None instead
         /// </summary>
-        public const string None = "BLOCK_NONE";
+        [Obsolete("Use GeminiConstants.SafetyThresholds.None instead")]
+        public const string None = GeminiConstants.SafetyThresholds.None;
     }
 
     /// <summary>
-    /// Constants for safety rating probabilities in the Gemini API responses
+    /// DEPRECATED: Use GeminiConstants.SafetyProbabilities instead
     /// </summary>
+    [Obsolete("This class is deprecated. Use GeminiConstants.SafetyProbabilities instead. Will be removed in v7.0.0")]
     public static class SafetyProbability
     {
-        public const string Unspecified = "HARM_PROBABILITY_UNSPECIFIED";
-        public const string Negligible = "NEGLIGIBLE";
-        public const string Low = "LOW";
-        public const string Medium = "MEDIUM";
-        public const string High = "HIGH";
+        /// <summary>
+        /// DEPRECATED: Use GeminiConstants.SafetyProbabilities.Unspecified instead
+        /// </summary>
+        [Obsolete("Use GeminiConstants.SafetyProbabilities.Unspecified instead")]
+        public const string Unspecified = GeminiConstants.SafetyProbabilities.Unspecified;
+
+        /// <summary>
+        /// DEPRECATED: Use GeminiConstants.SafetyProbabilities.Negligible instead
+        /// </summary>
+        [Obsolete("Use GeminiConstants.SafetyProbabilities.Negligible instead")]
+        public const string Negligible = GeminiConstants.SafetyProbabilities.Negligible;
+
+        /// <summary>
+        /// DEPRECATED: Use GeminiConstants.SafetyProbabilities.Low instead
+        /// </summary>
+        [Obsolete("Use GeminiConstants.SafetyProbabilities.Low instead")]
+        public const string Low = GeminiConstants.SafetyProbabilities.Low;
+
+        /// <summary>
+        /// DEPRECATED: Use GeminiConstants.SafetyProbabilities.Medium instead
+        /// </summary>
+        [Obsolete("Use GeminiConstants.SafetyProbabilities.Medium instead")]
+        public const string Medium = GeminiConstants.SafetyProbabilities.Medium;
+
+        /// <summary>
+        /// DEPRECATED: Use GeminiConstants.SafetyProbabilities.High instead
+        /// </summary>
+        [Obsolete("Use GeminiConstants.SafetyProbabilities.High instead")]
+        public const string High = GeminiConstants.SafetyProbabilities.High;
     }
 }

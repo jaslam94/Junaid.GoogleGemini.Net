@@ -6,8 +6,20 @@ using Microsoft.Extensions.Configuration;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
+    /// <summary>
+    /// Legacy service collection extensions - DEPRECATED
+    /// Use GeminiExtensions.AddGemini() instead
+    /// </summary>
+    [Obsolete("This class is deprecated. Use GeminiExtensions.AddGemini() instead. Will be removed in v7.0.0")]
     public static class ServiceCollectionExtensions
     {
+        /// <summary>
+        /// DEPRECATED: Use services.AddGemini() instead
+        /// </summary>
+        /// <param name="services">Service collection</param>
+        /// <param name="configureOptions">Configuration action</param>
+        /// <returns>Service collection</returns>
+        [Obsolete("Use services.AddGemini(options => { options.ApiKey = \"...\"; }) instead")]
         public static IServiceCollection AddGeminiServices(
             this IServiceCollection services,
             Action<GeminiConfiguration> configureOptions)
@@ -35,6 +47,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             return services;
         }
 
+        /// <summary>
+        /// DEPRECATED: Use services.AddGemini(configuration, "Gemini") instead
+        /// </summary>
+        /// <param name="services">Service collection</param>
+        /// <param name="configuration">Configuration</param>
+        /// <param name="configurationSection">Configuration section name</param>
+        /// <returns>Service collection</returns>
+        [Obsolete("Use services.AddGemini(configuration, \"Gemini\") instead")]
         public static IServiceCollection AddGeminiServices(
             this IServiceCollection services,
             IConfiguration configuration,

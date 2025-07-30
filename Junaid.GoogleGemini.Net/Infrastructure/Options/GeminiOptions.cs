@@ -15,9 +15,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
 
         /// <summary>
         /// API key for authentication
+        /// Can be set via configuration or environment variable 'GeminiApiKey'
         /// </summary>
         [Required]
-        public string ApiKey { get; set; } = string.Empty;
+        public string ApiKey { get; set; } = GetApiKeyFromEnvironment();
 
         /// <summary>
         /// Default timeout for API requests in seconds
@@ -34,7 +35,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// <summary>
         /// Default model to use for requests
         /// </summary>
-        public string DefaultModel { get; set; } = "gemini-pro";
+        public string DefaultModel { get; set; } = "gemini-1.5-pro";
 
         /// <summary>
         /// Rate limiting settings
@@ -45,6 +46,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// Proxy settings
         /// </summary>
         public ProxyOptions? Proxy { get; set; }
+
+        /// <summary>
+        /// Gets API key from environment variable if not set in configuration
+        /// </summary>
+        private static string GetApiKeyFromEnvironment()
+        {
+            return Environment.GetEnvironmentVariable("GeminiApiKey") ?? string.Empty;
+        }
     }
 
     /// <summary>

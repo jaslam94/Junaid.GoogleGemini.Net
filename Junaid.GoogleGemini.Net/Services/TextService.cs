@@ -1,5 +1,4 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure.Builders;
-using Junaid.GoogleGemini.Net.Infrastructure.Extensions;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
@@ -32,28 +31,15 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateTextInput(text, nameof(text));
 
-            try
-            {
-                LogOperationStart("text content generation", new { TextLength = text.Length });
+            var endpoint = $"/models/{Options.DefaultModel}:generateContent";
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(text);
 
-                var request = GeminiClient.CreateTextRequest(text).Build();
-                var endpoint = $"/models/{Options.DefaultModel}:generateContent";
-                
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                ValidateResponse(response, "text content generation");
-                LogOperationSuccess("text content generation");
-                
-                return response;
-            }
-            catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
-            {
-                LogOperationError(ex, "text content generation");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "text content generation",
+                endpoint,
+                request,
+                new { TextLength = text.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -65,27 +51,21 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidateTextInput(text, nameof(text));
             ValidateStreamHandler(handleStreamResponse);
 
-            try
-            {
-                LogOperationStart("text content streaming", new { TextLength = text.Length });
+            var request = new ContentRequestBuilder()
+                .WithRole("user")
+                .AddText(text)
+                .AddMessage()
+                .EnableStreaming(true)
+                .Build();
 
-                var request = GeminiClient.CreateStreamingRequest(
-                    GeminiClient.CreateTextRequest(text)
-                ).Build();
-
-                var endpoint = $"/models/{Options.DefaultModel}:streamGenerateContent";
-                await foreach (var data in GeminiClient.SendAsync(endpoint, request).WithCancellation(cancellationToken))
-                {
-                    handleStreamResponse(data);
-                }
-
-                LogOperationSuccess("text content streaming");
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "text content streaming");
-                throw;
-            }
+            var endpoint = $"/models/{Options.DefaultModel}:streamGenerateContent";
+            await ExecuteStreamRequestAsync(
+                "text content streaming",
+                endpoint,
+                request,
+                handleStreamResponse,
+                new { TextLength = text.Length },
+                cancellationToken);
         }
 
         /// <inheritdoc/>
@@ -95,30 +75,15 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidateTextInput(text, nameof(text));
 
-            try
-            {
-                LogOperationStart("token counting", new { TextLength = text.Length });
+            var request = Infrastructure.Factories.RequestFactory.CreateTextRequest(text);
+            var endpoint = $"/models/{Options.DefaultModel}:countTokens";
 
-                var request = new ContentRequestBuilder()
-                    .WithRole("user")
-                    .AddText(text)
-                    .AddMessage()
-                    .Build();
-
-                var endpoint = $"/models/{Options.DefaultModel}:countTokens";
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, CountTokensResponse>(
-                    endpoint,
-                    request,
-                    cancellationToken);
-
-                LogOperationSuccess("token counting", new { TokenCount = response.totalTokens });
-                return response;
-            }
-            catch (Exception ex)
-            {
-                LogOperationError(ex, "token counting");
-                throw;
-            }
+            return await ExecuteRequestAsync<GenerateContentRequest, CountTokensResponse>(
+                "token counting",
+                endpoint,
+                request,
+                new { TextLength = text.Length },
+                cancellationToken);
         }
     }
 }

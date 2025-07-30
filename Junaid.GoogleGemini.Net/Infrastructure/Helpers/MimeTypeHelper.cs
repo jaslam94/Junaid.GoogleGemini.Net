@@ -1,5 +1,11 @@
-﻿namespace Junaid.GoogleGemini.Net.Infrastructure.Helpers
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
+
+namespace Junaid.GoogleGemini.Net.Infrastructure.Helpers
 {
+    /// <summary>
+    /// DEPRECATED: Use FileUtilities instead
+    /// </summary>
+    [Obsolete("This class is deprecated. Use FileUtilities.GetMimeType() instead. Will be removed in v7.0.0")]
     public class MimeTypeHelper
     {
         private static readonly Dictionary<string, string> MimeTypeMappings = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -13,22 +19,13 @@
             { ".tif", "image/tiff" },
         };
 
+        /// <summary>
+        /// DEPRECATED: Use FileUtilities.GetMimeType() instead
+        /// </summary>
+        [Obsolete("Use FileUtilities.GetMimeType() instead")]
         public static string GetMimeType(string fileName)
         {
-            if (fileName == null)
-            {
-                throw new ArgumentNullException(nameof(fileName));
-            }
-
-            var extension = Path.GetExtension(fileName);
-
-            if (extension != null && MimeTypeMappings.TryGetValue(extension.ToLower(), out var mimeType))
-            {
-                return mimeType;
-            }
-
-            // Default to application/octet-stream if the mapping is not found
-            return "application/octet-stream";
+            return FileUtilities.GetMimeType(fileName);
         }
     }
 }

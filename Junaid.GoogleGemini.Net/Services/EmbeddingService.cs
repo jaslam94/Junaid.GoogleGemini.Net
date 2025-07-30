@@ -1,4 +1,4 @@
-﻿using Junaid.GoogleGemini.Net.Infrastructure.Extensions;
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Factories;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
@@ -43,7 +43,7 @@ namespace Junaid.GoogleGemini.Net.Services
                     TextLength = text.Length 
                 });
 
-                var request = GeminiClient.CreateEmbeddingRequest(text).Build();
+                var request = RequestFactory.CreateTextRequest(text); // Simplified approach
                 var endpoint = $"/models/{model}:embedContent";
                 
                 var response = await GeminiClient.PostAsync<GenerateContentRequest, EmbedContentResponse>(
@@ -86,7 +86,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 var requests = texts.Select(text => new EmbedContentRequest
                 {
                     model = $"models/{model}",
-                    content = GeminiClient.CreateEmbeddingRequest(text).Build().Contents[0]
+                    content = RequestFactory.CreateTextRequest(text).Contents[0] // Simplified approach
                 });
 
                 var batchRequest = new BatchEmbedContentRequest

@@ -1,20 +1,13 @@
 using Microsoft.Extensions.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure.Options
 {
     /// <summary>
-    /// Validates GeminiOptions configuration at startup
+    /// Validates GeminiOptions configuration at startup using unified constants
     /// </summary>
     public class GeminiOptionsValidator : IValidateOptions<GeminiOptions>
     {
-        private const int MIN_TIMEOUT_SECONDS = 1;
-        private const int MAX_TIMEOUT_SECONDS = 300;
-        private const int MAX_RETRIES = 5;
-        private const int MIN_REQUESTS_PER_MINUTE = 1;
-        private const int MAX_REQUESTS_PER_MINUTE = 1000;
-        private const int MIN_TOKENS_PER_MINUTE = 1;
-        private const int MAX_TOKENS_PER_MINUTE = 1000000;
-
         /// <inheritdoc/>
         public ValidateOptionsResult Validate(string? name, GeminiOptions options)
         {
@@ -45,15 +38,21 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         {
             if (string.IsNullOrWhiteSpace(options.ApiKey))
             {
-                var envApiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
+                var envApiKey = ConfigurationUtilities.GetApiKeyFromEnvironment();
                 if (string.IsNullOrWhiteSpace(envApiKey))
                 {
-                    errors.Add("API key must be provided either in configuration or as 'GeminiApiKey' environment variable.");
+                    errors.Add($"API key must be provided either in configuration or as '{GeminiConstants.ApiKeyEnvironmentVariable}' environment variable.");
                 }
                 else
                 {
                     options.ApiKey = envApiKey;
                 }
+            }
+
+            // Validate API key format if provided
+            if (!string.IsNullOrWhiteSpace(options.ApiKey) && !ConfigurationUtilities.IsValidApiKeyFormat(options.ApiKey))
+            {
+                errors.Add("API key format appears to be invalid. Please verify your API key.");
             }
         }
 
@@ -75,17 +74,17 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
 
         private static void ValidateTimeouts(GeminiOptions options, List<string> errors)
         {
-            if (options.TimeoutSeconds < MIN_TIMEOUT_SECONDS || options.TimeoutSeconds > MAX_TIMEOUT_SECONDS)
+            if (options.TimeoutSeconds < 1 || options.TimeoutSeconds > 300)
             {
-                errors.Add($"Timeout must be between {MIN_TIMEOUT_SECONDS} and {MAX_TIMEOUT_SECONDS} seconds.");
+                errors.Add("Timeout must be between 1 and 300 seconds.");
             }
         }
 
         private static void ValidateRetries(GeminiOptions options, List<string> errors)
         {
-            if (options.MaxRetries < 0 || options.MaxRetries > MAX_RETRIES)
+            if (options.MaxRetries < 0 || options.MaxRetries > GeminiConstants.Defaults.MaxRetries)
             {
-                errors.Add($"MaxRetries must be between 0 and {MAX_RETRIES}.");
+                errors.Add($"MaxRetries must be between 0 and {GeminiConstants.Defaults.MaxRetries}.");
             }
         }
 
@@ -99,16 +98,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
 
             if (options.RateLimit.Enabled)
             {
-                if (options.RateLimit.RequestsPerMinute < MIN_REQUESTS_PER_MINUTE || 
-                    options.RateLimit.RequestsPerMinute > MAX_REQUESTS_PER_MINUTE)
+                if (options.RateLimit.RequestsPerMinute < 1 || 
+                    options.RateLimit.RequestsPerMinute > 1000)
                 {
-                    errors.Add($"RequestsPerMinute must be between {MIN_REQUESTS_PER_MINUTE} and {MAX_REQUESTS_PER_MINUTE}.");
+                    errors.Add("RequestsPerMinute must be between 1 and 1000.");
                 }
 
-                if (options.RateLimit.TokensPerMinute < MIN_TOKENS_PER_MINUTE || 
-                    options.RateLimit.TokensPerMinute > MAX_TOKENS_PER_MINUTE)
+                if (options.RateLimit.TokensPerMinute < 1 || 
+                    options.RateLimit.TokensPerMinute > 1000000)
                 {
-                    errors.Add($"TokensPerMinute must be between {MIN_TOKENS_PER_MINUTE} and {MAX_TOKENS_PER_MINUTE}.");
+                    errors.Add("TokensPerMinute must be between 1 and 1000000.");
                 }
             }
         }
@@ -141,10 +140,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
             }
             else
             {
-                var validModels = new[] { "gemini-pro", "gemini-pro-vision", "embedding-001" };
-                if (!validModels.Contains(options.DefaultModel))
+                try
                 {
-                    errors.Add($"Default model must be one of: {string.Join(", ", validModels)}");
+                    ValidationUtilities.ValidateModelName(options.DefaultModel);
+                }
+                catch (ArgumentException ex)
+                {
+                    errors.Add($"Default model validation failed: {ex.Message}");
                 }
             }
         }
