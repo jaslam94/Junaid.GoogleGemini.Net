@@ -299,13 +299,13 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         private string GetGenerateEndpoint(string? model) =>
-            $"/models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:generateContent";
+            $"models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:generateContent";
 
         private string GetStreamEndpoint(string? model) =>
-            $"/models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:streamGenerateContent";
+            $"models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:streamGenerateContent";
 
         private string GetCountTokensEndpoint(string? model) =>
-            $"/models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:countTokens";
+            $"models/{model ?? Options?.DefaultModel ?? GeminiConstants.Defaults.Model}:countTokens";
 
         #endregion Private Helper Methods
     }

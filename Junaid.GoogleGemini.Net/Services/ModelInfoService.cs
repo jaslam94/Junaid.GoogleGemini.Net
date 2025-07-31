@@ -34,7 +34,7 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 LogOperationStart("model list retrieval");
 
-                var endpoint = "/models";
+                var endpoint = "models";
                 var response = await GeminiClient.GetAsync<ListModelsResponse>(
                     endpoint,
                     cancellationToken);
@@ -78,7 +78,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
                 LogOperationStart("model info retrieval", new { ModelName = modelName });
 
-                var endpoint = $"/models/{modelName}";
+                var endpoint = $"models/{modelName}";
                 var model = await GeminiClient.GetAsync<ModelInfo>(
                     endpoint,
                     cancellationToken);

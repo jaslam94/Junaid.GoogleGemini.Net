@@ -44,7 +44,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 });
 
                 var request = RequestFactory.CreateTextRequest(text); // Simplified approach
-                var endpoint = $"/models/{model}:embedContent";
+                var endpoint = $"models/{model}:embedContent";
                 
                 var response = await GeminiClient.PostAsync<GenerateContentRequest, EmbedContentResponse>(
                     endpoint,
@@ -94,7 +94,7 @@ namespace Junaid.GoogleGemini.Net.Services
                     requests = requests.ToArray()
                 };
 
-                var endpoint = $"/models/{model}:batchEmbedContents";
+                var endpoint = $"models/{model}:batchEmbedContents";
                 var response = await GeminiClient.PostAsync<BatchEmbedContentRequest, BatchEmbedContentResponse>(
                     endpoint,
                     batchRequest,

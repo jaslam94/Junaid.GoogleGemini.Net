@@ -1,4 +1,5 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
+using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Services;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
@@ -93,6 +94,10 @@ namespace Junaid.GoogleGemini.Net.Extensions
 
             // Register authentication handler
             services.AddTransient<GeminiAuthHandler>();
+            
+            // Register IGeminiClient interface with GeminiClient implementation
+            services.AddTransient<IGeminiClient>(serviceProvider => 
+                serviceProvider.GetRequiredService<GeminiClient>());
             
             // Register unified service (replaces multiple specialized services)
             services.AddTransient<IGeminiService, GeminiService>();
