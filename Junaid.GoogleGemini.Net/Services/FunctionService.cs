@@ -35,7 +35,7 @@ namespace Junaid.GoogleGemini.Net.Services
 
             if (_functions.TryAdd(definition.Name, (definition, handler)))
             {
-                _logger.LogInformation("Function {FunctionName} registered successfully", definition.Name);
+                _logger.LogDebug("Function {FunctionName} registered", definition.Name);
             }
             else
             {
@@ -65,8 +65,6 @@ namespace Junaid.GoogleGemini.Net.Services
 
             try
             {
-                _logger.LogInformation("Calling function {FunctionName}", functionCall.Name);
-
                 var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(
                     functionCall.Arguments,
                     _jsonOptions);
@@ -90,8 +88,6 @@ namespace Junaid.GoogleGemini.Net.Services
                 var result = await function.Handler(arguments);
                 var response = JsonSerializer.Serialize(result, _jsonOptions);
 
-                _logger.LogInformation("Function {FunctionName} executed successfully", functionCall.Name);
-
                 return new FunctionResult
                 {
                     Name = functionCall.Name,
@@ -100,7 +96,7 @@ namespace Junaid.GoogleGemini.Net.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error executing function {FunctionName}", functionCall.Name);
+                _logger.LogError(ex, "Function {FunctionName} execution failed", functionCall.Name);
                 return new FunctionResult
                 {
                     Name = functionCall.Name,
@@ -126,11 +122,10 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             if (_functions.TryRemove(functionName, out _))
             {
-                _logger.LogInformation("Function {FunctionName} unregistered successfully", functionName);
+                _logger.LogDebug("Function {FunctionName} unregistered", functionName);
                 return true;
             }
 
-            _logger.LogWarning("Function {FunctionName} not found for unregistration", functionName);
             return false;
         }
     }

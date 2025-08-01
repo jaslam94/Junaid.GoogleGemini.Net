@@ -51,7 +51,14 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             Temperature = 0.9f,
             TopP = 0.8f,
             TopK = 40,
-            Model = model ?? GeminiConstants.Models.Recommended
+            Model = model ?? GeminiConstants.Models.Recommended,
+            SafetySettings = new List<SafetySetting>
+            {
+                new() { Category = GeminiConstants.SafetyCategories.Harassment, Threshold = GeminiConstants.SafetyThresholds.High },
+                new() { Category = GeminiConstants.SafetyCategories.HateSpeech, Threshold = GeminiConstants.SafetyThresholds.High },
+                new() { Category = GeminiConstants.SafetyCategories.SexuallyExplicit, Threshold = GeminiConstants.SafetyThresholds.High },
+                new() { Category = GeminiConstants.SafetyCategories.DangerousContent, Threshold = GeminiConstants.SafetyThresholds.High }
+            }
         };
 
         /// <summary>

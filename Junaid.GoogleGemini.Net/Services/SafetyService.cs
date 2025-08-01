@@ -79,8 +79,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 { GeminiConstants.SafetyCategories.Harassment, GeminiConstants.SafetyThresholds.Low },
                 { GeminiConstants.SafetyCategories.HateSpeech, GeminiConstants.SafetyThresholds.Low },
                 { GeminiConstants.SafetyCategories.SexuallyExplicit, GeminiConstants.SafetyThresholds.Low },
-                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.Low },
-                { GeminiConstants.SafetyCategories.Deceptive, GeminiConstants.SafetyThresholds.Low }
+                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.Low }
             });
         }
 
@@ -92,8 +91,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 { GeminiConstants.SafetyCategories.Harassment, GeminiConstants.SafetyThresholds.Medium },
                 { GeminiConstants.SafetyCategories.HateSpeech, GeminiConstants.SafetyThresholds.Medium },
                 { GeminiConstants.SafetyCategories.SexuallyExplicit, GeminiConstants.SafetyThresholds.High },
-                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.Medium },
-                { GeminiConstants.SafetyCategories.Deceptive, GeminiConstants.SafetyThresholds.Medium }
+                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.Medium }
             });
         }
 
@@ -105,8 +103,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 { GeminiConstants.SafetyCategories.Harassment, GeminiConstants.SafetyThresholds.High },
                 { GeminiConstants.SafetyCategories.HateSpeech, GeminiConstants.SafetyThresholds.High },
                 { GeminiConstants.SafetyCategories.SexuallyExplicit, GeminiConstants.SafetyThresholds.High },
-                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.High },
-                { GeminiConstants.SafetyCategories.Deceptive, GeminiConstants.SafetyThresholds.High }
+                { GeminiConstants.SafetyCategories.DangerousContent, GeminiConstants.SafetyThresholds.High }
             });
         }
 

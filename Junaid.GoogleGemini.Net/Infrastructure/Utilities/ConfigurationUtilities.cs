@@ -18,7 +18,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <param name="fallbackVariables">Fallback environment variable names</param>
         /// <returns>API key if found, otherwise empty string</returns>
         public static string GetApiKeyFromEnvironment(
-            string primaryVariable = GeminiConstants.ApiKeyEnvironmentVariable, 
+            string primaryVariable = GeminiConstants.ApiKeyEnvironmentVariable,
             params string[] fallbackVariables)
         {
             var apiKey = Environment.GetEnvironmentVariable(primaryVariable);
@@ -46,13 +46,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
                 return false;
 
             // Basic validation - Google API keys typically start with specific prefixes
-            return apiKey.Length >= 20 && 
-                   (apiKey.StartsWith("AIza", StringComparison.Ordinal) || 
+            return apiKey.Length >= 20 &&
+                   (apiKey.StartsWith("AIza", StringComparison.Ordinal) ||
                     apiKey.StartsWith("BIza", StringComparison.Ordinal) ||
                     apiKey.StartsWith("CIza", StringComparison.Ordinal));
         }
 
-        #endregion
+        #endregion Environment Variable Helpers
 
         #region Default Configuration Generators
 
@@ -108,7 +108,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             return options;
         }
 
-        #endregion
+        #endregion Default Configuration Generators
 
         #region Legacy Migration Support
 
@@ -142,13 +142,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
 ## Service Registration
 ? OLD (removed in v7.0.0):
-services.AddGeminiServices(config => 
+services.AddGeminiServices(config =>
 {
     config.ApiKey = ""your-api-key"";
 });
 
 ? NEW (recommended):
-services.AddGemini(options => 
+services.AddGemini(options =>
 {
     options.ApiKey = ""your-api-key"";
     options.DefaultModel = GeminiConstants.Models.Recommended;
@@ -182,7 +182,7 @@ var options = ConfigurationUtilities.CreateDevelopmentOptions(""your-api-key"");
 ";
         }
 
-        #endregion
+        #endregion Legacy Migration Support
 
         #region Safety Configuration Helpers
 
@@ -241,6 +241,6 @@ var options = ConfigurationUtilities.CreateDevelopmentOptions(""your-api-key"");
             }).ToList();
         }
 
-        #endregion
+        #endregion Safety Configuration Helpers
     }
 }

@@ -22,7 +22,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// </summary>
         public const string ApiKeyHeaderName = "x-goog-api-key";
 
-        #endregion
+        #endregion API Configuration
 
         #region Model Information
 
@@ -31,89 +31,51 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// </summary>
         public static class Models
         {
-            /// <summary>
-            /// Latest and most capable multimodal model (Recommended)
-            /// Supports: Text, Images, Audio, Video, Code
-            /// </summary>
+            public const string Gemini25Pro = "gemini-2.5-pro";
+            public const string Gemini25Flash = "gemini-2.5-flash";
+            public const string Gemini20Flash = "gemini-2.0-flash-001";
             public const string Gemini15Pro = "gemini-1.5-pro";
-
-            /// <summary>
-            /// Fast and efficient model for lightweight tasks
-            /// Supports: Text, Images
-            /// </summary>
             public const string Gemini15Flash = "gemini-1.5-flash";
 
-            /// <summary>
-            /// Legacy text-only model
-            /// Supports: Text only
-            /// </summary>
-            public const string GeminiPro = "gemini-pro";
-
-            /// <summary>
-            /// Stable version for production use
-            /// Supports: Text only
-            /// </summary>
-            public const string Gemini10Pro = "gemini-1.0-pro";
-
-            /// <summary>
-            /// DEPRECATED: Use Gemini15Pro for multimodal content
-            /// </summary>
-            [Obsolete("Use Gemini15Pro instead. This model is deprecated.")]
+            [Obsolete("Use newer models; this variant may no longer be available.")]
             public const string GeminiProVision = "gemini-pro-vision";
 
-            /// <summary>
-            /// Model for generating embeddings (legacy)
-            /// </summary>
+            public const string GeminiPro = "gemini-pro";
+            public const string Gemini10Pro = "gemini-1.0-pro";
             public const string Embedding001 = "embedding-001";
-
-            /// <summary>
-            /// Latest model for generating embeddings
-            /// </summary>
             public const string TextEmbedding004 = "text-embedding-004";
 
-            /// <summary>
-            /// Gets all available models for content generation
-            /// </summary>
-            public static readonly string[] ContentGenerationModels = 
+            public static readonly string[] ContentGenerationModels =
             {
+                Gemini25Pro,
+                Gemini25Flash,
+                Gemini20Flash,
                 Gemini15Pro,
                 Gemini15Flash,
                 GeminiPro,
-                Gemini10Pro,
-                GeminiProVision
+                Gemini10Pro
             };
 
-            /// <summary>
-            /// Gets all available embedding models
-            /// </summary>
-            public static readonly string[] EmbeddingModels = 
+            public static readonly string[] EmbeddingModels =
             {
                 Embedding001,
                 TextEmbedding004
             };
 
-            /// <summary>
-            /// Gets all multimodal models that support images
-            /// </summary>
-            public static readonly string[] MultimodalModels = 
+            public static readonly string[] MultimodalModels =
             {
+                Gemini25Pro,
+                Gemini25Flash,
+                Gemini20Flash,
                 Gemini15Pro,
-                Gemini15Flash,
-                GeminiProVision
+                Gemini15Flash
             };
 
-            /// <summary>
-            /// Gets the recommended model for new applications
-            /// </summary>
-            public static string Recommended => Gemini15Pro;
-
-            /// <summary>
-            /// Gets the fastest model for quick responses
-            /// </summary>
-            public static string Fastest => Gemini15Flash;
+            public static string Recommended => Gemini25Pro;
+            public static string Fastest => Gemini15Flash; // Changed from non-existent lite model to actual fast model
         }
 
-        #endregion
+        #endregion Model Information
 
         #region Safety Configuration
 
@@ -143,20 +105,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string DangerousContent = "HARM_CATEGORY_DANGEROUS_CONTENT";
 
             /// <summary>
-            /// Deceptive or manipulative content
+            /// Gets all valid safety categories supported by the Gemini API
             /// </summary>
-            public const string Deceptive = "HARM_CATEGORY_DECEPTIVE";
-
-            /// <summary>
-            /// Gets all available safety categories
-            /// </summary>
-            public static readonly string[] All = 
+            public static readonly string[] All =
             {
                 Harassment,
                 HateSpeech,
                 SexuallyExplicit,
-                DangerousContent,
-                Deceptive
+                DangerousContent
             };
         }
 
@@ -205,7 +161,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// Gets all probability levels in order from lowest to highest
             /// </summary>
-            public static readonly string[] InOrder = 
+            public static readonly string[] InOrder =
             {
                 Negligible,
                 Low,
@@ -214,7 +170,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             };
         }
 
-        #endregion
+        #endregion Safety Configuration
 
         #region API Limits
 
@@ -264,7 +220,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const int MaxEmbeddingTextLength = 20000;
         }
 
-        #endregion
+        #endregion API Limits
 
         #region Default Values
 
@@ -294,6 +250,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string Model = Models.Gemini15Pro;
         }
 
-        #endregion
+        #endregion Default Values
     }
 }

@@ -56,7 +56,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                         if (exception.Result != null)
                         {
                             _logger.LogWarning(
-                                "Retry {RetryCount} after {RetryTime}ms due to {StatusCode}",
+                                "Retry {RetryCount} after {DelayMs}ms - Status: {StatusCode}",
                                 retryCount,
                                 timeSpan.TotalMilliseconds,
                                 exception.Result.StatusCode);
@@ -64,7 +64,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                         else
                         {
                             _logger.LogWarning(
-                                "Retry {RetryCount} after {RetryTime}ms due to {Exception}",
+                                "Retry {RetryCount} after {DelayMs}ms - Error: {Error}",
                                 retryCount,
                                 timeSpan.TotalMilliseconds,
                                 exception.Exception?.Message);
@@ -82,12 +82,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         public async Task<TResponse> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)
         {
             var correlationId = Guid.NewGuid().ToString();
-            using var scope = _logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId });
 
             try
             {
-                _logger.LogInformation("Making GET request to endpoint: {Endpoint}", endpoint);
-
                 // Apply rate limiting
                 using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
                 if (!lease.IsAcquired)
@@ -102,12 +99,12 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                     return await _httpClient.SendAsync(request, cancellationToken);
                 }, new Context());
 
-                return await HandleResponse<TResponse>(response, cancellationToken)
+                return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
                        ?? throw new GeminiException("The API has returned a null response.");
             }
             catch (Exception ex) when (ex is not GeminiException)
             {
-                _logger.LogError(ex, "Error making GET request to {Endpoint}", endpoint);
+                _logger.LogError(ex, "GET request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
                 throw new GeminiException("Failed to make GET request to Gemini API", ex);
             }
         }
@@ -124,12 +121,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data, CancellationToken cancellationToken = default)
         {
             var correlationId = Guid.NewGuid().ToString();
-            using var scope = _logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId });
 
             try
             {
-                _logger.LogInformation("Making POST request to endpoint: {Endpoint}", endpoint);
-                
                 // Apply rate limiting
                 using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
                 if (!lease.IsAcquired)
@@ -139,8 +133,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
                 var serializedContent = JsonSerializer.Serialize(data, _jsonOptions);
                 var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
-
-                _logger.LogDebug("Request payload: {Payload}", serializedContent);
 
                 var response = await _retryPolicy.ExecuteAsync(async (ctx) =>
                 {
@@ -152,12 +144,12 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                     return await _httpClient.SendAsync(request, cancellationToken);
                 }, new Context());
 
-                return await HandleResponse<TResponse>(response, cancellationToken)
+                return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
                        ?? throw new GeminiException("The API has returned a null response.");
             }
             catch (Exception ex) when (ex is not GeminiException)
             {
-                _logger.LogError(ex, "Error making POST request to {Endpoint}", endpoint);
+                _logger.LogError(ex, "POST request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
                 throw new GeminiException("Failed to make POST request to Gemini API", ex);
             }
         }
@@ -167,9 +159,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         /// </summary>
         /// <typeparam name="T">The type to deserialize the response to</typeparam>
         /// <param name="response">The HTTP response message</param>
+        /// <param name="correlationId">Correlation ID for request tracking</param>
         /// <returns>The deserialized response</returns>
         /// <exception cref="GeminiException">Thrown when the response indicates an error or cannot be deserialized</exception>
-        private async Task<T> HandleResponse<T>(HttpResponseMessage response, CancellationToken cancellationToken = default)
+        private async Task<T> HandleResponse<T>(HttpResponseMessage response, string correlationId, CancellationToken cancellationToken = default)
         {
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
 
@@ -177,20 +170,18 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 if (response.IsSuccessStatusCode)
                 {
-                    _logger.LogDebug("Successful response received. Status code: {StatusCode}", response.StatusCode);
-                    _logger.LogTrace("Response content: {Content}", content);
-
                     var result = JsonSerializer.Deserialize<T>(content, _jsonOptions);
                     if (result == null)
                     {
-                        _logger.LogError("Deserialization resulted in null object for type {Type}", typeof(T).Name);
+                        _logger.LogError("Response deserialization failed for type {Type} [ID: {CorrelationId}]", typeof(T).Name, correlationId);
                         throw new GeminiException($"Failed to deserialize response to type {typeof(T).Name}");
                     }
                     return result;
                 }
 
-                _logger.LogWarning("API returned error response. Status code: {StatusCode}", response.StatusCode);
-                _logger.LogDebug("Error response content: {Content}", content);
+                // Log API failure with response content
+                _logger.LogError("API request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]", 
+                    response.StatusCode, content, correlationId);
 
                 var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
                 if (geminiError?.error == null)
@@ -205,7 +196,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             }
             catch (JsonException ex)
             {
-                _logger.LogError(ex, "Failed to parse response content: {Content}", content);
+                _logger.LogError(ex, "Failed to parse API response: {Content} [ID: {CorrelationId}]", content, correlationId);
                 throw new GeminiException("Failed to parse API response", ex);
             }
         }
@@ -223,9 +214,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             CancellationToken cancellationToken = default)
         {
             var correlationId = Guid.NewGuid().ToString();
-            using var scope = _logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId });
-
-            _logger.LogInformation("Starting streaming request to endpoint: {Endpoint}", endpoint);
 
             // Apply rate limiting
             using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
@@ -245,8 +233,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             request.Content = requestContent;
             requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-            _logger.LogDebug("Sending streaming request with payload size: {Size} bytes", ms.Length);
-
             request.Headers.Add("X-Correlation-ID", correlationId);
             var response = await _retryPolicy.ExecuteAsync(async () =>
                 await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken));
@@ -254,8 +240,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             if (!response.IsSuccessStatusCode)
             {
                 var content = await response.Content.ReadAsStringAsync(cancellationToken);
-                _logger.LogWarning("Stream request failed. Status: {StatusCode}. Content: {Content}",
-                    response.StatusCode, content);
+                _logger.LogError("Stream request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
+                    response.StatusCode, content, correlationId);
 
                 var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions)
                     ?? throw new GeminiException($"Failed to parse error response. Status code: {response.StatusCode}");
@@ -266,7 +252,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 };
             }
 
-            _logger.LogInformation("Stream connection established successfully");
             var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
             var streamReader = new StreamReader(responseStream);
             var messageCount = 0;
@@ -287,15 +272,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                     }
                     catch (JsonException ex)
                     {
-                        _logger.LogError(ex, "Failed to parse stream message: {Line}", line);
+                        _logger.LogError(ex, "Failed to parse stream message: {Line} [ID: {CorrelationId}]", line, correlationId);
                         continue; // Skip malformed messages instead of failing the entire stream
                     }
 
                     if (processedText is not null)
                     {
                         messageCount++;
-                        _logger.LogDebug("Received message {Count}: {Length} characters",
-                            messageCount, processedText.Length);
                         yield return processedText;
                     }
                 }
@@ -304,7 +287,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             {
                 streamReader.Dispose();
                 await responseStream.DisposeAsync();
-                _logger.LogInformation("Stream completed. Total messages: {Count}", messageCount);
+                _logger.LogDebug("Stream completed with {MessageCount} messages [ID: {CorrelationId}]", messageCount, correlationId);
             }
         }
     }

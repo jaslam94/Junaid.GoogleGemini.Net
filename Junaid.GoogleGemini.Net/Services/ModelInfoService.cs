@@ -32,8 +32,6 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             try
             {
-                LogOperationStart("model list retrieval");
-
                 var endpoint = "models";
                 var response = await GeminiClient.GetAsync<ListModelsResponse>(
                     endpoint,
@@ -52,12 +50,12 @@ namespace Junaid.GoogleGemini.Net.Services
                     }
                 }
 
-                LogOperationSuccess("model list retrieval", new { ModelCount = modelCount });
+                Logger?.LogDebug("Retrieved {ModelCount} models from API", modelCount);
                 return response ?? new ListModelsResponse { models = Array.Empty<ModelInfo>() };
             }
             catch (Exception ex)
             {
-                LogOperationError(ex, "model list retrieval");
+                Logger?.LogError(ex, "Failed to retrieve model list");
                 throw;
             }
         }
@@ -72,11 +70,8 @@ namespace Junaid.GoogleGemini.Net.Services
                 // Try to get from cache first
                 if (_modelCache.TryGetValue(modelName, out var cachedModel))
                 {
-                    Logger?.LogDebug("Retrieved model {ModelName} from cache", modelName);
                     return cachedModel;
                 }
-
-                LogOperationStart("model info retrieval", new { ModelName = modelName });
 
                 var endpoint = $"models/{modelName}";
                 var model = await GeminiClient.GetAsync<ModelInfo>(
@@ -91,12 +86,11 @@ namespace Junaid.GoogleGemini.Net.Services
                 // Cache the model info
                 _modelCache.Set(modelName, model, _cacheDuration);
 
-                LogOperationSuccess("model info retrieval", new { ModelName = modelName });
                 return model;
             }
             catch (Exception ex)
             {
-                LogOperationError(ex, "model info retrieval");
+                Logger?.LogError(ex, "Failed to retrieve model info for {ModelName}", modelName);
                 throw;
             }
         }

@@ -40,11 +40,11 @@ namespace Junaid.GoogleGemini.Net.Examples
             if (ConfigurationUtilities.IsValidApiKeyFormat(apiKey))
             {
                 var options = ConfigurationUtilities.CreateDefaultOptions(apiKey);
-                Console.WriteLine("? Valid API key loaded from environment");
+                Console.WriteLine("SUCCESS: Valid API key loaded from environment");
             }
             else
             {
-                Console.WriteLine("? Invalid or missing API key in environment");
+                Console.WriteLine("ERROR: Invalid or missing API key in environment");
             }
         }
 
@@ -89,14 +89,14 @@ namespace Junaid.GoogleGemini.Net.Examples
                 var isValidContent = imageBytes.IsImageContent();
                 var fileSize = FileUtilities.FormatFileSize(imageBytes.Length);
                 
-                Console.WriteLine($"? Valid image: {fileName}");
+                Console.WriteLine($"SUCCESS: Valid image: {fileName}");
                 Console.WriteLine($"   MIME Type: {mimeType}");
                 Console.WriteLine($"   File Size: {fileSize}");
                 Console.WriteLine($"   Content Valid: {isValidContent}");
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine($"? Invalid image: {ex.Message}");
+                Console.WriteLine($"ERROR: Invalid image: {ex.Message}");
             }
         }
 
@@ -127,7 +127,7 @@ namespace Junaid.GoogleGemini.Net.Examples
             }
             catch (ArgumentException ex)
             {
-                Console.WriteLine($"? Validation failed: {ex.Message}");
+                Console.WriteLine($"ERROR: Validation failed: {ex.Message}");
             }
         }
 
@@ -144,12 +144,12 @@ namespace Junaid.GoogleGemini.Net.Examples
             // - ValidationUtilities (comprehensive validation)
             // - Consistent patterns and error handling
 
-            Console.WriteLine("? Helper classes consolidated successfully!");
-            Console.WriteLine("?? Reduced from 7+ helper classes to 4 utility classes");
-            Console.WriteLine("?? Better organization and discoverability");
-            Console.WriteLine("?? Enhanced validation and error handling");
-            Console.WriteLine("? Improved performance with optimized implementations");
-            Console.WriteLine("?? Comprehensive documentation and examples");
+            Console.WriteLine("SUCCESS: Helper classes consolidated successfully!");
+            Console.WriteLine("INFO: Reduced from 7+ helper classes to 4 utility classes");
+            Console.WriteLine("INFO: Better organization and discoverability");
+            Console.WriteLine("INFO: Enhanced validation and error handling");
+            Console.WriteLine("INFO: Improved performance with optimized implementations");
+            Console.WriteLine("INFO: Comprehensive documentation and examples");
         }
 
         /// <summary>
@@ -160,21 +160,21 @@ namespace Junaid.GoogleGemini.Net.Examples
             Console.WriteLine("Migration Guide:");
             Console.WriteLine("================");
             
-            Console.WriteLine("? OLD (removed in v6.0.0):");
+            Console.WriteLine("OLD (removed in v6.0.0):");
             Console.WriteLine("  MimeTypeHelper.GetMimeType(fileName)");
             Console.WriteLine("  image.IsImage()");
             Console.WriteLine("  SafetyCategory.Harassment");
             Console.WriteLine("  GeminiModels.Recommended");
             Console.WriteLine();
             
-            Console.WriteLine("? NEW (unified utilities):");
+            Console.WriteLine("NEW (unified utilities):");
             Console.WriteLine("  FileUtilities.GetMimeType(fileName)");
             Console.WriteLine("  FileUtilities.IsImageContent(image)");
             Console.WriteLine("  GeminiConstants.SafetyCategories.Harassment");
             Console.WriteLine("  GeminiConstants.Models.Recommended");
             Console.WriteLine();
             
-            Console.WriteLine("?? Additional utilities now available:");
+            Console.WriteLine("Additional utilities now available:");
             Console.WriteLine("  ConfigurationUtilities.CreateDefaultOptions()");
             Console.WriteLine("  ValidationUtilities.ValidateTextInput()");
             Console.WriteLine("  FileUtilities.ValidateImageFile()");

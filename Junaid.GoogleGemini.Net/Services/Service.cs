@@ -47,8 +47,6 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             try
             {
-                LogOperationStart(operation, logContext);
-
                 var response = await GeminiClient.PostAsync<TRequest, TResponse>(
                     endpoint,
                     request,
@@ -59,12 +57,11 @@ namespace Junaid.GoogleGemini.Net.Services
                     ValidateResponse(contentResponse, operation);
                 }
 
-                LogOperationSuccess(operation);
                 return response;
             }
             catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
             {
-                LogOperationError(ex, operation);
+                Logger?.LogError(ex, "API {Operation} failed", operation);
                 throw;
             }
         }
@@ -82,18 +79,14 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             try
             {
-                LogOperationStart(operation, logContext);
-
                 await foreach (var data in GeminiClient.SendAsync(endpoint, request).WithCancellation(cancellationToken))
                 {
                     handleStreamResponse(data);
                 }
-
-                LogOperationSuccess(operation);
             }
             catch (Exception ex)
             {
-                LogOperationError(ex, operation);
+                Logger?.LogError(ex, "API {Operation} streaming failed", operation);
                 throw;
             }
         }
@@ -113,11 +106,9 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidationUtilities.ValidateContentResponse(response, operation);
 
-            if (SafetyService != null && !SafetyService.IsContentSafe(response, GetDefaultSafetyThresholds()))
-            {
-                Logger?.LogWarning("Generated content for {Operation} failed safety checks", operation);
-                throw new InvalidOperationException("Generated content failed safety checks");
-            }
+            // Note: Safety validation removed from base class as it should be handled
+            // per-request based on the actual safety settings sent with the request.
+            // The API itself will block content that violates the requested safety settings.
         }
 
         /// <summary>
@@ -137,41 +128,29 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <summary>
-        /// Logs the start of an operation
+        /// Logs operation start only when necessary
         /// </summary>
         protected void LogOperationStart(string operation, object? context = null)
         {
-            if (context != null)
-            {
-                Logger?.LogInformation("Starting {Operation} with context: {@Context}", operation, context);
-            }
-            else
-            {
-                Logger?.LogInformation("Starting {Operation}", operation);
-            }
+            // Only log complex operations, not every single request
+            Logger?.LogDebug("{Operation} started", operation);
         }
 
         /// <summary>
-        /// Logs the successful completion of an operation
+        /// Logs successful operation completion
         /// </summary>
         protected void LogOperationSuccess(string operation, object? result = null)
         {
-            if (result != null)
-            {
-                Logger?.LogInformation("{Operation} completed successfully: {@Result}", operation, result);
-            }
-            else
-            {
-                Logger?.LogInformation("{Operation} completed successfully", operation);
-            }
+            // Simplified success logging
+            Logger?.LogDebug("{Operation} completed", operation);
         }
 
         /// <summary>
-        /// Logs an operation error
+        /// Logs an operation error with response details
         /// </summary>
         protected void LogOperationError(Exception ex, string operation)
         {
-            Logger?.LogError(ex, "Error during {Operation}", operation);
+            Logger?.LogError(ex, "Operation {Operation} failed", operation);
         }
     }
 }

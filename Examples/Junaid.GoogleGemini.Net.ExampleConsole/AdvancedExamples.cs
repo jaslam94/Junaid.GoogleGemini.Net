@@ -25,7 +25,7 @@ public class AdvancedExamples
     /// </summary>
     public async Task RunPerformanceOptimizationExamples()
     {
-        Console.WriteLine("? === PERFORMANCE OPTIMIZATION EXAMPLES ===");
+        Console.WriteLine("=== PERFORMANCE OPTIMIZATION EXAMPLES ===");
         Console.WriteLine();
 
         try
@@ -83,7 +83,7 @@ public class AdvancedExamples
             _logger.LogError(ex, "Error in performance optimization examples");
         }
 
-        Console.WriteLine("?????????????????????????????????????????????????????????????");
+        Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
 
@@ -92,7 +92,7 @@ public class AdvancedExamples
     /// </summary>
     public async Task RunContentGenerationPatterns()
     {
-        Console.WriteLine("?? === CONTENT GENERATION PATTERNS ===");
+        Console.WriteLine("=== CONTENT GENERATION PATTERNS ===");
         Console.WriteLine();
 
         try
@@ -151,7 +151,7 @@ public class AdvancedExamples
             _logger.LogError(ex, "Error in content generation patterns");
         }
 
-        Console.WriteLine("?????????????????????????????????????????????????????????????");
+        Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
 
@@ -160,7 +160,7 @@ public class AdvancedExamples
     /// </summary>
     public async Task RunErrorHandlingExamples()
     {
-        Console.WriteLine("??? === ERROR HANDLING EXAMPLES ===");
+        Console.WriteLine("=== ERROR HANDLING EXAMPLES ===");
         Console.WriteLine();
 
         try
@@ -175,18 +175,18 @@ public class AdvancedExamples
                     "Write a detailed analysis",
                     new GeminiRequestOptions { MaxTokens = 1000 });
                 
-                Console.WriteLine("? Full response generated successfully");
+                Console.WriteLine("SUCCESS: Full response generated successfully");
                 Console.WriteLine($"Response length: {response.Text().Length} characters");
             }
             catch (Exception)
             {
                 // Fallback to simpler request
-                Console.WriteLine("?? Falling back to simpler request...");
+                Console.WriteLine("FALLBACK: Falling back to simpler request...");
                 var fallbackResponse = await _gemini.GenerateAsync(
                     "Write a brief analysis",
                     GeminiRequestOptions.Fast());
                 
-                Console.WriteLine("? Fallback response generated");
+                Console.WriteLine("SUCCESS: Fallback response generated");
                 Console.WriteLine($"Fallback response: {fallbackResponse.Text()}");
             }
             Console.WriteLine();
@@ -201,12 +201,12 @@ public class AdvancedExamples
                 try
                 {
                     var response = await _gemini.GenerateAsync("Hello, world!");
-                    Console.WriteLine($"? Success on attempt {attempt}");
+                    Console.WriteLine($"SUCCESS: Success on attempt {attempt}");
                     break;
                 }
                 catch (Exception ex) when (attempt < maxRetries)
                 {
-                    Console.WriteLine($"?? Attempt {attempt} failed: {ex.Message}");
+                    Console.WriteLine($"RETRY: Attempt {attempt} failed: {ex.Message}");
                     Console.WriteLine($"Waiting {retryDelay.TotalSeconds} seconds before retry...");
                     await Task.Delay(retryDelay);
                     retryDelay = TimeSpan.FromMilliseconds(retryDelay.TotalMilliseconds * 2); // Exponential backoff
@@ -229,11 +229,11 @@ public class AdvancedExamples
                 try
                 {
                     ValidationUtilities.ValidateTextInput(input, "test", 1000);
-                    Console.WriteLine($"? Input valid: \"{(input.Length > 20 ? input[..20] + "..." : input)}\"");
+                    Console.WriteLine($"VALID: Input valid: \"{(input.Length > 20 ? input[..20] + "..." : input)}\"");
                 }
                 catch (ArgumentException ex)
                 {
-                    Console.WriteLine($"? Input invalid: {ex.Message}");
+                    Console.WriteLine($"INVALID: Input invalid: {ex.Message}");
                 }
             }
 
@@ -243,7 +243,7 @@ public class AdvancedExamples
             _logger.LogError(ex, "Error in error handling examples");
         }
 
-        Console.WriteLine("?????????????????????????????????????????????????????????????");
+        Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
 
@@ -252,7 +252,7 @@ public class AdvancedExamples
     /// </summary>
     public async Task RunIntegrationPatterns()
     {
-        Console.WriteLine("?? === INTEGRATION PATTERNS ===");
+        Console.WriteLine("=== INTEGRATION PATTERNS ===");
         Console.WriteLine();
 
         try
@@ -327,7 +327,7 @@ public class AdvancedExamples
             _logger.LogError(ex, "Error in integration patterns");
         }
 
-        Console.WriteLine("?????????????????????????????????????????????????????????????");
+        Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
 
@@ -336,7 +336,7 @@ public class AdvancedExamples
     /// </summary>
     public async Task RunMonitoringExamples()
     {
-        Console.WriteLine("?? === MONITORING & ANALYTICS EXAMPLES ===");
+        Console.WriteLine("=== MONITORING & ANALYTICS EXAMPLES ===");
         Console.WriteLine();
 
         try
@@ -388,7 +388,7 @@ public class AdvancedExamples
             _logger.LogError(ex, "Error in monitoring examples");
         }
 
-        Console.WriteLine("?????????????????????????????????????????????????????????????");
+        Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
 }

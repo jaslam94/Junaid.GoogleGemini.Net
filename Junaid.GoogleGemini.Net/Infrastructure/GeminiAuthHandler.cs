@@ -47,27 +47,21 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 var correlationId = Guid.NewGuid().ToString();
                 request.Headers.Add("X-Correlation-ID", correlationId);
 
-                _logger.LogDebug(
-                    "Sending authenticated request. Correlation ID: {CorrelationId}, Method: {Method}, URI: {Uri}",
-                    correlationId,
-                    request.Method,
-                    request.RequestUri);
-
                 var response = await base.SendAsync(request, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
                     _logger.LogWarning(
-                        "Request failed. Correlation ID: {CorrelationId}, Status: {StatusCode}",
-                        correlationId,
-                        response.StatusCode);
+                        "Request failed - Status: {StatusCode} [ID: {CorrelationId}]",
+                        response.StatusCode,
+                        correlationId);
                 }
 
                 return response;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error processing request");
+                _logger.LogError(ex, "Error processing authentication");
                 throw;
             }
         }

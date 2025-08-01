@@ -37,12 +37,6 @@ namespace Junaid.GoogleGemini.Net.Services
 
             try
             {
-                LogOperationStart("embedding generation", new 
-                { 
-                    Model = model, 
-                    TextLength = text.Length 
-                });
-
                 var request = RequestFactory.CreateTextRequest(text); // Simplified approach
                 var endpoint = $"models/{model}:embedContent";
                 
@@ -52,17 +46,11 @@ namespace Junaid.GoogleGemini.Net.Services
                     cancellationToken);
 
                 ValidateEmbeddingResponse(response);
-                LogOperationSuccess("embedding generation", new 
-                { 
-                    Model = model, 
-                    Dimensions = response.embedding?.values?.Length ?? 0 
-                });
-
                 return response;
             }
             catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
             {
-                LogOperationError(ex, "embedding generation");
+                Logger?.LogError(ex, "Failed to generate embedding with model {Model}", model);
                 throw;
             }
         }
@@ -77,12 +65,6 @@ namespace Junaid.GoogleGemini.Net.Services
 
             try
             {
-                LogOperationStart("batch embedding generation", new 
-                { 
-                    Model = model, 
-                    TextCount = texts.Length 
-                });
-
                 var requests = texts.Select(text => new EmbedContentRequest
                 {
                     model = $"models/{model}",
@@ -101,17 +83,12 @@ namespace Junaid.GoogleGemini.Net.Services
                     cancellationToken);
 
                 ValidateBatchEmbeddingResponse(response);
-                LogOperationSuccess("batch embedding generation", new 
-                { 
-                    Model = model, 
-                    Count = response.embeddings?.Length ?? 0 
-                });
-
+                Logger?.LogDebug("Generated {Count} embeddings with model {Model}", response.embeddings?.Length ?? 0, model);
                 return response;
             }
             catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
             {
-                LogOperationError(ex, "batch embedding generation");
+                Logger?.LogError(ex, "Failed to generate batch embeddings with model {Model} for {TextCount} texts", model, texts.Length);
                 throw;
             }
         }
