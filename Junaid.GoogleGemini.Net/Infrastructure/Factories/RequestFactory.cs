@@ -112,5 +112,98 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
         {
             return ConfigurationUtilities.CreateSafetySettings(ConfigurationUtilities.GetDefaultSafetyThresholds());
         }
+
+        /// <summary>
+        /// Creates a simple text request for token counting (without generation config or safety settings)
+        /// </summary>
+        public static CountTokensRequest CreateTokenCountingTextRequest(string text)
+        {
+            var content = new Content
+            {
+                Role = "user",
+                Parts = new List<Part> { new() { Text = text } }
+            };
+
+            return new CountTokensRequest
+            {
+                contents = new List<Content> { content }
+            };
+        }
+
+        /// <summary>
+        /// Creates a vision request for token counting (text + image, without generation config or safety settings)
+        /// </summary>
+        public static CountTokensRequest CreateTokenCountingVisionRequest(string text, FileObject image)
+        {
+            var parts = new List<Part>
+            {
+                new() { Text = text },
+                new() 
+                { 
+                    InlineData = new InlineData
+                    {
+                        Data = Convert.ToBase64String(image.FileContent),
+                        MimeType = FileUtilities.GetMimeType(image.FileName)
+                    }
+                }
+            };
+
+            var content = new Content
+            {
+                Role = "user",
+                Parts = parts
+            };
+
+            return new CountTokensRequest
+            {
+                contents = new List<Content> { content }
+            };
+        }
+
+        /// <summary>
+        /// Creates a chat request for token counting (without generation config or safety settings)
+        /// </summary>
+        public static CountTokensRequest CreateTokenCountingChatRequest(MessageObject[] messages)
+        {
+            var contents = messages.Select(msg => new Content
+            {
+                Role = msg.Role,
+                Parts = new List<Part> { new() { Text = msg.Text } }
+            }).ToList();
+
+            return new CountTokensRequest
+            {
+                contents = contents
+            };
+        }
+
+        /// <summary>
+        /// Creates an embedding request for single text input (without generation config or safety settings)
+        /// </summary>
+        public static SingleEmbedContentRequest CreateEmbeddingRequest(string text)
+        {
+            var content = new Content
+            {
+                Role = "user",
+                Parts = new List<Part> { new() { Text = text } }
+            };
+
+            return new SingleEmbedContentRequest
+            {
+                content = content
+            };
+        }
+
+        /// <summary>
+        /// Creates embedding content for batch requests
+        /// </summary>
+        public static Content CreateEmbeddingContent(string text)
+        {
+            return new Content
+            {
+                Role = "user",
+                Parts = new List<Part> { new() { Text = text } }
+            };
+        }
     }
 }

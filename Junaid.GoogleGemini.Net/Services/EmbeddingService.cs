@@ -37,10 +37,10 @@ namespace Junaid.GoogleGemini.Net.Services
 
             try
             {
-                var request = RequestFactory.CreateTextRequest(text); // Simplified approach
+                var request = RequestFactory.CreateEmbeddingRequest(text);
                 var endpoint = $"models/{model}:embedContent";
                 
-                var response = await GeminiClient.PostAsync<GenerateContentRequest, EmbedContentResponse>(
+                var response = await GeminiClient.PostAsync<SingleEmbedContentRequest, EmbedContentResponse>(
                     endpoint,
                     request,
                     cancellationToken);
@@ -68,7 +68,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 var requests = texts.Select(text => new EmbedContentRequest
                 {
                     model = $"models/{model}",
-                    content = RequestFactory.CreateTextRequest(text).Contents[0] // Simplified approach
+                    content = RequestFactory.CreateEmbeddingContent(text)
                 });
 
                 var batchRequest = new BatchEmbedContentRequest

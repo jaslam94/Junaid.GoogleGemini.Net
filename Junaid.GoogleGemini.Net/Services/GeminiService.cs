@@ -156,10 +156,10 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
 
-            var request = CreateTextRequest(prompt, null);
+            var request = RequestFactory.CreateTokenCountingTextRequest(prompt);
             var endpoint = GetCountTokensEndpoint(null);
 
-            return await ExecuteRequestAsync<GenerateContentRequest, CountTokensResponse>(
+            return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "token counting",
                 endpoint,
                 request,
@@ -176,10 +176,10 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
-            var request = CreateVisionRequest(prompt, image, null);
+            var request = RequestFactory.CreateTokenCountingVisionRequest(prompt, image);
             var endpoint = GetCountTokensEndpoint("gemini-1.5-pro");
 
-            return await ExecuteRequestAsync<GenerateContentRequest, CountTokensResponse>(
+            return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "vision token counting",
                 endpoint,
                 request,
@@ -194,10 +194,10 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidationUtilities.ValidateMessages(messages, nameof(messages));
 
-            var request = CreateChatRequest(messages, null);
+            var request = RequestFactory.CreateTokenCountingChatRequest(messages);
             var endpoint = GetCountTokensEndpoint(null);
 
-            return await ExecuteRequestAsync<GenerateContentRequest, CountTokensResponse>(
+            return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "chat token counting",
                 endpoint,
                 request,

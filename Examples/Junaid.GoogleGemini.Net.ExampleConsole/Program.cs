@@ -175,7 +175,7 @@ public class GeminiExampleApp
         Console.WriteLine("Interactive Mode: You will be prompted before each API call to respect rate limits and allow you to control the flow.");
         Console.WriteLine();
 
-        // Basic Examples (with user prompts)
+        //Basic Examples(with user prompts)
         if (await PromptUserToContinue("Text Generation Examples"))
             await RunTextGenerationExamples();
 
@@ -561,7 +561,7 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    private async Task<string?> CreateOrFindSampleImage()
+    private static async Task<string?> CreateOrFindSampleImage()
     {
         var sampleImagesDir = Path.Combine(Directory.GetCurrentDirectory(), "sample-images");
         
@@ -594,7 +594,7 @@ public class GeminiExampleApp
         }
     }
 
-    private async Task CreateSimpleTestImage(string path)
+    private static async Task CreateSimpleTestImage(string path)
     {
         // Create a simple 1x1 PNG image for testing
         // This is a minimal PNG file in base64

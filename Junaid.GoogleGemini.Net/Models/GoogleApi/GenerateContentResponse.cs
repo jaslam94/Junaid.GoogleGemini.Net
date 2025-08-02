@@ -5,9 +5,36 @@ public class GenerateContentResponse
     public Candidate[] candidates { get; set; }
     public Promptfeedback promptFeedback { get; set; }
 
+    /// <summary>
+    /// Extracts the text content from the response, handling blocked content gracefully
+    /// </summary>
+    /// <returns>The generated text or a message indicating the content was blocked</returns>
     public string Text()
     {
-        return this.candidates?[0].content?.Parts?[0]?.Text;
+        // Check if we have any candidates
+        if (candidates == null || candidates.Length == 0)
+        {
+            return "[No content generated - response contained no candidates]";
+        }
+
+        // Get the first candidate
+        var firstCandidate = candidates[0];
+        
+        // Check for content blocking
+        if (firstCandidate?.content?.Parts == null || firstCandidate.content.Parts.Count == 0)
+        {
+            return "[Content was blocked by safety filters]";
+        }
+
+        // Try to get the text from the first part
+        var text = firstCandidate.content.Parts[0]?.Text;
+        
+        if (string.IsNullOrEmpty(text))
+        {
+            return "[Content was blocked or empty]";
+        }
+
+        return text;
     }
 }
 

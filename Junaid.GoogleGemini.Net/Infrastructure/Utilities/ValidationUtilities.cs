@@ -261,15 +261,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
                 throw new InvalidOperationException($"No content was generated for {operation}");
             }
 
-            // Check if all candidates are blocked
-            var validCandidates = response.candidates.Where(c => 
-                c.content?.Parts != null && 
-                c.content.Parts.Any(p => !string.IsNullOrEmpty(p.Text))).ToArray();
-
-            if (validCandidates.Length == 0)
-            {
-                throw new InvalidOperationException($"All generated content was blocked or empty for {operation}");
-            }
+            // NOTE: We no longer throw exceptions for blocked content as this is a normal API behavior
+            // when safety filters are applied. The response should be processed normally and the 
+            // application can check for blocked content using the safety ratings if needed.
         }
 
         /// <summary>
