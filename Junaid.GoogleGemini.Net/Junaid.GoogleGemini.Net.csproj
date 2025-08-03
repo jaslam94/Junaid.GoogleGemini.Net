@@ -21,7 +21,7 @@
 			- Enhanced performance and maintainability
 			- Targets .NET 8 LTS only for optimal performance
 		</PackageReleaseNotes>
-		<Version>7.0.0</Version>
+		<Version>5.0.0</Version>
 	</PropertyGroup>
 
 	<ItemGroup>

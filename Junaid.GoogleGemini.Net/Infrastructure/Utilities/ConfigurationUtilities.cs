@@ -1,6 +1,5 @@
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
-using Junaid.GoogleGemini.Net.Models.Requests;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 {
@@ -109,80 +108,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         }
 
         #endregion Default Configuration Generators
-
-        #region Legacy Migration Support
-
-        /// <summary>
-        /// Converts legacy GenerateContentConfiguration to modern GeminiRequestOptions
-        /// </summary>
-        /// <param name="legacyConfig">Legacy request configuration</param>
-        /// <returns>Modern request options</returns>
-        [Obsolete("This method helps migrate from legacy configuration. Use GeminiRequestOptions directly instead.")]
-        public static GeminiRequestOptions ToGeminiRequestOptions(this GenerateContentConfiguration legacyConfig)
-        {
-            return new GeminiRequestOptions
-            {
-                Temperature = legacyConfig.generationConfig?.Temperature,
-                MaxTokens = legacyConfig.generationConfig?.MaxOutputTokens,
-                TopP = legacyConfig.generationConfig?.TopP,
-                TopK = legacyConfig.generationConfig?.TopK,
-                StopSequences = legacyConfig.generationConfig?.StopSequences,
-                SafetySettings = legacyConfig.safetySettings?.ToList()
-            };
-        }
-
-        /// <summary>
-        /// Gets comprehensive migration examples and guidance
-        /// </summary>
-        /// <returns>Migration guide text</returns>
-        public static string GetMigrationGuide()
-        {
-            return @"
-# Configuration Migration Guide
-
-## Service Registration
-? OLD (removed in v7.0.0):
-services.AddGeminiServices(config =>
-{
-    config.ApiKey = ""your-api-key"";
-});
-
-? NEW (recommended):
-services.AddGemini(options =>
-{
-    options.ApiKey = ""your-api-key"";
-    options.DefaultModel = GeminiConstants.Models.Recommended;
-    options.TimeoutSeconds = 30;
-});
-
-## Request Configuration
-? OLD (deprecated):
-var legacyConfig = new GenerateContentConfiguration
-{
-    generationConfig = new GenerationConfig { Temperature = 0.8f },
-    safetySettings = new[] { /* settings */ }
-};
-
-? NEW (recommended):
-var options = new GeminiRequestOptions
-{
-    Temperature = 0.8f,
-    SafetySettings = new List<SafetySetting> { /* settings */ }
-};
-
-## Using Utilities
-?? Default configuration:
-var options = ConfigurationUtilities.CreateDefaultOptions();
-
-?? Production configuration:
-var options = ConfigurationUtilities.CreateProductionOptions(""your-api-key"");
-
-??? Development configuration:
-var options = ConfigurationUtilities.CreateDevelopmentOptions(""your-api-key"");
-";
-        }
-
-        #endregion Legacy Migration Support
 
         #region Safety Configuration Helpers
 

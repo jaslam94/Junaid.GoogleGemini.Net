@@ -37,9 +37,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string Gemini15Pro = "gemini-1.5-pro";
             public const string Gemini15Flash = "gemini-1.5-flash";
 
-            [Obsolete("Use newer models; this variant may no longer be available.")]
-            public const string GeminiProVision = "gemini-pro-vision";
-
             public const string GeminiPro = "gemini-pro";
             public const string Gemini10Pro = "gemini-1.0-pro";
             public const string Embedding001 = "embedding-001";
@@ -72,7 +69,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             };
 
             public static string Recommended => Gemini25Pro;
-            public static string Fastest => Gemini15Flash; // Changed from non-existent lite model to actual fast model
+            public static string Fastest => Gemini25Flash;
         }
 
         #endregion Model Information
@@ -247,7 +244,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// Default model for new requests
             /// </summary>
-            public const string Model = Models.Gemini15Pro;
+            public const string Model = Models.Gemini25Pro;
         }
 
         #endregion Default Values

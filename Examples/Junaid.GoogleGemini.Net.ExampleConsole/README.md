@@ -4,7 +4,7 @@
 ![C#](https://img.shields.io/badge/C%23-12.0-blue.svg)
 ![Google Gemini](https://img.shields.io/badge/Google-Gemini%20API-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Version](https://img.shields.io/badge/Library-v7.0.0-red.svg)
+![Version](https://img.shields.io/badge/Library-v5.0.0-red.svg)
 
 This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library v5.0.0.
 
@@ -164,14 +164,6 @@ The example demonstrates:
 - Custom temperature, tokens, and parameters
 - Model selection and switching
 - Safety settings per request
-
-## What's New in v5.0.0
-
-- **Major Cleanup**: Removed all legacy services (TextService, VisionService, etc.)
-- **Performance**: 50% reduction in API surface area
-- **Simplified**: Single unified `IGeminiService` for all operations
-- **Modern**: Updated utilities and configuration system
-- **.NET 8**: Optimized for .NET 8 LTS
 
 ## Troubleshooting
 
