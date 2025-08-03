@@ -1,6 +1,12 @@
 # Junaid.GoogleGemini.Net Example Console Application
 
-This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library version 7.0.0.
+![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)
+![C#](https://img.shields.io/badge/C%23-12.0-blue.svg)
+![Google Gemini](https://img.shields.io/badge/Google-Gemini%20API-orange.svg)
+![License](https://img.shields.io/badge/License-MIT-green.svg)
+![Version](https://img.shields.io/badge/Library-v7.0.0-red.svg)
+
+This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library v5.0.0.
 
 ## Prerequisites
 
@@ -46,61 +52,68 @@ dotnet run
 
 ## Features Demonstrated
 
-### ?? Basic Text Generation
+### Basic Text Generation
 - Simple text generation
 - Creative text generation with options
 - Factual text generation
 
-### ?? Model Information
+### Model Information
 - List all available models
 - Get specific model details
 - Model capabilities and limits
 
-### ?? Request Options
+### Request Options
 - Predefined options (Creative, Fast, Code, Factual)
 - Custom options with temperature, tokens, etc.
 - Model-specific configurations
 
-### ??? Vision Capabilities
+### Vision Capabilities
 - Image analysis and description
 - Creative story generation from images
 - Token counting for vision inputs
 - Supported formats: JPG, PNG, GIF, BMP, WebP
 
-### ?? Chat Conversations
+### Chat Conversations
 - Multi-turn conversations
 - Chat with different personalities
 - Token counting for chat sessions
 
-### ?? Streaming Responses
+### Streaming Responses
 - Real-time text streaming
 - Creative streaming with options
 - Chat streaming capabilities
 
-### ?? Token Counting
+### Token Counting
 - Count tokens for various text lengths
 - Compare efficiency across different content types
 - Vision and chat token analysis
 
-### ??? Safety Features
+### Safety Features
 - Different safety configurations (Strict, Moderate, Permissive)
 - Content safety analysis
 - Custom safety thresholds
 
-### ?? Embedding Generation
+### Embedding Generation
 - Text embeddings for semantic analysis
 - Multiple text embedding comparison
 - Embedding dimension analysis
 
-### ?? Configuration Management
+### Configuration Management
 - Environment variable support
-- Different configuration approaches
-- Migration from legacy configurations
+- Modern unified configuration
+- Development vs Production settings
 
-### ?? Function Services
+### Function Services
 - Function registration concepts
 - Tool integration patterns
 - External API integration
+
+### Advanced Examples
+- Performance optimization techniques
+- Content generation patterns
+- Error handling and recovery
+- Integration patterns
+- Monitoring and analytics
 
 ## Sample Images
 
@@ -108,13 +121,13 @@ To test vision capabilities, place sample images in the `sample-images` folder:
 - Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.webp`
 - The application will automatically detect and use available images
 
-## Error Handling
+## Interactive Mode
 
-The application includes comprehensive error handling and logging:
-- API key validation
-- Network error recovery
-- Rate limiting respect
-- Safety threshold enforcement
+The application features **interactive mode** to help manage API usage:
+- Prompts before each API call
+- Rate limit awareness (free tier: ~limited requests/minute)
+- Cost control for paid tiers
+- Exit anytime with `Q`
 
 ## Architecture
 
@@ -127,46 +140,38 @@ The example demonstrates:
 
 ## Library Features Covered
 
-? **Core Services:**
+**Core Services:**
 - `IGeminiService` - Unified content generation
 - `IEmbeddingService` - Text embeddings
 - `IModelInfoService` - Model information
 - `ISafetyService` - Content safety
 - `IFunctionService` - Function calling
 
-? **Configuration:**
-- Modern `GeminiOptions` configuration
+**Modern Configuration:**
+- `GeminiOptions` configuration
 - Environment variable support
 - Rate limiting configuration
-- Proxy support (configuration shown)
+- Proxy support
 
-? **Utilities:**
+**Unified Utilities:**
 - `ConfigurationUtilities` - Configuration helpers
 - `ValidationUtilities` - Input validation
 - `FileUtilities` - File handling
 - `GeminiConstants` - Constants and defaults
 
-? **Request Options:**
+**Request Options:**
 - Predefined options (Creative, Fast, Code, etc.)
 - Custom temperature, tokens, and parameters
 - Model selection and switching
 - Safety settings per request
 
-? **Advanced Features:**
-- Streaming responses
-- Vision (multimodal) capabilities
-- Token counting and analysis
-- Safety analysis and configuration
-- Function calling framework
+## What's New in v5.0.0
 
-## Performance Features
-
-The library includes several performance optimizations demonstrated:
-- **50% faster text generation** with simplified approach
-- **No builder pattern overhead** for common operations
-- **Efficient streaming** with real-time processing
-- **Rate limiting** to respect API quotas
-- **Retry logic** with exponential backoff
+- **Major Cleanup**: Removed all legacy services (TextService, VisionService, etc.)
+- **Performance**: 50% reduction in API surface area
+- **Simplified**: Single unified `IGeminiService` for all operations
+- **Modern**: Updated utilities and configuration system
+- **.NET 8**: Optimized for .NET 8 LTS
 
 ## Troubleshooting
 
@@ -178,7 +183,8 @@ The library includes several performance optimizations demonstrated:
 
 2. **Rate Limiting**
    - The library includes built-in rate limiting
-   - Adjust `RequestsPerMinute` in configuration if needed
+   - Use interactive mode to control API calls
+   - Consider upgrading to paid tier
 
 3. **Vision Examples Skipped**
    - Place sample images in `sample-images` folder
@@ -201,4 +207,3 @@ After running this example:
 
 - **GitHub**: [Junaid.GoogleGemini.Net](https://github.com/jaslam94/Junaid.GoogleGemini.Net)
 - **NuGet**: [Package](https://www.nuget.org/packages/Junaid.GoogleGemini.Net)
-- **Email**: aslam.junaid786@hotmail.com

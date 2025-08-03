@@ -1,5 +1,4 @@
 ﻿using Junaid.GoogleGemini.Net.Extensions;
-using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
@@ -10,9 +9,9 @@ using Microsoft.Extensions.Logging;
 
 namespace Junaid.GoogleGemini.Net.ExampleConsole;
 
-static class Program
+internal static class Program
 {
-    static async Task Main(string[] args)
+    private static async Task Main(string[] args)
     {
         // Build configuration
         var configuration = new ConfigurationBuilder()
@@ -27,7 +26,7 @@ static class Program
             {
                 // Register Gemini services with configuration
                 services.AddGemini(configuration.GetSection("Gemini"));
-                
+
                 // Register the main application service
                 services.AddTransient<GeminiExampleApp>();
                 services.AddTransient<AdvancedExamples>();
@@ -79,7 +78,7 @@ public class GeminiExampleApp
     public async Task RunAsync()
     {
         _logger.LogInformation("Starting Junaid.GoogleGemini.Net Example Console Application");
-        
+
         try
         {
             // Check if API key is configured
@@ -95,16 +94,16 @@ public class GeminiExampleApp
             }
 
             // Display menu and run examples
-            await ShowWelcomeMessage();
+            ShowWelcomeMessage();
             await RunAllExamples();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Unexpected error occurred in example application");
         }
-        
+
         _logger.LogInformation("Example application completed");
-        
+
         Console.WriteLine();
         Console.WriteLine("Thank you for exploring Junaid.GoogleGemini.Net!");
         Console.WriteLine("Visit https://github.com/jaslam94/Junaid.GoogleGemini.Net for more information.");
@@ -125,7 +124,7 @@ public class GeminiExampleApp
         }
     }
 
-    private async Task ShowWelcomeMessage()
+    private static void ShowWelcomeMessage()
     {
         Console.WriteLine("================================================================");
         Console.WriteLine("                  Junaid.GoogleGemini.Net                       ");
@@ -133,7 +132,7 @@ public class GeminiExampleApp
         Console.WriteLine("                        v7.0.0                                 ");
         Console.WriteLine("================================================================");
         Console.WriteLine();
-        
+
         // Interactive mode explanation
         Console.WriteLine("INTERACTIVE MODE ENABLED");
         Console.WriteLine("========================");
@@ -143,13 +142,13 @@ public class GeminiExampleApp
         Console.WriteLine("  - Focus on specific features you want to test");
         Console.WriteLine("  - Exit anytime if you hit rate limits");
         Console.WriteLine();
-        
+
         Console.WriteLine("CONTROLS:");
         Console.WriteLine("  Y/Enter = Run the example");
         Console.WriteLine("  N = Skip the example");
         Console.WriteLine("  Q = Quit the application");
         Console.WriteLine();
-        
+
         // Show what will be demonstrated
         Console.WriteLine("Features to be demonstrated:");
         Console.WriteLine("   - Basic text generation with various options");
@@ -162,7 +161,7 @@ public class GeminiExampleApp
         Console.WriteLine("   - Advanced integration patterns");
         Console.WriteLine("   - Performance monitoring");
         Console.WriteLine();
-        
+
         Console.WriteLine("RATE LIMIT NOTICE:");
         Console.WriteLine("   Free tier: ~15 requests/minute, 1,500/day");
         Console.WriteLine("   Paid tier: Higher limits available");
@@ -175,7 +174,7 @@ public class GeminiExampleApp
         Console.WriteLine("Interactive Mode: You will be prompted before each API call to respect rate limits and allow you to control the flow.");
         Console.WriteLine();
 
-        //Basic Examples(with user prompts)
+        // Basic Examples (with user prompts)
         if (await PromptUserToContinue("Text Generation Examples"))
             await RunTextGenerationExamples();
 
@@ -208,25 +207,25 @@ public class GeminiExampleApp
 
         if (await PromptUserToContinue("Function Service Examples"))
             await RunFunctionServiceExamples();
-        
+
         // Advanced Examples
         if (await PromptUserToContinue("Advanced Examples"))
         {
             Console.WriteLine("=== ADVANCED EXAMPLES ===");
             Console.WriteLine();
-            
+
             if (await PromptUserToContinue("Performance Optimization Examples"))
                 await _advancedExamples.RunPerformanceOptimizationExamples();
-                
+
             if (await PromptUserToContinue("Content Generation Patterns"))
                 await _advancedExamples.RunContentGenerationPatterns();
-                
+
             if (await PromptUserToContinue("Error Handling Examples"))
                 await _advancedExamples.RunErrorHandlingExamples();
-                
+
             if (await PromptUserToContinue("Integration Patterns"))
                 await _advancedExamples.RunIntegrationPatterns();
-                
+
             if (await PromptUserToContinue("Monitoring Examples"))
                 await _advancedExamples.RunMonitoringExamples();
         }
@@ -240,7 +239,7 @@ public class GeminiExampleApp
     /// </summary>
     /// <param name="sectionName">Name of the section to run</param>
     /// <returns>True if user wants to continue, false otherwise</returns>
-    private async Task<bool> PromptUserToContinue(string sectionName)
+    private static async Task<bool> PromptUserToContinue(string sectionName)
     {
         Console.WriteLine();
         Console.WriteLine($"==================================================");
@@ -255,7 +254,7 @@ public class GeminiExampleApp
         Console.Write("Your choice (Y/N/Q): ");
 
         var choice = Console.ReadLine()?.Trim().ToUpperInvariant();
-        
+
         switch (choice)
         {
             case "Y":
@@ -264,19 +263,19 @@ public class GeminiExampleApp
                 Console.WriteLine($"Running {sectionName}...");
                 Console.WriteLine();
                 return true;
-                
+
             case "N":
             case "NO":
                 Console.WriteLine($"Skipping {sectionName}");
                 return false;
-                
+
             case "Q":
             case "QUIT":
             case "EXIT":
                 Console.WriteLine("Goodbye! Thanks for trying Junaid.GoogleGemini.Net!");
                 Environment.Exit(0);
                 return false;
-                
+
             default:
                 Console.WriteLine("Invalid choice. Please enter Y, N, or Q.");
                 return await PromptUserToContinue(sectionName); // Recursive call for invalid input
@@ -288,32 +287,32 @@ public class GeminiExampleApp
     /// </summary>
     /// <param name="apiCallDescription">Description of the API call</param>
     /// <returns>True if user wants to continue</returns>
-    private async Task<bool> PromptForApiCall(string apiCallDescription)
+    private static async Task<bool> PromptForApiCall(string apiCallDescription)
     {
         Console.WriteLine();
         Console.WriteLine($"About to make API call: {apiCallDescription}");
         Console.Write("Continue? (Y/N/Q): ");
-        
+
         var choice = Console.ReadLine()?.Trim().ToUpperInvariant();
-        
+
         switch (choice)
         {
             case "Y":
             case "YES":
             case "":
                 return true;
-                
+
             case "N":
             case "NO":
                 Console.WriteLine("Skipping this API call");
                 return false;
-                
+
             case "Q":
             case "QUIT":
                 Console.WriteLine("Exiting application");
                 Environment.Exit(0);
                 return false;
-                
+
             default:
                 Console.WriteLine("Invalid choice. Please enter Y, N, or Q.");
                 return await PromptForApiCall(apiCallDescription);
@@ -321,7 +320,7 @@ public class GeminiExampleApp
     }
 
     #region 1. Basic Text Generation Examples
-    
+
     private async Task RunTextGenerationExamples()
     {
         Console.WriteLine("=== BASIC TEXT GENERATION EXAMPLES ===");
@@ -353,12 +352,11 @@ public class GeminiExampleApp
                     GeminiRequestOptions.Factual());
                 Console.WriteLine($"Quantum Computing Explanation:\n{response3.Text()}\n");
             }
-
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in text generation examples");
-            
+
             // Show rate limit specific guidance
             if (ex.Message.Contains("TooManyRequests") || ex.Message.Contains("quota"))
             {
@@ -377,10 +375,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 1. Basic Text Generation Examples
 
     #region 2. Model Information Examples
-    
+
     private async Task RunModelInfoExamples()
     {
         Console.WriteLine("=== MODEL INFORMATION EXAMPLES ===");
@@ -414,7 +412,6 @@ public class GeminiExampleApp
                 Console.WriteLine($"  Temperature: {modelInfo.temperature}");
                 Console.WriteLine();
             }
-
         }
         catch (Exception ex)
         {
@@ -425,10 +422,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 2. Model Information Examples
 
     #region 3. Request Options Examples
-    
+
     private async Task RunRequestOptionsExamples()
     {
         Console.WriteLine("=== REQUEST OPTIONS EXAMPLES ===");
@@ -478,12 +475,11 @@ public class GeminiExampleApp
                     customOptions);
                 Console.WriteLine($"Custom Options Response:\n{customResponse.Text()}\n");
             }
-
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in request options examples");
-            
+
             if (ex.Message.Contains("TooManyRequests") || ex.Message.Contains("quota"))
             {
                 Console.WriteLine();
@@ -498,10 +494,11 @@ public class GeminiExampleApp
         Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
-    #endregion
+
+    #endregion 3. Request Options Examples
 
     #region 4. Vision Examples
-    
+
     private async Task RunVisionExamples()
     {
         Console.WriteLine("=== VISION EXAMPLES ===");
@@ -511,7 +508,7 @@ public class GeminiExampleApp
         {
             // Create a simple test image if it doesn't exist
             var imagePath = await CreateOrFindSampleImage();
-            
+
             if (imagePath != null)
             {
                 var imageBytes = await File.ReadAllBytesAsync(imagePath);
@@ -550,7 +547,6 @@ public class GeminiExampleApp
                 Console.WriteLine("No sample image found. Skipping vision examples.");
                 Console.WriteLine("   Place a sample image (JPG/PNG) in the sample-images folder to test vision features.");
             }
-
         }
         catch (Exception ex)
         {
@@ -564,7 +560,7 @@ public class GeminiExampleApp
     private static async Task<string?> CreateOrFindSampleImage()
     {
         var sampleImagesDir = Path.Combine(Directory.GetCurrentDirectory(), "sample-images");
-        
+
         if (!Directory.Exists(sampleImagesDir))
         {
             Directory.CreateDirectory(sampleImagesDir);
@@ -603,10 +599,10 @@ public class GeminiExampleApp
         await File.WriteAllBytesAsync(path, imageBytes);
     }
 
-    #endregion
+    #endregion 4. Vision Examples
 
     #region 5. Chat Examples
-    
+
     private async Task RunChatExamples()
     {
         Console.WriteLine("=== CHAT EXAMPLES ===");
@@ -656,7 +652,6 @@ public class GeminiExampleApp
                 var chatTokens = await _gemini.CountTokensChatAsync(messages);
                 Console.WriteLine($"Chat Token Count: {chatTokens.totalTokens}\n");
             }
-
         }
         catch (Exception ex)
         {
@@ -667,10 +662,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 5. Chat Examples
 
     #region 6. Streaming Examples
-    
+
     private async Task RunStreamingExamples()
     {
         Console.WriteLine("=== STREAMING EXAMPLES ===");
@@ -683,7 +678,7 @@ public class GeminiExampleApp
             {
                 Console.WriteLine("Streaming Response (Real-time):");
                 var streamedContent = new List<string>();
-                
+
                 await _gemini.StreamAsync(
                     "Tell me a story about a brave knight on an epic quest",
                     chunk =>
@@ -691,7 +686,7 @@ public class GeminiExampleApp
                         Console.Write(chunk);
                         streamedContent.Add(chunk);
                     });
-                
+
                 Console.WriteLine("\n");
                 Console.WriteLine($"Total streamed content length: {string.Join("", streamedContent).Length} characters\n");
             }
@@ -701,7 +696,7 @@ public class GeminiExampleApp
             {
                 Console.WriteLine("Creative Streaming Response:");
                 var creativeStreamContent = new List<string>();
-                
+
                 await _gemini.StreamAsync(
                     "Write a futuristic poem about AI and humanity",
                     chunk =>
@@ -710,11 +705,10 @@ public class GeminiExampleApp
                         creativeStreamContent.Add(chunk);
                     },
                     GeminiRequestOptions.Creative());
-                
+
                 Console.WriteLine("\n");
                 Console.WriteLine($"Creative stream content length: {string.Join("", creativeStreamContent).Length} characters\n");
             }
-
         }
         catch (Exception ex)
         {
@@ -725,10 +719,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 6. Streaming Examples
 
     #region 7. Token Counting Examples
-    
+
     private async Task RunTokenCountingExamples()
     {
         Console.WriteLine("=== TOKEN COUNTING EXAMPLES ===");
@@ -760,14 +754,13 @@ public class GeminiExampleApp
             {
                 var sampleText = "Artificial intelligence and machine learning are transforming industries.";
                 var tokenCount = await _gemini.CountTokensAsync(sampleText);
-                
+
                 Console.WriteLine($"Sample text: \"{sampleText}\"");
                 Console.WriteLine($"Character count: {sampleText.Length}");
                 Console.WriteLine($"Token count: {tokenCount.totalTokens}");
                 Console.WriteLine($"Characters per token: {(double)sampleText.Length / tokenCount.totalTokens:F2}");
                 Console.WriteLine();
             }
-
         }
         catch (Exception ex)
         {
@@ -778,10 +771,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 7. Token Counting Examples
 
     #region 8. Safety Examples
-    
+
     private async Task RunSafetyExamples()
     {
         Console.WriteLine("=== SAFETY EXAMPLES ===");
@@ -803,20 +796,20 @@ public class GeminiExampleApp
             if (await PromptForApiCall("Generate content with strict safety settings"))
             {
                 var safePrompt = "Write a heartwarming story about friendship";
-                
+
                 // Generate with strict safety
                 var safeOptions = new GeminiRequestOptions
                 {
                     SafetySettings = strictSafety
                 };
-                
+
                 var safeResponse = await _gemini.GenerateAsync(safePrompt, safeOptions);
                 Console.WriteLine($"Safe content generated successfully:");
                 Console.WriteLine($"{safeResponse.Text()[..Math.Min(200, safeResponse.Text().Length)]}...\n");
 
                 // Analyze safety ratings
                 var safetyAnalysis = _safetyService.AnalyzeSafetyRatings(safeResponse);
-                
+
                 Console.WriteLine("Safety Analysis:");
                 foreach (var rating in safetyAnalysis)
                 {
@@ -824,7 +817,6 @@ public class GeminiExampleApp
                 }
                 Console.WriteLine();
             }
-
         }
         catch (Exception ex)
         {
@@ -835,10 +827,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 8. Safety Examples
 
     #region 9. Embedding Examples
-    
+
     private async Task RunEmbeddingExamples()
     {
         Console.WriteLine("=== EMBEDDING EXAMPLES ===");
@@ -863,7 +855,7 @@ public class GeminiExampleApp
                 {
                     var embedding = await _embeddingService.EmbedContentAsync("text-embedding-004", text);
                     embeddings.Add((text, embedding));
-                    
+
                     Console.WriteLine($"Text: \"{text}\"");
                     Console.WriteLine($"Embedding generated successfully (dimension: {embedding.embedding?.values?.Length ?? 0})");
                     if (embedding.embedding?.values?.Length > 0)
@@ -877,7 +869,6 @@ public class GeminiExampleApp
                 Console.WriteLine("Note: In a real application, you could calculate cosine similarity between embeddings");
                 Console.WriteLine("to find semantically similar texts.");
             }
-
         }
         catch (Exception ex)
         {
@@ -888,10 +879,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 9. Embedding Examples
 
     #region 10. Configuration Examples
-    
+
     private async Task RunConfigurationExamples()
     {
         Console.WriteLine("=== CONFIGURATION EXAMPLES ===");
@@ -928,14 +919,13 @@ public class GeminiExampleApp
             // Show safety settings configuration
             var defaultSafetyThresholds = ConfigurationUtilities.GetDefaultSafetyThresholds();
             var safetySettings = ConfigurationUtilities.CreateSafetySettings(defaultSafetyThresholds);
-            
+
             Console.WriteLine($"Default safety settings configured for {safetySettings.Count} categories:");
             foreach (var setting in safetySettings)
             {
                 Console.WriteLine($"  {setting.Category}: {setting.Threshold}");
             }
             Console.WriteLine();
-
         }
         catch (Exception ex)
         {
@@ -946,10 +936,10 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 10. Configuration Examples
 
     #region 11. Function Service Examples
-    
+
     private async Task RunFunctionServiceExamples()
     {
         Console.WriteLine("=== FUNCTION SERVICE EXAMPLES ===");
@@ -960,20 +950,19 @@ public class GeminiExampleApp
             Console.WriteLine("Function Service Features:");
             Console.WriteLine("  - Register custom functions for tool use");
             Console.WriteLine("  - Call functions from Gemini responses");
-            Console.WriteLine("  - Handle structured function calls");  
+            Console.WriteLine("  - Handle structured function calls");
             Console.WriteLine("  - Integrate with external APIs and services");
             Console.WriteLine();
-            
+
             Console.WriteLine("Example function registration pattern:");
             Console.WriteLine("  functionService.RegisterFunction(weatherFunction, weatherHandler);");
             Console.WriteLine("  var result = await functionService.CallFunctionAsync(functionCall);");
             Console.WriteLine();
-            
+
             Console.WriteLine("Note: Complete function examples require defining:");
             Console.WriteLine("  - Function schemas (parameters, descriptions)");
             Console.WriteLine("  - Function handlers (actual implementation)");
             Console.WriteLine("  - Integration with Gemini function calling");
-
         }
         catch (Exception ex)
         {
@@ -984,5 +973,5 @@ public class GeminiExampleApp
         Console.WriteLine();
     }
 
-    #endregion
+    #endregion 11. Function Service Examples
 }
