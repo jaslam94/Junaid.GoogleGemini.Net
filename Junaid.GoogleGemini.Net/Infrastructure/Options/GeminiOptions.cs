@@ -1,3 +1,4 @@
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using System.ComponentModel.DataAnnotations;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure.Options
@@ -35,7 +36,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// <summary>
         /// Default model to use for requests
         /// </summary>
-        public string DefaultModel { get; set; } = "gemini-1.5-pro";
+        public string DefaultModel { get; set; } = GeminiConstants.Models.Gemini25Pro;
 
         /// <summary>
         /// Rate limiting settings

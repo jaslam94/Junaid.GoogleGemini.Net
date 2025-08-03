@@ -404,7 +404,7 @@ public class GeminiExampleApp
             // Get specific model information
             if (await PromptForApiCall("Get specific model information (gemini-1.5-pro)"))
             {
-                var modelInfo = await _modelInfoService.GetModelAsync("gemini-1.5-pro");
+                var modelInfo = await _modelInfoService.GetModelAsync(GeminiConstants.Models.Gemini15Pro);
                 Console.WriteLine($"Model Details for {modelInfo.name}:");
                 Console.WriteLine($"  Display Name: {modelInfo.displayName}");
                 Console.WriteLine($"  Input Token Limit: {modelInfo.inputTokenLimit:N0}");
