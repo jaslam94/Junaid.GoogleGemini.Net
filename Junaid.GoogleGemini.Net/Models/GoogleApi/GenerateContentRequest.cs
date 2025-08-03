@@ -1,18 +1,15 @@
-﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi
+﻿using System.Text.Json.Serialization;
+
+namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+
+public class GenerateContentRequest
 {
-    public class GenerateContentRequest : GenerateContentConfiguration
-    {
-        public Content[] contents { get; set; }
+    [JsonPropertyName("contents")]
+    public List<Content> Contents { get; set; } = new();
 
-        public GenerateContentRequest(Content[] contents)
-        {
-            this.contents = contents;
-        }
+    [JsonPropertyName("generationConfig")]
+    public GenerationConfig? GenerationConfig { get; set; }
 
-        public void ApplyConfiguration(GenerateContentConfiguration configuration)
-        {
-            this.safetySettings = configuration.safetySettings;
-            this.generationConfig = configuration.generationConfig;
-        }
-    }
+    [JsonPropertyName("safetySettings")]
+    public List<SafetySetting>? SafetySettings { get; set; }
 }

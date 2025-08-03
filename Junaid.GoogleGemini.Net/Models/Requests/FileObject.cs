@@ -1,4 +1,4 @@
-﻿using Junaid.GoogleGemini.Net.Infrastructure.Helpers;
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 
 namespace Junaid.GoogleGemini.Net.Models.Requests
 {
@@ -30,9 +30,13 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
 
         private void ValidateImage()
         {
-            if (!ImageHelper.IsImage(FileContent))
+            try
             {
-                throw new ArgumentException("Invalid image file.");
+                FileUtilities.ValidateImageFile(FileContent, FileName);
+            }
+            catch (ArgumentException ex)
+            {
+                throw new ArgumentException("Invalid image file.", ex);
             }
         }
     }

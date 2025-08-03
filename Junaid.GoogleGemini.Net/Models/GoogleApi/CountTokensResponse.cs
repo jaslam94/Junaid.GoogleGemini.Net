@@ -1,7 +1,6 @@
-﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi
+﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+
+public class CountTokensResponse
 {
-    public class CountTokensResponse
-    {
-        public int totalTokens { get; set; }
-    }
+    public int totalTokens { get; set; }
 }

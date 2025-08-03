@@ -1,7 +1,6 @@
-﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi
+﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+
+public class BatchEmbedContentResponse
 {
-    public class BatchEmbedContentResponse
-    {
-        public Embedding[] embeddings { get; set; }
-    }
+    public Embedding[] embeddings { get; set; }
 }

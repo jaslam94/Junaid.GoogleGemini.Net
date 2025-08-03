@@ -1,20 +1,12 @@
-﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi
+﻿using System.Text.Json.Serialization;
+
+namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+
+public class Content
 {
-    public class Content
-    {
-        public Part[] parts { get; set; }
-        public string role { get; set; }
-    }
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
 
-    public class Part
-    {
-        public string text { get; set; }
-        public Inline_Data inline_data { get; set; }
-    }
-
-    public class Inline_Data
-    {
-        public string mime_type { get; set; }
-        public string data { get; set; }
-    }
+    [JsonPropertyName("parts")]
+    public List<Part> Parts { get; set; } = new();
 }

@@ -1,37 +1,93 @@
-﻿using Microsoft.Extensions.Options;
+﻿using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Net.Http.Headers;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure
 {
-    public class GeminiAuthHandler<TOptions> : DelegatingHandler
-        where TOptions : class, IGeminiAuthHttpClientOptions
+    /// <summary>
+    /// HTTP message handler that adds authentication headers to requests for the Gemini API
+    /// </summary>
+    public class GeminiAuthHandler : DelegatingHandler
     {
-        private readonly TOptions _options;
+        private readonly ILogger<GeminiAuthHandler> _logger;
+        private readonly GeminiOptions _options;
+        private const string AUTH_HEADER = "x-goog-api-key";
 
-        public GeminiAuthHandler(IOptions<TOptions> options)
+        /// <summary>
+        /// Initializes a new instance of the GeminiAuthHandler
+        /// </summary>
+        /// <param name="options">Configuration options</param>
+        /// <param name="logger">Logger for diagnostic information</param>
+        public GeminiAuthHandler(
+            IOptions<GeminiOptions> options,
+            ILogger<GeminiAuthHandler> logger)
         {
-            _options = options.Value;
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
+            _options = options?.Value ?? throw new ArgumentNullException(nameof(options));
         }
 
-        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        /// <summary>
+        /// Adds authentication headers to the request and forwards it to the inner handler
+        /// </summary>
+        protected override async Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken)
         {
-            if (_options.Credentials != null)
+            try
             {
-                request.Headers.Add(GeminiConfiguration.Scheme, _options.Credentials.ApiKey);
+                var apiKey = GetApiKey();
+                request.Headers.Add(AUTH_HEADER, apiKey);
+
+                // Add common headers
+                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                request.Headers.Add("User-Agent", "Junaid.GoogleGemini.Net");
+
+                // Add correlation ID for request tracing
+                var correlationId = Guid.NewGuid().ToString();
+                request.Headers.Add("X-Correlation-ID", correlationId);
+
+                var response = await base.SendAsync(request, cancellationToken);
+
+                if (!response.IsSuccessStatusCode)
+                {
+                    _logger.LogWarning(
+                        "Request failed - Status: {StatusCode} [ID: {CorrelationId}]",
+                        response.StatusCode,
+                        correlationId);
+                }
+
+                return response;
             }
-            else
+            catch (Exception ex)
             {
-                var apiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
-                if (!string.IsNullOrEmpty(apiKey))
-                {
-                    request.Headers.Add(GeminiConfiguration.Scheme, apiKey);
-                }
-                else
-                {
-                    throw new ArgumentNullException($"Your API key is invalid, as it is an empty string. You can double-check your API key from the Google Cloud API Credentials page (https://console.cloud.google.com/apis/credentials).");
-                }
+                _logger.LogError(ex, "Error processing authentication");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Gets the API key from configuration or environment variables
+        /// </summary>
+        private string GetApiKey()
+        {
+            // Try configuration first
+            if (!string.IsNullOrWhiteSpace(_options.ApiKey))
+            {
+                return _options.ApiKey;
             }
 
-            return await base.SendAsync(request, cancellationToken);
+            // Try environment variable
+            var envApiKey = Environment.GetEnvironmentVariable("GeminiApiKey");
+            if (!string.IsNullOrWhiteSpace(envApiKey))
+            {
+                return envApiKey;
+            }
+
+            _logger.LogError("API key not found in configuration or environment variables");
+            throw new InvalidOperationException(
+                "API key is required. Set it in configuration or environment variable 'GeminiApiKey'. " +
+                "You can get an API key from Google AI Studio: https://makersuite.google.com/app/apikey");
         }
     }
 }

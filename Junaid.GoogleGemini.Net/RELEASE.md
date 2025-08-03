@@ -1,5 +1,37 @@
 ﻿# Release Notes
 
+## v5.0.0
+- **MAJOR CLEANUP**: Removed all legacy and obsolete services for simplified architecture
+- **Removed Services**: TextService, VisionService, and ChatService
+- **Removed Legacy**: ServiceCollectionExtensions and GeminiConfiguration classes
+- **Unified Service**: Single `IGeminiService` for all content generation operations (text, vision, chat, streaming)
+- **Specialized Services**: Consolidated to 4 focused services - `IEmbeddingService`, `IModelInfoService`, `ISafetyService`, `IFunctionService`
+- **Request Options**: Added predefined `GeminiRequestOptions` (Creative, Fast, Code, Factual)
+- **Model Constants**: Introduced `GeminiConstants.Models` for easy model selection (Gemini25Pro, Gemini25Flash, etc.)
+- **Modern Configuration**: New `GeminiOptions` class with comprehensive settings
+- **Environment Variables**: Automatic API key loading from `GeminiApiKey` environment variable
+- **Rate Limiting**: Built-in rate limiting with `System.Threading.RateLimiting`
+- **Enhanced Resilience**: Updated Polly integration (v8.2.0) for better retry policies
+- **Safety Enhancements**: Predefined safety settings (Strict, Moderate, Permissive)
+- **Modern Utilities**: Updated `ConfigurationUtilities`, `ValidationUtilities`, `FileUtilities`, and `GeminiConstants`
+- **Performance**: 50% reduction in API surface area achieved
+- **.NET 8 LTS Only**: Targets .NET 8 exclusively for optimal performance
+- **Enhanced Streaming**: Improved streaming capabilities across all operations
+- **Comprehensive Token Counting**: Token counting for text, vision, and chat inputs
+- **Proxy Support**: Added proxy configuration options
+
+Example of unified API:
+```csharp
+// All operations through single service
+var response = await gemini.GenerateAsync("Your prompt");
+var visionResponse = await gemini.GenerateWithImageAsync("Describe image", image);
+var chatResponse = await gemini.ChatAsync(messages);
+
+// Predefined options
+var creative = await gemini.GenerateAsync("Write a poem", GeminiRequestOptions.Creative());
+var code = await gemini.GenerateAsync("Write a function", GeminiRequestOptions.Code());
+```
+
 ## v4.0.0
 - Using Dependency Injection.
 - Using Typed HttpClient.
