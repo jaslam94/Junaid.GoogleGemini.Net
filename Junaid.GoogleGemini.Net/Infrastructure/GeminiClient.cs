@@ -24,6 +24,23 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         private readonly IRateLimiter _rateLimiter;
 
         /// <summary>
+        /// Shared retry policy instance to avoid repeated policy creation overhead.
+        /// Polly policies are thread-safe and can be reused across multiple client instances.
+        /// </summary>
+        private static readonly AsyncRetryPolicy<HttpResponseMessage> SharedRetryPolicy = 
+            Policy<HttpResponseMessage>
+                .Handle<HttpRequestException>()
+                .Or<TimeoutException>()
+                .OrResult(response =>
+                {
+                    var statusCode = (int)response.StatusCode;
+                    return statusCode == 429 || // Too Many Requests
+                           statusCode >= 500;   // Server Errors
+                })
+                .WaitAndRetryAsync(3, retryAttempt =>
+                    TimeSpan.FromSeconds(Math.Pow(2, retryAttempt))); // exponential backoff
+
+        /// <summary>
         /// Initializes a new instance of the GeminiClient
         /// </summary>
         /// <param name="httpClient">The HttpClient instance to use for API requests</param>
@@ -40,36 +57,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
             };
 
-            _retryPolicy = Policy<HttpResponseMessage>
-                .Handle<HttpRequestException>()
-                .Or<TimeoutException>()
-                .OrResult(response =>
-                {
-                    var statusCode = (int)response.StatusCode;
-                    return statusCode == 429 || // Too Many Requests
-                           statusCode >= 500;   // Server Errors
-                })
-                .WaitAndRetryAsync(3, retryAttempt =>
-                    TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), // exponential backoff
-                    onRetry: (exception, timeSpan, retryCount, context) =>
-                    {
-                        if (exception.Result != null)
-                        {
-                            _logger.LogWarning(
-                                "Retry {RetryCount} after {DelayMs}ms - Status: {StatusCode}",
-                                retryCount,
-                                timeSpan.TotalMilliseconds,
-                                exception.Result.StatusCode);
-                        }
-                        else
-                        {
-                            _logger.LogWarning(
-                                "Retry {RetryCount} after {DelayMs}ms - Error: {Error}",
-                                retryCount,
-                                timeSpan.TotalMilliseconds,
-                                exception.Exception?.Message);
-                        }
-                    });
+            // Use the shared static retry policy to avoid overhead
+            _retryPolicy = SharedRetryPolicy;
         }
 
         /// <summary>
@@ -141,8 +130,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                         Content = jsonContent
                     };
                     request.Headers.Add("X-Correlation-ID", correlationId);
+                    
+                    // Log retry attempts
+                    if (ctx.TryGetValue("retryCount", out var retryCountObj) && retryCountObj is int retryCount && retryCount > 0)
+                    {
+                        _logger.LogWarning("Retry attempt {RetryCount} for POST {Endpoint} [ID: {CorrelationId}]", 
+                            retryCount, endpoint, correlationId);
+                    }
+                    
                     return await _httpClient.SendAsync(request, cancellationToken);
-                }, new Context());
+                }, new Context { ["endpoint"] = endpoint, ["correlationId"] = correlationId });
 
                 return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
                        ?? throw new GeminiException("The API has returned a null response.");
