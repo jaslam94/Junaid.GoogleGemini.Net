@@ -119,7 +119,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         public static class SafetyThresholds
         {
             /// <summary>
-            /// Block content if probability of category exceeds a very low threshold
+            /// Use the default threshold for this safety category (threshold determined by the model)
             /// </summary>
             public const string Unspecified = "HARM_BLOCK_THRESHOLD_UNSPECIFIED";
 

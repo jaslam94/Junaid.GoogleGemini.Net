@@ -8,6 +8,22 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
     /// </summary>
     public static class ValidationUtilities
     {
+        #region Cached Arrays
+
+        /// <summary>
+        /// Cached array of all valid models (content generation + embedding models) to avoid repeated allocations
+        /// </summary>
+        private static readonly string[] _allValidModels = GeminiConstants.Models.ContentGenerationModels
+            .Concat(GeminiConstants.Models.EmbeddingModels)
+            .ToArray();
+
+        /// <summary>
+        /// Cached array of valid message roles to avoid repeated allocations
+        /// </summary>
+        private static readonly string[] _validRoles = { "user", "model" };
+
+        #endregion
+
         #region Text Validation
 
         /// <summary>
@@ -129,8 +145,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
                     $"Too many messages. Maximum allowed: {GeminiConstants.Limits.MaxChatMessages}, actual: {messages.Length}",
                     paramName);
             }
-
-            var validRoles = new[] { "user", "model" };
             
             for (int i = 0; i < messages.Length; i++)
             {
@@ -145,7 +159,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
                     throw new ArgumentException($"Message role at index {i} cannot be null or empty", paramName);
                 }
 
-                if (!validRoles.Contains(message.Role.ToLowerInvariant()))
+                if (!_validRoles.Contains(message.Role.ToLowerInvariant()))
                 {
                     throw new ArgumentException(
                         $"Invalid message role '{message.Role}' at index {i}. Must be 'user' or 'model'",
@@ -211,14 +225,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
                 throw new ArgumentException("Model name cannot be null or empty", paramName);
             }
 
-            var allModels = GeminiConstants.Models.ContentGenerationModels
-                .Concat(GeminiConstants.Models.EmbeddingModels)
-                .ToArray();
-
-            if (!allModels.Contains(modelName))
+            if (!_allValidModels.Contains(modelName))
             {
                 throw new ArgumentException(
-                    $"Invalid model '{modelName}'. Valid models are: {string.Join(", ", allModels)}",
+                    $"Invalid model '{modelName}'. Valid models are: {string.Join(", ", _allValidModels)}",
                     paramName);
             }
         }
