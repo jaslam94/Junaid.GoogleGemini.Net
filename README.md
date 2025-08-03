@@ -259,7 +259,6 @@ var analysis = await gemini.GenerateWithImageAsync(
 ## What's New in v5.0.0
 
 - **Major Cleanup**: Removed all legacy services for simplified architecture
-- **Performance**: 50% reduction in API surface area
 - **Unified Service**: Single `IGeminiService` for all content generation
 - **Modern Utilities**: Updated configuration and utility system
 - **.NET 8 Optimized**: Enhanced performance with latest .NET features

@@ -14,9 +14,8 @@
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReleaseNotes>
 			- MAJOR CLEANUP: Removed all legacy and obsolete services
-			- Removed TextService, VisionService, ChatService, CodeService, and AnalysisService
 			- Removed legacy ServiceCollectionExtensions and GeminiConfiguration
-			- Consolidated to unified IGeminiService + 4 specialized services only
+			- Consolidated TextService, VisionService, and ChatService to unified IGeminiService
 			- 50% reduction in API surface area achieved
 			- Enhanced performance and maintainability
 			- Targets .NET 8 LTS only for optimal performance

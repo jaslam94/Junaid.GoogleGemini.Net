@@ -2,7 +2,7 @@
 
 ## v5.0.0
 - **MAJOR CLEANUP**: Removed all legacy and obsolete services for simplified architecture
-- **Removed Services**: TextService, VisionService, ChatService, CodeService, and AnalysisService
+- **Removed Services**: TextService, VisionService, and ChatService
 - **Removed Legacy**: ServiceCollectionExtensions and GeminiConfiguration classes
 - **Unified Service**: Single `IGeminiService` for all content generation operations (text, vision, chat, streaming)
 - **Specialized Services**: Consolidated to 4 focused services - `IEmbeddingService`, `IModelInfoService`, `ISafetyService`, `IFunctionService`
