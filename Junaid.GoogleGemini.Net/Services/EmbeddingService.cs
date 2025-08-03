@@ -1,6 +1,7 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure.Factories;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -15,7 +16,11 @@ namespace Junaid.GoogleGemini.Net.Services
     {
         private const int MAX_TEXT_LENGTH = 20000;
         private const int MAX_BATCH_SIZE = 100;
-        private static readonly string[] ValidModels = { "embedding-001", "text-embedding-004" };
+
+        private static readonly string[] ValidModels = {
+            GeminiConstants.Models.Embedding001,
+            GeminiConstants.Models.TextEmbedding004
+        };
 
         /// <summary>
         /// Initializes a new instance of the EmbeddingService
@@ -39,7 +44,7 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 var request = RequestFactory.CreateEmbeddingRequest(text);
                 var endpoint = $"models/{model}:embedContent";
-                
+
                 var response = await GeminiClient.PostAsync<SingleEmbedContentRequest, EmbedContentResponse>(
                     endpoint,
                     request,

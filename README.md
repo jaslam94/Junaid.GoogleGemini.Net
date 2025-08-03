@@ -281,6 +281,6 @@ This project is licensed under the MIT License.
 
 - **GitHub**: [Issues and Discussions](https://github.com/jaslam94/Junaid.GoogleGemini.Net)
 - **NuGet**: [Package](https://www.nuget.org/packages/Junaid.GoogleGemini.Net)
-- **Release**: [Notes]()
+- **Release**: [Notes](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/RELEASE.md)
 
 Thanks for using Junaid.GoogleGemini.Net. Feel free to [email me](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.

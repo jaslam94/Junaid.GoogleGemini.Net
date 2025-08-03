@@ -116,7 +116,7 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateStreamHandler(handleResponse, nameof(handleResponse));
 
             var request = CreateVisionRequest(prompt, image, options, streaming: true);
-            var endpoint = GetStreamEndpoint(options?.Model ?? "gemini-1.5-pro");
+            var endpoint = GetStreamEndpoint(options?.Model ?? GeminiConstants.Models.Gemini15Pro);
 
             await ExecuteStreamRequestAsync(
                 "vision streaming",
@@ -177,7 +177,7 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = RequestFactory.CreateTokenCountingVisionRequest(prompt, image);
-            var endpoint = GetCountTokensEndpoint("gemini-1.5-pro");
+            var endpoint = GetCountTokensEndpoint(GeminiConstants.Models.Gemini15Pro);
 
             return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "vision token counting",
