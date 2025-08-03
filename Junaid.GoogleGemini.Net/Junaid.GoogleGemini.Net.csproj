@@ -16,7 +16,6 @@
 			- MAJOR CLEANUP: Removed all legacy and obsolete services
 			- Removed legacy ServiceCollectionExtensions and GeminiConfiguration
 			- Consolidated TextService, VisionService, and ChatService to unified IGeminiService
-			- 50% reduction in API surface area achieved
 			- Enhanced performance and maintainability
 			- Targets .NET 8 LTS only for optimal performance
 		</PackageReleaseNotes>

@@ -14,7 +14,6 @@
 - **Enhanced Resilience**: Updated Polly integration (v8.2.0) for better retry policies
 - **Safety Enhancements**: Predefined safety settings (Strict, Moderate, Permissive)
 - **Modern Utilities**: Updated `ConfigurationUtilities`, `ValidationUtilities`, `FileUtilities`, and `GeminiConstants`
-- **Performance**: 50% reduction in API surface area achieved
 - **.NET 8 LTS Only**: Targets .NET 8 exclusively for optimal performance
 - **Enhanced Streaming**: Improved streaming capabilities across all operations
 - **Comprehensive Token Counting**: Token counting for text, vision, and chat inputs
