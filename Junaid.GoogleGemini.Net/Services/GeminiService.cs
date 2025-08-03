@@ -20,8 +20,6 @@ namespace Junaid.GoogleGemini.Net.Services
         IOptions<GeminiOptions> options,
         ISafetyService safetyService) : Service(geminiClient, logger, options, safetyService), IGeminiService
     {
-        private static readonly string[] SupportedImageTypes = { ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp" };
-
         /// <inheritdoc/>
         public async Task<GenerateContentResponse> GenerateAsync(
             string prompt,
