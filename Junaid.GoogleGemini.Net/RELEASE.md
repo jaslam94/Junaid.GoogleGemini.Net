@@ -1,5 +1,45 @@
 ﻿# Release Notes
 
+## v5.1.0
+- **Enhanced Function Calling**: Complete implementation with robust JSON parameter handling
+- **Fixed JsonElement Issues**: Resolved deserialization errors when calling functions with numeric parameters
+- **Interactive Menu System**: New "CHOOSE YOUR ADVENTURE" interface in example console app for selective feature exploration
+- **Function Examples**: Added comprehensive demonstrations including calculator, weather service, and error handling scenarios
+- **Developer Experience**: Improved with helper methods for safe parameter extraction and duplicate registration prevention
+
+Example of function calling:
+```csharp
+// Register a function
+var weatherFunction = new FunctionDefinition
+{
+    Name = "get_weather",
+    Description = "Gets weather for a location",
+    Parameters = new FunctionParameters
+    {
+        Properties = new Dictionary<string, PropertyDefinition>
+        {
+            ["location"] = new() { Type = "string", Description = "City name" },
+            ["unit"] = new() { Type = "string", Enum = new[] { "celsius", "fahrenheit" } }
+        },
+        Required = new[] { "location" }
+    }
+};
+
+functionService.RegisterFunction(weatherFunction, async (args) =>
+{
+    var location = ExtractStringValue(args["location"], "location");
+    var unit = args.TryGetValue("unit", out var u) ? ExtractStringValue(u, "unit") : "celsius";
+    return new { weather = "sunny", temperature = 25, unit, location };
+});
+
+// Call the function
+var result = await functionService.CallFunctionAsync(new FunctionCall
+{
+    Name = "get_weather",
+    Arguments = """{"location": "San Francisco", "unit": "celsius"}"""
+});
+```
+
 ## v5.0.0
 - **MAJOR CLEANUP**: Removed all legacy and obsolete services for simplified architecture
 - **Removed Services**: TextService, VisionService, and ChatService

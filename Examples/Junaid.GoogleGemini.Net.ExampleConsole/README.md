@@ -4,9 +4,9 @@
 ![C#](https://img.shields.io/badge/C%23-12.0-blue.svg)
 ![Google Gemini](https://img.shields.io/badge/Google-Gemini%20API-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Version](https://img.shields.io/badge/Library-v5.0.0-red.svg)
+![Version](https://img.shields.io/badge/Library-v5.1.0-red.svg)
 
-This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library v5.0.0.
+This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library v5.1.0.
 
 ## Prerequisites
 
@@ -107,6 +107,8 @@ dotnet run
 - Function registration concepts
 - Tool integration patterns
 - External API integration
+- Error handling and validation
+- Real-world function calling examples
 
 ### Advanced Examples
 - Performance optimization techniques
@@ -123,11 +125,12 @@ To test vision capabilities, place sample images in the `sample-images` folder:
 
 ## Interactive Mode
 
-The application features **interactive mode** to help manage API usage:
-- Prompts before each API call
+The application features **choice-based menu system** to help manage API usage:
+- Choose specific examples you want to run
+- Return to main menu anytime
 - Rate limit awareness (free tier: ~limited requests/minute)
 - Cost control for paid tiers
-- Exit anytime with `Q`
+- Exit anytime with 'Q'
 
 ## Architecture
 

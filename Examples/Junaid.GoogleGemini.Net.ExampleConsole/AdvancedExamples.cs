@@ -386,4 +386,59 @@ public class AdvancedExamples
         Console.WriteLine("===============================================================");
         Console.WriteLine();
     }
+
+    /// <summary>
+    /// Demonstrates advanced function calling patterns
+    /// </summary>
+    public async Task RunFunctionCallingPatterns()
+    {
+        Console.WriteLine("=== ADVANCED FUNCTION CALLING PATTERNS ===");
+        Console.WriteLine();
+
+        try
+        {
+            Console.WriteLine("Function calling represents a powerful integration pattern where");
+            Console.WriteLine("the AI model can interact with external systems and APIs.");
+            Console.WriteLine();
+
+            Console.WriteLine("Key Concepts:");
+            Console.WriteLine("  • Function Registration - Define functions the model can call");
+            Console.WriteLine("  • Parameter Validation - Ensure type safety and data integrity");
+            Console.WriteLine("  • Error Handling - Graceful handling of function call failures");
+            Console.WriteLine("  • Asynchronous Execution - Support for async external API calls");
+            Console.WriteLine("  • Result Processing - Transform function results for the model");
+            Console.WriteLine();
+
+            Console.WriteLine("Common Use Cases:");
+            Console.WriteLine("  • Database Queries - Let AI query your data safely");
+            Console.WriteLine("  • API Integration - Connect to weather, maps, or other services");
+            Console.WriteLine("  • File Operations - Safe file system interactions");
+            Console.WriteLine("  • Calculations - Complex mathematical operations");
+            Console.WriteLine("  • System Actions - Controlled system administration tasks");
+            Console.WriteLine();
+
+            Console.WriteLine("Best Practices:");
+            Console.WriteLine("  • Validate all inputs thoroughly");
+            Console.WriteLine("  • Implement proper error handling and logging");
+            Console.WriteLine("  • Use type-safe parameter definitions");
+            Console.WriteLine("  • Implement timeout and rate limiting for external calls");
+            Console.WriteLine("  • Follow principle of least privilege for system access");
+            Console.WriteLine("  • Cache results when appropriate to improve performance");
+            Console.WriteLine();
+
+            Console.WriteLine("Example Integration Architecture:");
+            Console.WriteLine("  AI Model ? Function Call ? Validation ? External API ? Result Processing");
+            Console.WriteLine();
+
+            Console.WriteLine("For detailed implementation examples, see the Function Calling Examples");
+            Console.WriteLine("in the main menu (option 11).");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in function calling patterns");
+        }
+
+        Console.WriteLine("===============================================================");
+        Console.WriteLine();
+    }
 }

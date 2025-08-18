@@ -256,7 +256,14 @@ var analysis = await gemini.GenerateWithImageAsync(
     GeminiRequestOptions.Factual());
 ```
 
-## What's New in v5.0.0
+## What's New in v5.1.0
+
+- **Enhanced Function Calling**: Complete implementation with comprehensive examples and robust JSON handling
+- **Interactive Menu System**: New "CHOOSE YOUR ADVENTURE" interface for exploring features selectively
+- **Fixed JsonElement Issues**: Resolved deserialization problems in function parameters
+- **Improved Developer Experience**: Better error handling, type conversion, and organized example demonstrations using a menu-based interface
+
+## Previous Release - v5.0.0
 
 - **Major Cleanup**: Removed all legacy services for simplified architecture
 - **Unified Service**: Single `IGeminiService` for all content generation
