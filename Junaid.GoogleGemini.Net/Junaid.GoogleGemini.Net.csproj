@@ -13,13 +13,12 @@
 		<PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
 		<PackageLicenseExpression>MIT</PackageLicenseExpression>
 		<PackageReleaseNotes>
-			- MAJOR CLEANUP: Removed all legacy and obsolete services
-			- Removed legacy ServiceCollectionExtensions and GeminiConfiguration
-			- Consolidated TextService, VisionService, and ChatService to unified IGeminiService
-			- Enhanced performance and maintainability
-			- Targets .NET 8 LTS only for optimal performance
+			- Enhanced Function Calling: Complete implementation with comprehensive examples and robust JSON handling
+			- Interactive Menu System: New "CHOOSE YOUR ADVENTURE" interface for exploring features selectively
+			- Fixed JsonElement Issues: Resolved deserialization problems in function parameters
+			- Improved Developer Experience: Better error handling, type conversion, and organized example demonstrations using a menu-based interface
 		</PackageReleaseNotes>
-		<Version>5.0.0</Version>
+		<Version>5.1.0</Version>
 	</PropertyGroup>
 
 	<ItemGroup>

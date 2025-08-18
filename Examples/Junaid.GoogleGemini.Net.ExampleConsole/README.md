@@ -4,9 +4,9 @@
 ![C#](https://img.shields.io/badge/C%23-12.0-blue.svg)
 ![Google Gemini](https://img.shields.io/badge/Google-Gemini%20API-orange.svg)
 ![License](https://img.shields.io/badge/License-MIT-green.svg)
-![Version](https://img.shields.io/badge/Library-v5.0.0-red.svg)
+![Version](https://img.shields.io/badge/Library-v5.1.0-red.svg)
 
-This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library v5.0.0.
+This console application demonstrates all the features and capabilities of the **Junaid.GoogleGemini.Net** library v5.1.0.
 
 ## Prerequisites
 

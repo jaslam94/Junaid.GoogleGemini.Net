@@ -95,7 +95,7 @@ public class GeminiExampleApp
         Console.WriteLine("================================================================");
         Console.WriteLine("                  Junaid.GoogleGemini.Net                       ");
         Console.WriteLine("                    Example Console App                         ");
-        Console.WriteLine("                        v5.0.0                                 ");
+        Console.WriteLine("                        v5.1.0                                 ");
         Console.WriteLine("================================================================");
         Console.WriteLine();
 
