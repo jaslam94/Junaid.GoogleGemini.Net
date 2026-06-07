@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Junaid.GoogleGemini.Net\Junaid.GoogleGemini.Net.csproj" />
+    <ProjectReference Include="..\..\Junaid.GoogleGemini.Net.Extensions.AI\Junaid.GoogleGemini.Net.Extensions.AI.csproj" />
   </ItemGroup>
 
 </Project>
