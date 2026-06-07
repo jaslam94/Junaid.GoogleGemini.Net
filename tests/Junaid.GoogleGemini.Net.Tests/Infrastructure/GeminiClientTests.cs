@@ -45,13 +45,25 @@ public class GeminiClientTests
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.BadRequest, json);
         var client = CreateClient(handler);
 
-        var ex = await Assert.ThrowsAsync<GeminiException>(() =>
+        var ex = await Assert.ThrowsAsync<GeminiApiException>(() =>
             client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
                 "models/x:generateContent", new GenerateContentRequest()));
 
         Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Equal("INVALID_ARGUMENT", ex.Status);
         Assert.Contains("Invalid request", ex.Message);
         // A 400 is a client error and must NOT be retried.
         Assert.Single(handler.Requests);
+    }
+
+    [Fact]
+    public async Task PostAsync_WhenSuccessBodyIsInvalidJson_ThrowsSerializationException()
+    {
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, "this is not json");
+        var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<GeminiSerializationException>(() =>
+            client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+                "models/x:generateContent", new GenerateContentRequest()));
     }
 }

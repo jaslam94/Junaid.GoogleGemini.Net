@@ -1,12 +1,12 @@
+using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Xunit;
 
 namespace Junaid.GoogleGemini.Net.Tests.Models;
 
 /// <summary>
-/// Characterization tests: these lock in the CURRENT behavior of <see cref="GenerateContentResponse.Text()"/>
-/// so we have a safety net. Phase 1 intentionally changes this behavior (magic strings → typed result),
-/// at which point these tests are updated to describe the new contract.
+/// Tests the response text accessors: Text() returns the text (or empty string, never a placeholder
+/// sentence), TryGetText distinguishes "no text", and GetTextOrThrow surfaces a typed error.
 /// </summary>
 public class GenerateContentResponseTests
 {
@@ -26,13 +26,19 @@ public class GenerateContentResponseTests
         };
 
         Assert.Equal("Hi there", response.Text());
+        Assert.True(response.TryGetText(out var text));
+        Assert.Equal("Hi there", text);
+        Assert.Equal("STOP", response.FinishReason);
     }
 
     [Fact]
-    public void Text_WhenNoCandidates_ReturnsPlaceholder()
+    public void Text_WhenNoCandidates_ReturnsEmptyAndAccessorsReportNoText()
     {
         var response = new GenerateContentResponse { Candidates = [] };
 
-        Assert.Equal("[No content generated - response contained no candidates]", response.Text());
+        Assert.Equal(string.Empty, response.Text());
+        Assert.False(response.TryGetText(out var text));
+        Assert.Null(text);
+        Assert.Throws<GeminiContentException>(() => response.GetTextOrThrow());
     }
 }

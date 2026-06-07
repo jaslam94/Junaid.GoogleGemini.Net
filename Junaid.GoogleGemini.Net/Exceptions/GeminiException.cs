@@ -1,58 +1,27 @@
-using Junaid.GoogleGemini.Net.Models.GoogleApi;
-using System.Net;
-
 namespace Junaid.GoogleGemini.Net.Exceptions
 {
     /// <summary>
-    /// Represents errors that occur during interaction with the Gemini API
+    /// Base type for all errors raised by this library. Catch <see cref="GeminiException"/> to handle
+    /// any Gemini-related failure, or catch a more specific derived type
+    /// (<see cref="GeminiApiException"/>, <see cref="GeminiRateLimitException"/>,
+    /// <see cref="GeminiTimeoutException"/>, <see cref="GeminiSerializationException"/>,
+    /// <see cref="GeminiContentException"/>) to react to a particular failure mode.
     /// </summary>
+    /// <remarks>
+    /// Why a hierarchy instead of one exception type? It lets callers write intent-revealing
+    /// <c>catch</c> blocks (e.g. back off on <see cref="GeminiRateLimitException"/>, surface a
+    /// validation message on <see cref="GeminiApiException"/>) without string-matching messages.
+    /// </remarks>
     public class GeminiException : Exception
     {
-        /// <summary>
-        /// The detailed error response from the Gemini API, if available
-        /// </summary>
-        public ApiErrorResponse? ErrorResponse { get; set; }
-
-        /// <summary>
-        /// The HTTP status code of the failed request, if available
-        /// </summary>
-        public HttpStatusCode? StatusCode { get; set; }
-
-        /// <summary>
-        /// Creates a new instance of GeminiException
-        /// </summary>
-        /// <param name="message">The error message</param>
+        /// <summary>Creates a new <see cref="GeminiException"/>.</summary>
         public GeminiException(string message) : base(message)
         {
         }
 
-        /// <summary>
-        /// Creates a new instance of GeminiException with an inner exception
-        /// </summary>
-        /// <param name="message">The error message</param>
-        /// <param name="innerException">The inner exception that caused this error</param>
+        /// <summary>Creates a new <see cref="GeminiException"/> wrapping an underlying cause.</summary>
         public GeminiException(string message, Exception innerException) : base(message, innerException)
         {
-        }
-
-        /// <summary>
-        /// Creates a new instance of GeminiException with the API error response
-        /// </summary>
-        /// <param name="geminiError">The API error response</param>
-        /// <param name="message">The error message</param>
-        public GeminiException(ApiErrorResponse geminiError, string message) : base(message)
-        {
-            ErrorResponse = geminiError;
-        }
-
-        /// <summary>
-        /// Returns a string representation of the exception including the error details
-        /// </summary>
-        public override string ToString()
-        {
-            var status = StatusCode.HasValue ? $" (Status: {StatusCode})" : string.Empty;
-            var errorDetails = ErrorResponse?.Error?.Message != null ? $"\nAPI Error: {ErrorResponse.Error.Message}" : string.Empty;
-            return $"{base.ToString()}{status}{errorDetails}";
         }
     }
 }

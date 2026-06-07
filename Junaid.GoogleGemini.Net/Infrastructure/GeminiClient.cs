@@ -106,7 +106,7 @@ public class GeminiClient : IGeminiClient
             using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
             if (!lease.IsAcquired)
             {
-                throw new GeminiException("Rate limit exceeded. Please try again later.");
+                throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
             }
 
             var response = await _retryPolicy.ExecuteAsync(async (ctx) =>
@@ -119,7 +119,8 @@ public class GeminiClient : IGeminiClient
             return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
                    ?? throw new GeminiException("The API has returned a null response.");
         }
-        catch (Exception ex) when (ex is not GeminiException)
+        // Let our own exceptions and genuine cancellation propagate unchanged; only wrap unexpected faults.
+        catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
         {
             _logger.LogError(ex, "GET request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
             throw new GeminiException("Failed to make GET request to Gemini API", ex);
@@ -145,7 +146,7 @@ public class GeminiClient : IGeminiClient
             using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
             if (!lease.IsAcquired)
             {
-                throw new GeminiException("Rate limit exceeded. Please try again later.");
+                throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
             }
 
             var serializedContent = JsonSerializer.Serialize(data, _jsonOptions);
@@ -172,7 +173,8 @@ public class GeminiClient : IGeminiClient
             return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
                    ?? throw new GeminiException("The API has returned a null response.");
         }
-        catch (Exception ex) when (ex is not GeminiException)
+        // Let our own exceptions and genuine cancellation propagate unchanged; only wrap unexpected faults.
+        catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
         {
             _logger.LogError(ex, "POST request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
             throw new GeminiException("Failed to make POST request to Gemini API", ex);
@@ -199,7 +201,7 @@ public class GeminiClient : IGeminiClient
                 if (result == null)
                 {
                     _logger.LogError("Response deserialization failed for type {Type} [ID: {CorrelationId}]", typeof(T).Name, correlationId);
-                    throw new GeminiException($"Failed to deserialize response to type {typeof(T).Name}");
+                    throw new GeminiSerializationException($"Failed to deserialize response to type {typeof(T).Name}");
                 }
                 return result;
             }
@@ -211,18 +213,20 @@ public class GeminiClient : IGeminiClient
             var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
             if (geminiError?.Error == null)
             {
-                throw new GeminiException($"Unexpected error response format. Status code: {response.StatusCode}");
+                throw new GeminiApiException(
+                    $"Request failed with status {(int)response.StatusCode} and an unexpected error format.",
+                    response.StatusCode);
             }
 
-            throw new GeminiException(geminiError, geminiError.Error.Message ?? $"Request failed with status {(int)response.StatusCode}")
-            {
-                StatusCode = response.StatusCode
-            };
+            throw new GeminiApiException(
+                geminiError.Error.Message ?? $"Request failed with status {(int)response.StatusCode}",
+                response.StatusCode,
+                geminiError.Error);
         }
         catch (JsonException ex)
         {
             _logger.LogError(ex, "Failed to parse API response: {Content} [ID: {CorrelationId}]", content, correlationId);
-            throw new GeminiException("Failed to parse API response", ex);
+            throw new GeminiSerializationException("Failed to parse API response", ex);
         }
     }
 
@@ -268,13 +272,11 @@ public class GeminiClient : IGeminiClient
             _logger.LogError("Stream request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
                 response.StatusCode, content, correlationId);
 
-            var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions)
-                ?? throw new GeminiException($"Failed to parse error response. Status code: {response.StatusCode}");
-
-            throw new GeminiException(geminiError, geminiError.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}")
-            {
-                StatusCode = response.StatusCode
-            };
+            var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
+            throw new GeminiApiException(
+                geminiError?.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}",
+                response.StatusCode,
+                geminiError?.Error);
         }
 
         var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);

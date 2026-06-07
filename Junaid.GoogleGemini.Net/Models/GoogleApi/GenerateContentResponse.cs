@@ -1,4 +1,6 @@
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json.Serialization;
+using Junaid.GoogleGemini.Net.Exceptions;
 
 namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
 
@@ -19,32 +21,55 @@ public class GenerateContentResponse
     [JsonPropertyName("usageMetadata")]
     public UsageMetadata? UsageMetadata { get; set; }
 
+    /// <summary>Why generation finished for the first candidate (e.g. "STOP", "SAFETY"), if available.</summary>
+    [JsonIgnore]
+    public string? FinishReason => Candidates is { Length: > 0 } ? Candidates[0].FinishReason : null;
+
+    /// <summary>Why the prompt was blocked, if applicable.</summary>
+    [JsonIgnore]
+    public string? BlockReason => PromptFeedback?.BlockReason;
+
+    /// <summary>Token usage for this response, if reported.</summary>
+    [JsonIgnore]
+    public UsageMetadata? Usage => UsageMetadata;
+
     /// <summary>
-    /// Extracts the text of the first candidate, or returns a placeholder string when the response
-    /// contains no usable content.
+    /// The concatenated text of the first candidate, or an <b>empty string</b> when the response
+    /// carries no text (for example, when it was blocked). This never returns a placeholder
+    /// sentence — use <see cref="TryGetText"/> or <see cref="GetTextOrThrow"/> to distinguish
+    /// "no text" from a genuinely empty answer.
     /// </summary>
-    /// <remarks>
-    /// Phase 1 keeps this helper for source compatibility. Phase 2 replaces the placeholder strings
-    /// with typed accessors (<c>TryGetText</c>, <c>FinishReason</c>) so callers can distinguish real
-    /// output from a blocked/empty response.
-    /// </remarks>
-    public string Text()
+    public string Text() => GetTextInternal() ?? string.Empty;
+
+    /// <summary>
+    /// Gets the response text, returning <c>false</c> (and a null <paramref name="text"/>) when the
+    /// response has no text content.
+    /// </summary>
+    public bool TryGetText([NotNullWhen(true)] out string? text)
     {
-        var part = Candidates is { Length: > 0 }
-            ? Candidates[0].Content?.Parts is { Count: > 0 } parts ? parts[0].Text : null
-            : null;
+        text = GetTextInternal();
+        return text is not null;
+    }
 
-        if (Candidates is null || Candidates.Length == 0)
-        {
-            return "[No content generated - response contained no candidates]";
-        }
+    /// <summary>
+    /// Gets the response text, or throws <see cref="GeminiContentException"/> (with the finish/block
+    /// reason) when there is none. Use this when missing content should be treated as an error.
+    /// </summary>
+    public string GetTextOrThrow()
+    {
+        return GetTextInternal()
+            ?? throw new GeminiContentException(
+                "The response contained no text content.", FinishReason, BlockReason);
+    }
 
-        if (Candidates[0].Content?.Parts is not { Count: > 0 })
-        {
-            return "[Content was blocked by safety filters]";
-        }
+    private string? GetTextInternal()
+    {
+        if (Candidates is not { Length: > 0 }) return null;
+        if (Candidates[0].Content?.Parts is not { Count: > 0 } parts) return null;
 
-        return string.IsNullOrEmpty(part) ? "[Content was blocked or empty]" : part!;
+        // A candidate can legitimately contain several text parts; join them.
+        var joined = string.Concat(parts.Where(p => p.Text is not null).Select(p => p.Text));
+        return string.IsNullOrEmpty(joined) ? null : joined;
     }
 }
 
