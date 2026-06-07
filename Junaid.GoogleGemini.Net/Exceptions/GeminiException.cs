@@ -51,7 +51,7 @@ namespace Junaid.GoogleGemini.Net.Exceptions
         public override string ToString()
         {
             var status = StatusCode.HasValue ? $" (Status: {StatusCode})" : string.Empty;
-            var errorDetails = ErrorResponse?.error?.message != null ? $"\nAPI Error: {ErrorResponse.error.message}" : string.Empty;
+            var errorDetails = ErrorResponse?.Error?.Message != null ? $"\nAPI Error: {ErrorResponse.Error.Message}" : string.Empty;
             return $"{base.ToString()}{status}{errorDetails}";
         }
     }

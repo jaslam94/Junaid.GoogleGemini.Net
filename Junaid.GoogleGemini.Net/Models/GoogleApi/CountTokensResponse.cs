@@ -1,6 +1,13 @@
-﻿namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+using System.Text.Json.Serialization;
 
+namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
+
+/// <summary>
+/// Response model for the <c>countTokens</c> endpoint.
+/// </summary>
 public class CountTokensResponse
 {
-    public int totalTokens { get; set; }
+    /// <summary>Total number of tokens in the supplied content.</summary>
+    [JsonPropertyName("totalTokens")]
+    public int TotalTokens { get; set; }
 }

@@ -36,14 +36,17 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             var ratings = new Dictionary<string, string>();
 
-            if (response.candidates != null && response.candidates.Length > 0)
+            if (response.Candidates != null && response.Candidates.Length > 0)
             {
-                var candidate = response.candidates[0];
-                if (candidate.safetyRatings != null)
+                var candidate = response.Candidates[0];
+                if (candidate.SafetyRatings != null)
                 {
-                    foreach (var rating in candidate.safetyRatings)
+                    foreach (var rating in candidate.SafetyRatings)
                     {
-                        ratings[rating.category] = rating.probability;
+                        if (rating.Category is not null)
+                        {
+                            ratings[rating.Category] = rating.Probability ?? string.Empty;
+                        }
                     }
                 }
             }

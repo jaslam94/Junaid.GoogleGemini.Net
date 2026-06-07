@@ -72,13 +72,13 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 var requests = texts.Select(text => new EmbedContentRequest
                 {
-                    model = $"models/{model}",
-                    content = RequestFactory.CreateEmbeddingContent(text)
+                    Model = $"models/{model}",
+                    Content = RequestFactory.CreateEmbeddingContent(text)
                 });
 
                 var batchRequest = new BatchEmbedContentRequest
                 {
-                    requests = requests.ToArray()
+                    Requests = requests.ToArray()
                 };
 
                 var endpoint = $"models/{model}:batchEmbedContents";
@@ -88,7 +88,7 @@ namespace Junaid.GoogleGemini.Net.Services
                     cancellationToken);
 
                 ValidateBatchEmbeddingResponse(response);
-                Logger?.LogDebug("Generated {Count} embeddings with model {Model}", response.embeddings?.Length ?? 0, model);
+                Logger?.LogDebug("Generated {Count} embeddings with model {Model}", response.Embeddings?.Length ?? 0, model);
                 return response;
             }
             catch (Exception ex) when (ex is not (ArgumentException or InvalidOperationException))
@@ -177,12 +177,12 @@ namespace Junaid.GoogleGemini.Net.Services
 
         private static void ValidateEmbeddingResponse(EmbedContentResponse response)
         {
-            if (response?.embedding?.values == null || response.embedding.values.Length == 0)
+            if (response?.Embedding?.Values == null || response.Embedding.Values.Length == 0)
             {
                 throw new InvalidOperationException("No embedding was generated");
             }
 
-            if (response.embedding.values.Length < 50) // Reasonable minimum
+            if (response.Embedding.Values.Length < 50) // Reasonable minimum
             {
                 throw new InvalidOperationException("Generated embedding has unexpectedly low dimensions");
             }
@@ -190,15 +190,15 @@ namespace Junaid.GoogleGemini.Net.Services
 
         private static void ValidateBatchEmbeddingResponse(BatchEmbedContentResponse response)
         {
-            if (response?.embeddings == null || response.embeddings.Length == 0)
+            if (response?.Embeddings == null || response.Embeddings.Length == 0)
             {
                 throw new InvalidOperationException("No embeddings were generated");
             }
 
-            for (int i = 0; i < response.embeddings.Length; i++)
+            for (int i = 0; i < response.Embeddings.Length; i++)
             {
-                var embedding = response.embeddings[i];
-                if (embedding?.values == null || embedding.values.Length == 0)
+                var embedding = response.Embeddings[i];
+                if (embedding?.Values == null || embedding.Values.Length == 0)
                 {
                     throw new InvalidOperationException($"Embedding at index {i} is invalid");
                 }

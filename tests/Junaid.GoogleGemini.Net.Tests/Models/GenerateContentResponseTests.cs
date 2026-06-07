@@ -15,12 +15,12 @@ public class GenerateContentResponseTests
     {
         var response = new GenerateContentResponse
         {
-            candidates =
+            Candidates =
             [
                 new Candidate
                 {
-                    content = new Content { Role = "model", Parts = [new Part { Text = "Hi there" }] },
-                    finishReason = "STOP"
+                    Content = new Content { Role = "model", Parts = [new Part { Text = "Hi there" }] },
+                    FinishReason = "STOP"
                 }
             ]
         };
@@ -31,7 +31,7 @@ public class GenerateContentResponseTests
     [Fact]
     public void Text_WhenNoCandidates_ReturnsPlaceholder()
     {
-        var response = new GenerateContentResponse { candidates = [] };
+        var response = new GenerateContentResponse { Candidates = [] };
 
         Assert.Equal("[No content generated - response contained no candidates]", response.Text());
     }

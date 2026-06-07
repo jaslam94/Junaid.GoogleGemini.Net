@@ -37,21 +37,21 @@ namespace Junaid.GoogleGemini.Net.Services
                     endpoint,
                     cancellationToken);
 
-                var modelCount = response?.models?.Length ?? 0;
+                var modelCount = response?.Models?.Length ?? 0;
                 if (modelCount > 0)
                 {
                     // Cache individual models for future GetModelAsync calls
-                    foreach (var model in response.models)
+                    foreach (var model in response!.Models)
                     {
-                        if (!string.IsNullOrEmpty(model.name))
+                        if (!string.IsNullOrEmpty(model.Name))
                         {
-                            _modelCache.Set(model.name, model, _cacheDuration);
+                            _modelCache.Set(model.Name, model, _cacheDuration);
                         }
                     }
                 }
 
                 Logger?.LogDebug("Retrieved {ModelCount} models from API", modelCount);
-                return response ?? new ListModelsResponse { models = Array.Empty<ModelInfo>() };
+                return response ?? new ListModelsResponse { Models = [] };
             }
             catch (Exception ex)
             {

@@ -1,6 +1,7 @@
 ﻿using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -79,10 +80,9 @@ public class GeminiClient : IGeminiClient
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
 
-        _jsonOptions = new JsonSerializerOptions
-        {
-            DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-        };
+        // Single shared, source-generation-backed options instance (see GeminiJson) so the wire
+        // format is identical everywhere instead of each class configuring its own.
+        _jsonOptions = GeminiJson.Default;
 
         // Use cached retry policy based on configured max retries
         var maxRetries = options?.Value?.MaxRetries ?? 3; // Default to 3 if not configured
@@ -209,12 +209,12 @@ public class GeminiClient : IGeminiClient
                 response.StatusCode, content, correlationId);
 
             var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
-            if (geminiError?.error == null)
+            if (geminiError?.Error == null)
             {
                 throw new GeminiException($"Unexpected error response format. Status code: {response.StatusCode}");
             }
 
-            throw new GeminiException(geminiError, geminiError.error.message)
+            throw new GeminiException(geminiError, geminiError.Error.Message ?? $"Request failed with status {(int)response.StatusCode}")
             {
                 StatusCode = response.StatusCode
             };
@@ -271,7 +271,7 @@ public class GeminiClient : IGeminiClient
             var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions)
                 ?? throw new GeminiException($"Failed to parse error response. Status code: {response.StatusCode}");
 
-            throw new GeminiException(geminiError, geminiError.error.message)
+            throw new GeminiException(geminiError, geminiError.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}")
             {
                 StatusCode = response.StatusCode
             };

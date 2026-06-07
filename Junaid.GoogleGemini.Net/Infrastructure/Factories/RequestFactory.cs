@@ -126,7 +126,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
 
             return new CountTokensRequest
             {
-                contents = new List<Content> { content }
+                Contents = new List<Content> { content }
             };
         }
 
@@ -156,7 +156,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
 
             return new CountTokensRequest
             {
-                contents = new List<Content> { content }
+                Contents = new List<Content> { content }
             };
         }
 
@@ -173,7 +173,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
 
             return new CountTokensRequest
             {
-                contents = contents
+                Contents = contents
             };
         }
 
@@ -190,7 +190,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
 
             return new SingleEmbedContentRequest
             {
-                content = content
+                Content = content
             };
         }
 
