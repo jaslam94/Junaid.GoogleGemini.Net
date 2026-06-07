@@ -71,7 +71,9 @@ internal static class JsonSchemaGenerator
 
         var properties = new JsonObject();
         var required = new JsonArray();
+#if NET8_0_OR_GREATER
         var nullability = new NullabilityInfoContext();
+#endif
 
         foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
@@ -81,8 +83,13 @@ internal static class JsonSchemaGenerator
             var name = prop.GetCustomAttribute<JsonPropertyNameAttribute>()?.Name ?? prop.Name;
             properties[name] = Build(prop.PropertyType, visited);
 
-            var isNullable = Nullable.GetUnderlyingType(prop.PropertyType) is not null
-                || nullability.Create(prop).WriteState == NullabilityState.Nullable;
+            // A property is required unless it's a Nullable<T> value type, or (net8+) a nullable
+            // reference type. netstandard2.0 lacks NullabilityInfoContext, so we can only detect the
+            // Nullable<T> case there — a conservative, still-valid schema.
+            var isNullable = Nullable.GetUnderlyingType(prop.PropertyType) is not null;
+#if NET8_0_OR_GREATER
+            isNullable = isNullable || nullability.Create(prop).WriteState == NullabilityState.Nullable;
+#endif
             if (!isNullable)
             {
                 required.Add(name);

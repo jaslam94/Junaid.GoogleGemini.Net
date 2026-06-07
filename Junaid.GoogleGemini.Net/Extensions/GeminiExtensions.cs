@@ -5,10 +5,12 @@ using Junaid.GoogleGemini.Net.Services;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
-using Polly;
 using System.Net;
+#if NET8_0_OR_GREATER
+using Microsoft.Extensions.Http.Resilience;
+using Polly;
+#endif
 
 namespace Junaid.GoogleGemini.Net.Extensions
 {
@@ -64,7 +66,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             });
 
             // Configure HTTP client with authentication
-            services.AddHttpClient<GeminiClient>((sp, client) =>
+            var clientBuilder = services.AddHttpClient<GeminiClient>((sp, client) =>
             {
                 var options = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
                 client.BaseAddress = options.BaseUrl;
@@ -93,12 +95,13 @@ namespace Junaid.GoogleGemini.Net.Extensions
                 return handler;
             })
             // Auth handler is registered first => it is the OUTERMOST handler, so it runs once and
-            // adds the API key a single time...
-            .AddHttpMessageHandler<GeminiAuthHandler>()
-            // ...and the resilience handler is INNER, so it retries the network send without
-            // re-running auth. Retries/backoff/transient-fault handling live here (not in the client),
-            // which is what makes retries correct: the buffered request is re-sent internally.
-            .AddResilienceHandler("gemini", static (builder, context) =>
+            // adds the API key a single time. The retry handler is INNER, so it re-sends the network
+            // request without re-running auth (the buffered request is safe to resend).
+            .AddHttpMessageHandler<GeminiAuthHandler>();
+
+#if NET8_0_OR_GREATER
+            // net8+: the battle-tested standard resilience handler (retry + backoff + jitter).
+            clientBuilder.AddResilienceHandler("gemini", static (builder, context) =>
             {
                 var resilienceOptions = context.ServiceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
                 builder.AddRetry(new HttpRetryStrategyOptions
@@ -110,6 +113,14 @@ namespace Junaid.GoogleGemini.Net.Extensions
                     Delay = resilienceOptions.RetryBaseDelay,
                 });
             });
+#else
+            // netstandard2.0: Microsoft.Extensions.Http.Resilience isn't available, so use our own.
+            clientBuilder.AddHttpMessageHandler(sp =>
+            {
+                var resilienceOptions = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                return new GeminiRetryHandler(resilienceOptions.MaxRetries, resilienceOptions.RetryBaseDelay);
+            });
+#endif
 
             // Dedicated client for the Files API (host root + auth; no retry, since a partially
             // completed upload isn't safe to blindly replay).

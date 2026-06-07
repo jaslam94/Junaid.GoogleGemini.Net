@@ -87,7 +87,7 @@ public class GeminiClient : IGeminiClient
         var correlationId = Guid.NewGuid().ToString();
         var (operation, model) = GeminiTelemetry.Parse(endpoint);
         using var activity = GeminiTelemetry.StartOperation(operation, model);
-        var startedAt = Stopwatch.GetTimestamp();
+        var stopwatch = Stopwatch.StartNew();
 
         try
         {
@@ -135,7 +135,7 @@ public class GeminiClient : IGeminiClient
         }
         finally
         {
-            GeminiTelemetry.RecordDuration(operation, model, Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
+            GeminiTelemetry.RecordDuration(operation, model, stopwatch.Elapsed.TotalSeconds);
         }
     }
 
@@ -153,7 +153,7 @@ public class GeminiClient : IGeminiClient
             }
 
             var json = JsonSerializer.Serialize(data, typeof(TRequest), _jsonOptions);
-            using var request = new HttpRequestMessage(HttpMethod.Patch, endpoint)
+            using var request = new HttpRequestMessage(new HttpMethod("PATCH"), endpoint)
             {
                 Content = new StringContent(json, Encoding.UTF8, "application/json")
             };
@@ -196,7 +196,7 @@ public class GeminiClient : IGeminiClient
                 return;
             }
 
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var content = await response.Content.ReadStringAsync(cancellationToken);
             var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
             throw new GeminiApiException(
                 geminiError?.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}",
@@ -217,7 +217,7 @@ public class GeminiClient : IGeminiClient
     /// <summary>Deserializes a success response or maps an error response to a typed exception.</summary>
     private async Task<T> HandleResponse<T>(HttpResponseMessage response, string correlationId, CancellationToken cancellationToken = default)
     {
-        var content = await response.Content.ReadAsStringAsync(cancellationToken);
+        var content = await response.Content.ReadStringAsync(cancellationToken);
 
         try
         {
@@ -290,7 +290,7 @@ public class GeminiClient : IGeminiClient
 
         if (!response.IsSuccessStatusCode)
         {
-            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
+            var errorContent = await response.Content.ReadStringAsync(cancellationToken);
             _logger.LogError("Stream request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
                 response.StatusCode, errorContent, correlationId);
 
@@ -301,7 +301,7 @@ public class GeminiClient : IGeminiClient
                 geminiError?.Error);
         }
 
-        var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        var responseStream = await response.Content.ReadStreamAsync(cancellationToken);
         using var reader = new StreamReader(responseStream);
         var chunkCount = 0;
         var dataBuffer = new StringBuilder();
@@ -310,7 +310,7 @@ public class GeminiClient : IGeminiClient
         {
             while (true)
             {
-                var line = await reader.ReadLineAsync(cancellationToken);
+                var line = await reader.ReadLineCancelableAsync(cancellationToken);
                 if (line is null) break; // end of stream
 
                 if (line.Length == 0)
@@ -329,7 +329,7 @@ public class GeminiClient : IGeminiClient
                 // We only care about the "data:" field; ignore comments (":..."), "event:", "id:", etc.
                 if (line.StartsWith("data:", StringComparison.Ordinal))
                 {
-                    dataBuffer.Append(line.AsSpan(5).TrimStart());
+                    dataBuffer.Append(line.Substring(5).TrimStart());
                 }
             }
 
@@ -344,7 +344,11 @@ public class GeminiClient : IGeminiClient
         finally
         {
             reader.Dispose();
+#if NET8_0_OR_GREATER
             await responseStream.DisposeAsync();
+#else
+            responseStream.Dispose();
+#endif
             _logger.LogDebug("Stream completed with {ChunkCount} chunks [ID: {CorrelationId}]", chunkCount, correlationId);
         }
     }

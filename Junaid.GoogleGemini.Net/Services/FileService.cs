@@ -25,7 +25,7 @@ namespace Junaid.GoogleGemini.Net.Services
         /// <summary>Initializes a new instance of the <see cref="FileService"/>.</summary>
         public FileService(IHttpClientFactory httpClientFactory, ILogger<FileService> logger)
         {
-            ArgumentNullException.ThrowIfNull(httpClientFactory);
+            if (httpClientFactory is null) throw new ArgumentNullException(nameof(httpClientFactory));
             _httpClient = httpClientFactory.CreateClient(GeminiHttpClients.Files);
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
@@ -37,7 +37,7 @@ namespace Junaid.GoogleGemini.Net.Services
             string? displayName = null,
             CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(content);
+            if (content is null) throw new ArgumentNullException(nameof(content));
             if (string.IsNullOrWhiteSpace(mimeType))
             {
                 throw new ArgumentException("MIME type is required.", nameof(mimeType));
@@ -71,7 +71,7 @@ namespace Junaid.GoogleGemini.Net.Services
             using var uploadResponse = await _httpClient.SendAsync(uploadRequest, cancellationToken);
             await EnsureSuccessAsync(uploadResponse, "finalize file upload", cancellationToken);
 
-            var body = await uploadResponse.Content.ReadAsStringAsync(cancellationToken);
+            var body = await uploadResponse.Content.ReadStringAsync(cancellationToken);
             var parsed = Deserialize<FileUploadResponse>(body);
             return parsed?.File
                 ?? throw new GeminiSerializationException("The upload response did not contain a file.");
@@ -83,7 +83,7 @@ namespace Junaid.GoogleGemini.Net.Services
             using var response = await _httpClient.GetAsync($"{Version}/{Normalize(name)}", cancellationToken);
             await EnsureSuccessAsync(response, "get file", cancellationToken);
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var body = await response.Content.ReadStringAsync(cancellationToken);
             return Deserialize<FileResource>(body)
                 ?? throw new GeminiSerializationException($"No metadata returned for file '{name}'.");
         }
@@ -102,7 +102,7 @@ namespace Junaid.GoogleGemini.Net.Services
             using var response = await _httpClient.GetAsync($"{Version}/files{suffix}", cancellationToken);
             await EnsureSuccessAsync(response, "list files", cancellationToken);
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var body = await response.Content.ReadStringAsync(cancellationToken);
             return Deserialize<FileListResponse>(body) ?? new FileListResponse();
         }
 
@@ -172,7 +172,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 return;
             }
 
-            var body = await response.Content.ReadAsStringAsync(cancellationToken);
+            var body = await response.Content.ReadStringAsync(cancellationToken);
             _logger.LogError("Files API {Operation} failed - Status: {StatusCode}, Body: {Body}",
                 operation, response.StatusCode, body);
 
