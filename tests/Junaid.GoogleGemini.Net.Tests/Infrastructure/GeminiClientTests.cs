@@ -4,21 +4,19 @@ using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
 using Xunit;
 
 namespace Junaid.GoogleGemini.Net.Tests.Infrastructure;
 
 public class GeminiClientTests
 {
-    private static GeminiClient CreateClient(FakeHttpMessageHandler handler, GeminiOptions? options = null)
+    private static GeminiClient CreateClient(FakeHttpMessageHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/v1beta/") };
         return new GeminiClient(
             httpClient,
             NullLogger<GeminiClient>.Instance,
-            GeminiRateLimiter.CreateDisabled(),
-            Options.Create(options ?? new GeminiOptions()));
+            GeminiRateLimiter.CreateDisabled());
     }
 
     [Fact]
@@ -63,6 +61,19 @@ public class GeminiClientTests
         var client = CreateClient(handler);
 
         await Assert.ThrowsAsync<GeminiSerializationException>(() =>
+            client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+                "models/x:generateContent", new GenerateContentRequest()));
+    }
+
+    [Fact]
+    public async Task PostAsync_WhenSendTimesOut_ThrowsTimeoutException()
+    {
+        // A timeout surfaces as a TaskCanceledException while the caller's token is NOT cancelled.
+        var handler = new FakeHttpMessageHandler((_, _, _) =>
+            throw new TaskCanceledException("simulated timeout"));
+        var client = CreateClient(handler);
+
+        await Assert.ThrowsAsync<GeminiTimeoutException>(() =>
             client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
                 "models/x:generateContent", new GenerateContentRequest()));
     }

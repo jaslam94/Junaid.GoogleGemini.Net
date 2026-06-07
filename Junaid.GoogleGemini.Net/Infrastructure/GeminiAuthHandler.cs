@@ -37,20 +37,25 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
             try
             {
                 var apiKey = GetApiKey();
-                request.Headers.Add(AUTH_HEADER, apiKey);
+                if (!request.Headers.Contains(AUTH_HEADER))
+                {
+                    request.Headers.TryAddWithoutValidation(AUTH_HEADER, apiKey);
+                }
 
-                // Add common headers
-                request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-                request.Headers.Add("User-Agent", "Junaid.GoogleGemini.Net");
-
-                // Add correlation ID for request tracing
-                var correlationId = Guid.NewGuid().ToString();
-                request.Headers.Add("X-Correlation-ID", correlationId);
+                // Common headers (the client already sets the X-Correlation-ID we log below).
+                if (request.Headers.Accept.Count == 0)
+                {
+                    request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+                }
+                request.Headers.UserAgent.TryParseAdd("Junaid.GoogleGemini.Net");
 
                 var response = await base.SendAsync(request, cancellationToken);
 
                 if (!response.IsSuccessStatusCode)
                 {
+                    var correlationId = request.Headers.TryGetValues("X-Correlation-ID", out var ids)
+                        ? string.Join(",", ids)
+                        : "n/a";
                     _logger.LogWarning(
                         "Request failed - Status: {StatusCode} [ID: {CorrelationId}]",
                         response.StatusCode,
@@ -59,7 +64,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
 
                 return response;
             }
-            catch (Exception ex)
+            catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 _logger.LogError(ex, "Error processing authentication");
                 throw;

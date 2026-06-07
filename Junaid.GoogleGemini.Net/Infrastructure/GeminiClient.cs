@@ -1,125 +1,75 @@
-﻿using Junaid.GoogleGemini.Net.Exceptions;
+using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
-using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Options;
-using Polly;
-using Polly.Retry;
-using System.Collections.Concurrent;
 using System.Net.Http.Headers;
+using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using System.Text.Json.Serialization;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure;
 
 /// <summary>
-/// Factory for creating and caching retry policies with configurable retry counts
+/// Low-level HTTP client for the Google Gemini API.
 /// </summary>
-internal static class RetryPolicyCache
-{
-    /// <summary>
-    /// Cache of retry policies by retry count to avoid creating duplicate policies
-    /// while still allowing configuration flexibility
-    /// </summary>
-    private static readonly ConcurrentDictionary<int, AsyncRetryPolicy<HttpResponseMessage>> _policyCache = new();
-
-    /// <summary>
-    /// Gets or creates a retry policy for the specified retry count
-    /// </summary>
-    /// <param name="maxRetries">Maximum number of retries (0-5)</param>
-    /// <returns>Cached retry policy instance</returns>
-    public static AsyncRetryPolicy<HttpResponseMessage> GetPolicy(int maxRetries)
-    {
-        // Clamp retry count to valid range
-        maxRetries = Math.Max(0, Math.Min(5, maxRetries));
-
-        return _policyCache.GetOrAdd(maxRetries, retryCount =>
-            Policy<HttpResponseMessage>
-                .Handle<HttpRequestException>()
-                .Or<TimeoutException>()
-                .OrResult(response =>
-                {
-                    var statusCode = (int)response.StatusCode;
-                    return statusCode == 429 || // Too Many Requests
-                           statusCode >= 500;   // Server Errors
-                })
-                .WaitAndRetryAsync(retryCount, retryAttempt =>
-                    TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)))); // exponential backoff
-    }
-}
-
-/// <summary>
-/// Client for interacting with the Google Gemini API
-/// </summary>
+/// <remarks>
+/// This type is intentionally thin: it builds requests, applies client-side rate limiting, sends,
+/// and maps responses/errors to typed results. <b>Retries, backoff and timeouts are NOT handled
+/// here</b> — they live on the <see cref="HttpClient"/> pipeline (configured in
+/// <c>GeminiExtensions.AddGemini</c> via the standard resilience handler). That separation is what
+/// fixes the previous retry bug: the resilience handler re-sends a buffered request internally, so
+/// we never reuse a disposed <see cref="HttpContent"/> across attempts.
+/// </remarks>
 public class GeminiClient : IGeminiClient
 {
     private readonly HttpClient _httpClient;
     private readonly ILogger<GeminiClient> _logger;
-    private readonly JsonSerializerOptions _jsonOptions;
-    private readonly AsyncRetryPolicy<HttpResponseMessage> _retryPolicy;
     private readonly IRateLimiter _rateLimiter;
+    private readonly JsonSerializerOptions _jsonOptions = GeminiJson.Default;
 
-    /// <summary>
-    /// Initializes a new instance of the GeminiClient
-    /// </summary>
-    /// <param name="httpClient">The HttpClient instance to use for API requests</param>
-    /// <param name="logger">Logger for diagnostic information</param>
-    /// <param name="rateLimiter">Rate limiter for API requests</param>
-    /// <param name="options">Configuration options including retry settings</param>
+    /// <summary>Initializes a new instance of the <see cref="GeminiClient"/>.</summary>
+    /// <param name="httpClient">The configured HttpClient (resilience + auth handlers attached by DI).</param>
+    /// <param name="logger">Logger for diagnostics.</param>
+    /// <param name="rateLimiter">Client-side rate limiter.</param>
     public GeminiClient(
         HttpClient httpClient,
         ILogger<GeminiClient> logger,
-        IRateLimiter rateLimiter,
-        IOptions<GeminiOptions> options)
+        IRateLimiter rateLimiter)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
-
-        // Single shared, source-generation-backed options instance (see GeminiJson) so the wire
-        // format is identical everywhere instead of each class configuring its own.
-        _jsonOptions = GeminiJson.Default;
-
-        // Use cached retry policy based on configured max retries
-        var maxRetries = options?.Value?.MaxRetries ?? 3; // Default to 3 if not configured
-        _retryPolicy = RetryPolicyCache.GetPolicy(maxRetries);
     }
 
-    /// <summary>
-    /// Sends a GET request to the specified endpoint
-    /// </summary>
-    /// <typeparam name="TResponse">The type of the expected response</typeparam>
-    /// <param name="endpoint">The API endpoint to send the request to</param>
-    /// <returns>The deserialized response</returns>
-    /// <exception cref="GeminiException">Thrown when the request fails or returns invalid data</exception>
+    /// <summary>Sends a GET request and deserializes the response.</summary>
+    /// <param name="endpoint">The API endpoint (relative to the configured base address).</param>
+    /// <param name="cancellationToken">Token to cancel the request.</param>
     public async Task<TResponse> GetAsync<TResponse>(string endpoint, CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
 
         try
         {
-            // Apply rate limiting
             using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
             if (!lease.IsAcquired)
             {
                 throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
             }
 
-            var response = await _retryPolicy.ExecuteAsync(async (ctx) =>
-            {
-                var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
-                request.Headers.Add("X-Correlation-ID", correlationId);
-                return await _httpClient.SendAsync(request, cancellationToken);
-            }, new Context());
+            using var request = new HttpRequestMessage(HttpMethod.Get, endpoint);
+            request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
 
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
-                   ?? throw new GeminiException("The API has returned a null response.");
+                   ?? throw new GeminiException("The API returned a null response.");
         }
-        // Let our own exceptions and genuine cancellation propagate unchanged; only wrap unexpected faults.
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            // The token wasn't tripped by the caller, so this is a timeout, not a cancellation.
+            throw new GeminiTimeoutException($"The GET request to '{endpoint}' timed out.");
+        }
         catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
         {
             _logger.LogError(ex, "GET request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
@@ -127,53 +77,39 @@ public class GeminiClient : IGeminiClient
         }
     }
 
-    /// <summary>
-    /// Sends a POST request to the specified endpoint
-    /// </summary>
-    /// <typeparam name="TRequest">The type of the request data</typeparam>
-    /// <typeparam name="TResponse">The type of the expected response</typeparam>
-    /// <param name="endpoint">The API endpoint to send the request to</param>
-    /// <param name="data">The request data to send</param>
-    /// <returns>The deserialized response</returns>
-    /// <exception cref="GeminiException">Thrown when the request fails or returns invalid data</exception>
+    /// <summary>Sends a POST request with a JSON body and deserializes the response.</summary>
+    /// <param name="endpoint">The API endpoint (relative to the configured base address).</param>
+    /// <param name="data">The request payload.</param>
+    /// <param name="cancellationToken">Token to cancel the request.</param>
     public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data, CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
 
         try
         {
-            // Apply rate limiting
             using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
             if (!lease.IsAcquired)
             {
                 throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
             }
 
-            var serializedContent = JsonSerializer.Serialize(data, _jsonOptions);
-            var jsonContent = new StringContent(serializedContent, Encoding.UTF8, "application/json");
+            var json = JsonSerializer.Serialize(data, typeof(TRequest), _jsonOptions);
 
-            var response = await _retryPolicy.ExecuteAsync(async (ctx) =>
+            // The content is buffered (ByteArrayContent), so the resilience handler can re-send it on retry.
+            using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
             {
-                var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
-                {
-                    Content = jsonContent
-                };
-                request.Headers.Add("X-Correlation-ID", correlationId);
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
 
-                // Log retry attempts
-                if (ctx.TryGetValue("retryCount", out var retryCountObj) && retryCountObj is int retryCount && retryCount > 0)
-                {
-                    _logger.LogWarning("Retry attempt {RetryCount} for POST {Endpoint} [ID: {CorrelationId}]",
-                        retryCount, endpoint, correlationId);
-                }
-
-                return await _httpClient.SendAsync(request, cancellationToken);
-            }, new Context { ["endpoint"] = endpoint, ["correlationId"] = correlationId });
-
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
             return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
-                   ?? throw new GeminiException("The API has returned a null response.");
+                   ?? throw new GeminiException("The API returned a null response.");
         }
-        // Let our own exceptions and genuine cancellation propagate unchanged; only wrap unexpected faults.
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GeminiTimeoutException($"The POST request to '{endpoint}' timed out.");
+        }
         catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
         {
             _logger.LogError(ex, "POST request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
@@ -181,14 +117,7 @@ public class GeminiClient : IGeminiClient
         }
     }
 
-    /// <summary>
-    /// Handles the HTTP response and deserializes the content
-    /// </summary>
-    /// <typeparam name="T">The type to deserialize the response to</typeparam>
-    /// <param name="response">The HTTP response message</param>
-    /// <param name="correlationId">Correlation ID for request tracking</param>
-    /// <returns>The deserialized response</returns>
-    /// <exception cref="GeminiException">Thrown when the response indicates an error or cannot be deserialized</exception>
+    /// <summary>Deserializes a success response or maps an error response to a typed exception.</summary>
     private async Task<T> HandleResponse<T>(HttpResponseMessage response, string correlationId, CancellationToken cancellationToken = default)
     {
         var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -200,13 +129,12 @@ public class GeminiClient : IGeminiClient
                 var result = JsonSerializer.Deserialize<T>(content, _jsonOptions);
                 if (result == null)
                 {
-                    _logger.LogError("Response deserialization failed for type {Type} [ID: {CorrelationId}]", typeof(T).Name, correlationId);
+                    _logger.LogError("Response deserialization returned null for type {Type} [ID: {CorrelationId}]", typeof(T).Name, correlationId);
                     throw new GeminiSerializationException($"Failed to deserialize response to type {typeof(T).Name}");
                 }
                 return result;
             }
 
-            // Log API failure with response content
             _logger.LogError("API request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
                 response.StatusCode, content, correlationId);
 
@@ -231,40 +159,36 @@ public class GeminiClient : IGeminiClient
     }
 
     /// <summary>
-    /// Sends a streaming request to the Gemini API
+    /// Sends a streaming request and yields text chunks as they arrive.
     /// </summary>
-    /// <typeparam name="TRequest">The type of the request data</typeparam>
-    /// <param name="endpoint">The API endpoint to send the request to</param>
-    /// <param name="data">The request data to send</param>
-    /// <returns>An async enumerable of response text chunks</returns>
+    /// <remarks>
+    /// Phase 1, Step 4 replaces this line-sniffing parser with a proper Server-Sent-Events reader
+    /// (<c>?alt=sse</c>) that surfaces structured chunks. For now it remains a text-only stream but
+    /// goes through the same resilient pipeline and honors cancellation.
+    /// </remarks>
     public async IAsyncEnumerable<string> SendAsync<TRequest>(
         string endpoint,
         TRequest data,
-        CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
 
-        // Apply rate limiting
         using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
         if (!lease.IsAcquired)
         {
-            throw new GeminiException("Rate limit exceeded. Please try again later.");
+            throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
         }
 
-        using var ms = new MemoryStream();
-        await JsonSerializer.SerializeAsync(ms, data, _jsonOptions, cancellationToken);
-        ms.Seek(0, SeekOrigin.Begin);
+        var json = JsonSerializer.Serialize(data, typeof(TRequest), _jsonOptions);
 
-        var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+        using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
 
-        using var requestContent = new StreamContent(ms);
-        request.Content = requestContent;
-        requestContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
-
-        request.Headers.Add("X-Correlation-ID", correlationId);
-        var response = await _retryPolicy.ExecuteAsync(async () =>
-            await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken));
+        using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
@@ -286,9 +210,9 @@ public class GeminiClient : IGeminiClient
         try
         {
             string? line;
-            while ((line = await streamReader.ReadLineAsync()) is not null)
+            while ((line = await streamReader.ReadLineAsync(cancellationToken)) is not null)
             {
-                if (!line.Contains(@"""text""")) continue;
+                if (!line.Contains(@"""text""", StringComparison.Ordinal)) continue;
 
                 string? processedText = null;
                 try
@@ -300,7 +224,7 @@ public class GeminiClient : IGeminiClient
                 catch (JsonException ex)
                 {
                     _logger.LogError(ex, "Failed to parse stream message: {Line} [ID: {CorrelationId}]", line, correlationId);
-                    continue; // Skip malformed messages instead of failing the entire stream
+                    continue; // Skip malformed messages instead of failing the entire stream.
                 }
 
                 if (processedText is not null)
