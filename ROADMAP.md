@@ -123,7 +123,7 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 - [x] Documented resilience + rate-limiting story; sensible production defaults.
 - [x] Refreshed README with the "why choose this" matrix and accurate 6.0 examples.
 - [ ] First-class ASP.NET Core minimal-API sample; DocFX/docs site. *(still open)*
-- [ ] `netstandard2.0` target with polyfills. *(still open)*
+- [x] `netstandard2.0` target with polyfills (alpha.4) — PolySharp + Microsoft.Bcl.AsyncInterfaces + System.Text.Json package + a hand-written GeminiRetryHandler where Microsoft.Extensions.Http.Resilience (net8+ only) isn't available.
 
 **Ships as:** `6.0.0` — the production-grade DX release.
 

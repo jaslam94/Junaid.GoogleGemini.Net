@@ -43,9 +43,9 @@ namespace Junaid.GoogleGemini.Net.Services
                     // Cache individual models for future GetModelAsync calls
                     foreach (var model in response!.Models)
                     {
-                        if (!string.IsNullOrEmpty(model.Name))
+                        if (model.Name is { Length: > 0 } modelName)
                         {
-                            _modelCache.Set(model.Name, model, _cacheDuration);
+                            _modelCache.Set(modelName, model, _cacheDuration);
                         }
                     }
                 }

@@ -24,7 +24,7 @@ namespace Junaid.GoogleGemini.Net.Services
         /// <inheritdoc/>
         public Task<CachedContent> CreateAsync(CachedContent content, CancellationToken cancellationToken = default)
         {
-            ArgumentNullException.ThrowIfNull(content);
+            if (content is null) throw new ArgumentNullException(nameof(content));
             if (string.IsNullOrWhiteSpace(content.Model))
             {
                 throw new ArgumentException("CachedContent.Model is required (e.g. 'models/gemini-2.5-flash').", nameof(content));

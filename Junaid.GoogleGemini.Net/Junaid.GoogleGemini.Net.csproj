@@ -8,20 +8,23 @@
 
 	<PropertyGroup>
 		<!--
-			Multi-target: net8.0 (current LTS) and net9.0 (current STS). netstandard2.0 is planned
-			for Phase 1, where the transport rewrite lets us add the needed polyfills cleanly
-			(IAsyncEnumerable, CancellationToken stream overloads).
+			Multi-target: net8.0 (LTS), net9.0 (STS), and netstandard2.0 for maximum reach
+			(.NET Framework 4.6.1+, Mono, Unity, Xamarin). The netstandard2.0 build relies on the
+			polyfill packages below for APIs missing from that older surface.
 		-->
-		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+		<TargetFrameworks>net8.0;net9.0;netstandard2.0</TargetFrameworks>
 
 		<!-- Package metadata -->
 		<Title>Junaid.GoogleGemini.Net</Title>
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-alpha.3</Version>
+		<Version>6.0.0-alpha.4</Version>
 		<PackageReleaseNotes>
-			6.0 alpha.3 adds the differentiation layer on top of the modern feature set:
+			6.0 alpha.4 adds a netstandard2.0 target for maximum reach (.NET Framework 4.6.1+, Mono,
+			Unity, Xamarin), using polyfills and a built-in retry handler where the modern resilience
+			package isn't available. net8/net9 are unchanged.
+			6.0 alpha.3 added the differentiation layer on top of the modern feature set:
 			- Microsoft.Extensions.AI adapters (IChatClient / IEmbeddingGenerator) via the
 			  companion package Junaid.GoogleGemini.Net.Extensions.AI.
 			- OpenTelemetry-native tracing + token/latency metrics (GenAI semantic conventions),
@@ -66,10 +69,29 @@
 		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
 		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
-		<!-- Modern resilience (Polly v8 under the hood). Replaces the deprecated Polly.Extensions.Http
-		     and the hand-rolled retry cache: resilience now lives on the HttpClient pipeline. -->
-		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
 		<PackageReference Include="System.Threading.RateLimiting" Version="8.0.0" />
+	</ItemGroup>
+
+	<!-- Modern resilience (Polly v8 under the hood) on the HttpClient pipeline. Net8+ only — this
+	     package has no netstandard2.0 asset, so the ns2.0 build uses GeminiRetryHandler instead. -->
+	<ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
+	</ItemGroup>
+
+	<!--
+		Polyfills for the netstandard2.0 target only:
+		- System.Text.Json: in-box on net8/9, a package here (brings the source generator too).
+		- Microsoft.Bcl.AsyncInterfaces: IAsyncEnumerable / IAsyncDisposable.
+		- PolySharp: generates compiler-required shims (init/record, required members, nullable and
+		  [EnumeratorCancellation] attributes) so modern C# compiles on the old surface. Dev-only.
+	-->
+	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
+		<PackageReference Include="System.Text.Json" Version="8.0.5" />
+		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+		<PackageReference Include="PolySharp" Version="1.14.1">
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
 	</ItemGroup>
 
 </Project>
