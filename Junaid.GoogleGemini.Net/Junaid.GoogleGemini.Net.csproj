@@ -1,24 +1,47 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<!--
+		Shared settings (LangVersion, Nullable, analyzers, package identity, deterministic builds)
+		come from ../Directory.Build.props. This file only declares what is specific to producing
+		THIS package.
+	-->
+
 	<PropertyGroup>
-		<TargetFrameworks>net8.0</TargetFrameworks>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-		<Authors>Junaid Aslam</Authors>
+		<!--
+			Multi-target: net8.0 (current LTS) and net9.0 (current STS). netstandard2.0 is planned
+			for Phase 1, where the transport rewrite lets us add the needed polyfills cleanly
+			(IAsyncEnumerable, CancellationToken stream overloads).
+		-->
+		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+
+		<!-- Package metadata -->
 		<Title>Junaid.GoogleGemini.Net</Title>
-		<Description>An open-source .NET library to use Gemini (Google's largest and most capable AI model yet).</Description>
+		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
+		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
-		<PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Version>5.1.0</Version>
 		<PackageReleaseNotes>
 			- Enhanced Function Calling: Complete implementation with comprehensive examples and robust JSON handling
 			- Interactive Menu System: New "CHOOSE YOUR ADVENTURE" interface for exploring features selectively
 			- Fixed JsonElement Issues: Resolved deserialization problems in function parameters
 			- Improved Developer Experience: Better error handling, type conversion, and organized example demonstrations using a menu-based interface
 		</PackageReleaseNotes>
-		<Version>5.1.0</Version>
+
+		<!--
+			Production settings for the package itself:
+			- XML docs ship with the package so consumers get IntelliSense.
+			- A .snupkg symbol package + embedded untracked sources enable step-through debugging
+			  and Source Link navigation from a consumer's IDE straight to our source on GitHub.
+			- Pack on Release build so `dotnet build -c Release` yields a ready-to-publish .nupkg.
+		-->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- TEMPORARY: suppress "missing XML comment" until the public surface is fully documented
+		     in Phase 2/3. Docs are still generated for members that have them. -->
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>

@@ -1,0 +1,50 @@
+<Project>
+
+  <!--
+    Directory.Build.props is imported automatically by MSBuild for EVERY project at or below
+    this folder, BEFORE each project's own body. It is the canonical place to centralize
+    settings so they are defined once instead of copy-pasted into every .csproj.
+
+    We keep ONLY things that are safe for every project here (library, tests, examples):
+      - universal language/safety switches
+      - shared package *identity* (who/what) — harmless on non-packable projects
+    Per-package *production* settings (XML docs, symbol packages, version) live in the
+    library .csproj, because enabling XML-doc generation on the test project would produce
+    noise, and because those settings vary per package.
+  -->
+
+  <PropertyGroup>
+    <!-- Language & safety: opt into the latest C# and treat nullability seriously everywhere. -->
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <!-- Run the .NET analyzers at the latest ruleset so quality issues surface at build time. -->
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <AnalysisLevel>latest</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+
+    <!--
+      Deterministic builds produce byte-for-byte identical output for identical input — a
+      prerequisite for reproducible, verifiable NuGet packages. ContinuousIntegrationBuild
+      normalizes embedded paths; we only turn it on under GitHub Actions so local builds keep
+      friendly absolute paths for debugging.
+    -->
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- Shared package identity. Safe on every project; non-packable ones simply never pack. -->
+  <PropertyGroup>
+    <Authors>Junaid Aslam</Authors>
+    <Company>Junaid Aslam</Company>
+    <Copyright>Copyright © Junaid Aslam</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</PackageProjectUrl>
+    <!-- Records the exact commit in the package so consumers can trace a binary back to source. -->
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+  </PropertyGroup>
+
+</Project>
