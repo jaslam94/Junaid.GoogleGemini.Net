@@ -6,6 +6,8 @@
 
 A **production-ready** .NET client for the [Google Gemini API](https://ai.google.dev/) — resilient, observable, DI-native, and built to feel right in ASP.NET Core.
 
+> 🤖 **Built with AI.** The v5 → v6 modernization was implemented end-to-end by [Claude](https://www.anthropic.com/claude) (Anthropic). See [AI-assisted development](#ai-assisted-development).
+
 It covers the modern Gemini surface (structured output, system instructions, thinking, grounding, the Files API, context caching), but what makes it worth choosing is everything *around* the API call:
 
 | | This library | Typical thin wrappers |
@@ -221,6 +223,22 @@ Failures surface as typed exceptions: `GeminiApiException` (status + parsed erro
 
 - **.NET 8.0, .NET 9.0, or any netstandard2.0 runtime** (.NET Framework 4.6.1+, Mono, Unity)
 - A **Google AI Studio API key**
+
+## AI-assisted development
+
+This library is **heavily developed with AI**, and we want to be transparent about that. The
+**v5 → v6 modernization** — architecture, code, tests, documentation, and this README — was carried
+out **end-to-end by [Claude](https://www.anthropic.com/claude) (Anthropic's coding agent)** under the
+maintainer's direction, rather than written by hand.
+
+What that means for you:
+
+- **Shipped behind guardrails.** Changes go through an automated test suite and CI on every commit;
+  the public API surface is documented and versioned with [semantic versioning](https://semver.org/).
+- **6.0 is a preview (`-alpha`).** Treat it as such: try it, report issues, and pin a version you've
+  validated for your use case before relying on it in production.
+- **Transparency over polish.** We'd rather tell you how the code is produced than hide it. If you
+  spot something off, please [open an issue](https://github.com/jaslam94/Junaid.GoogleGemini.Net/issues).
 
 ## Contributing & support
 
