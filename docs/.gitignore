@@ -1,0 +1,5 @@
+# DocFX generated output (built by CI / locally; not committed)
+_site/
+api/*.yml
+api/.manifest
+obj/

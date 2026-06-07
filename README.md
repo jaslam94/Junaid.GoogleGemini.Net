@@ -212,9 +212,14 @@ builder.Services.AddGemini(options =>
 
 Failures surface as typed exceptions: `GeminiApiException` (status + parsed error), `GeminiRateLimitException`, `GeminiTimeoutException`, `GeminiSerializationException`, `GeminiContentException` — all deriving from `GeminiException`.
 
+## Documentation & samples
+
+- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, and a v5→v6 migration guide). Published to GitHub Pages via the Docs workflow.
+- **Runnable sample**: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample) — a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
+
 ## Requirements
 
-- **.NET 8.0 or .NET 9.0**
+- **.NET 8.0, .NET 9.0, or any netstandard2.0 runtime** (.NET Framework 4.6.1+, Mono, Unity)
 - A **Google AI Studio API key**
 
 ## Contributing & support

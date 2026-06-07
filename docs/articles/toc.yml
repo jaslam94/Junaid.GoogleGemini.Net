@@ -1,0 +1,16 @@
+- name: Getting started
+  href: getting-started.md
+- name: Structured output
+  href: structured-output.md
+- name: Streaming
+  href: streaming.md
+- name: Resilience & rate limiting
+  href: resilience-and-rate-limiting.md
+- name: Observability
+  href: observability.md
+- name: Microsoft.Extensions.AI
+  href: extensions-ai.md
+- name: Files & caching
+  href: files-and-caching.md
+- name: Migrating v5 → v6
+  href: migration-v5-to-v6.md
