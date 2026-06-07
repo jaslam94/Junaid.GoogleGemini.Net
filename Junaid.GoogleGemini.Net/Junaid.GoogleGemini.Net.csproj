@@ -19,20 +19,16 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-alpha.2</Version>
+		<Version>6.0.0-alpha.3</Version>
 		<PackageReleaseNotes>
-			6.0 is a modernization release with breaking changes. Phase 1 (foundation + correctness):
-			- Fixed retries: resilience now runs on the HttpClient pipeline (Microsoft.Extensions.Http.Resilience);
-			  the previous hand-rolled retry reused disposed content and never worked.
-			- Real Server-Sent-Events streaming exposed as IAsyncEnumerable&lt;GenerateContentResponse&gt;
-			  (callback overloads retained); proper cancellation and timeout handling throughout.
-			- Unified, source-generated JSON serialization (AOT-friendly) with one consistent wire contract.
-			- Typed exception hierarchy (GeminiApiException, GeminiRateLimitException, GeminiTimeoutException,
-			  GeminiSerializationException, GeminiContentException) replacing string-matched errors.
-			- Honest response accessors (Text(), TryGetText, GetTextOrThrow, FinishReason, Usage) instead of
-			  placeholder strings.
-			- Multi-targets net8.0 and net9.0; defaults to the v1beta API; refreshed model constants.
-			BREAKING: response DTOs are PascalCase; streaming returns IAsyncEnumerable; exception types changed.
+			6.0 alpha.3 adds the differentiation layer on top of the modern feature set:
+			- Microsoft.Extensions.AI adapters (IChatClient / IEmbeddingGenerator) via the
+			  companion package Junaid.GoogleGemini.Net.Extensions.AI.
+			- OpenTelemetry-native tracing + token/latency metrics (GenAI semantic conventions),
+			  with no OpenTelemetry dependency — opt in via AddSource/AddMeter("Junaid.GoogleGemini.Net").
+			Earlier 6.0 alphas delivered: correct retries/streaming/serialization/typed errors (Phase 1)
+			and the modern API — structured output GenerateAsync&lt;T&gt;, system instructions, thinking,
+			tools/grounding, Files API, context caching (Phase 2).
 		</PackageReleaseNotes>
 
 		<!--

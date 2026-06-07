@@ -116,12 +116,14 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 
 ---
 
-## Phase 3 — The differentiators (the wedge) *(→ 6.0.0)*
+## Phase 3 — The differentiators (the wedge) *(6.0.0-alpha.3)*
 
-- [ ] `Junaid.GoogleGemini.Net.Extensions.AI`: `IChatClient` + `IEmbeddingGenerator` adapters (ecosystem interop: Semantic Kernel, agent frameworks).
-- [ ] OpenTelemetry-native tracing + metrics (GenAI semconv): spans per request, token-usage/latency/retry counters.
-- [ ] Polished, documented resilience + rate-limiting story; sensible production defaults.
-- [ ] First-class ASP.NET Core minimal-API sample; DocFX/docs site; refreshed README with the "why choose this" matrix.
+- [x] `Junaid.GoogleGemini.Net.Extensions.AI`: `IChatClient` + `IEmbeddingGenerator` adapters (ecosystem interop: Semantic Kernel, agent frameworks).
+- [x] OpenTelemetry-native tracing + metrics (GenAI semconv): spans per request, token-usage/latency histograms (no OTel dependency).
+- [x] Documented resilience + rate-limiting story; sensible production defaults.
+- [x] Refreshed README with the "why choose this" matrix and accurate 6.0 examples.
+- [ ] First-class ASP.NET Core minimal-API sample; DocFX/docs site. *(still open)*
+- [ ] `netstandard2.0` target with polyfills. *(still open)*
 
 **Ships as:** `6.0.0` — the production-grade DX release.
 

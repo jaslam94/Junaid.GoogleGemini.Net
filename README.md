@@ -1,292 +1,222 @@
 # Junaid.GoogleGemini.Net
 
-![.NET 8](https://img.shields.io/badge/.NET-8.0-purple.svg)
-![C#](https://img.shields.io/badge/C%23-12.0-blue.svg)
+![.NET](https://img.shields.io/badge/.NET-8.0%20%7C%209.0-purple.svg)
 ![NuGet](https://img.shields.io/nuget/v/Junaid.GoogleGemini.Net.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Build](https://img.shields.io/badge/build-passing-brightgreen.svg)
 
-An open-source .NET library to use [Gemini API](https://ai.google.dev/tutorials/rest_quickstart) based on Google's largest and most capable AI model yet.
+A **production-ready** .NET client for the [Google Gemini API](https://ai.google.dev/) — resilient, observable, DI-native, and built to feel right in ASP.NET Core.
+
+It covers the modern Gemini surface (structured output, system instructions, thinking, grounding, the Files API, context caching), but what makes it worth choosing is everything *around* the API call:
+
+| | This library | Typical thin wrappers |
+|---|---|---|
+| **Resilience built in** | ✅ retries + backoff on the HttpClient pipeline | ❌ roll your own |
+| **Client-side rate limiting** | ✅ token-bucket, configurable | ❌ none |
+| **OpenTelemetry-native** | ✅ traces + token/latency metrics (GenAI semconv), zero extra deps | ❌ none |
+| **`IChatClient` / `IEmbeddingGenerator`** | ✅ via companion package | sometimes |
+| **Typed structured output** | ✅ `GenerateAsync<T>()` | rare |
+| **DI-first + Options pattern** | ✅ | varies |
+
+> **v6 is a modernization release with breaking changes** (idiomatic PascalCase models, `IAsyncEnumerable` streaming, typed exceptions). See [ROADMAP.md](ROADMAP.md).
 
 ## Installation
 
-### NuGet Package
-
-.NET CLI:
 ```shell
 dotnet add package Junaid.GoogleGemini.Net
-```
-
-Package Manager:
-```shell
-Install-Package Junaid.GoogleGemini.Net
+# optional: Microsoft.Extensions.AI adapters (IChatClient, IEmbeddingGenerator)
+dotnet add package Junaid.GoogleGemini.Net.Extensions.AI
 ```
 
 ## Authentication
 
-Get an API key from Google's AI Studio [here](https://makersuite.google.com/app/apikey).
+Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey), then provide it via environment variable (`GeminiApiKey`) or configuration:
 
-### Option 1: Environment Variable (Recommended)
-```bash
-# Set environment variable
-export GeminiApiKey="your-api-key-here"
-
-# Or on Windows
-set GeminiApiKey=your-api-key-here
-```
-
-### Option 2: Configuration File
 ```json
 {
   "Gemini": {
     "ApiKey": "your-api-key-here",
+    "DefaultModel": "gemini-2.5-flash",
     "TimeoutSeconds": 30,
     "MaxRetries": 3,
-    "DefaultModel": "gemini-2.5-pro",
-    "RateLimit": {
-      "Enabled": true,
-      "RequestsPerMinute": 60,
-      "TokensPerMinute": 60000
-    }
+    "RateLimit": { "Enabled": true, "RequestsPerMinute": 60 }
   }
 }
 ```
 
-## Quick Start
-
-Register the services and start using:
+## Quick start
 
 ```csharp
-// Register services
 builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
 
-// Use in your application
 app.MapGet("/", async (IGeminiService gemini) =>
 {
-    var response = await gemini.GenerateAsync("Say hello to me!");
+    var response = await gemini.GenerateAsync("Say hello!");
     return response.Text();
 });
 ```
 
-## Core Features
+## Core features
 
-### Unified IGeminiService
-Single service for all content generation operations:
+### Generation, vision, chat
 
 ```csharp
-// Text generation
-var response = await gemini.GenerateAsync("Write a story about AI");
+// Text
+var response = await gemini.GenerateAsync("Write a haiku about C#");
 
 // Vision (text + image)
-var imageBytes = File.ReadAllBytes("image.jpg");
-var image = new FileObject(imageBytes, "image.jpg");
-var response = await gemini.GenerateWithImageAsync("What's in this image?", image);
+var image = new FileObject(File.ReadAllBytes("photo.jpg"), "photo.jpg");
+var vision = await gemini.GenerateWithImageAsync("What's in this image?", image);
 
-// Chat conversations
+// Chat
 var messages = new[]
 {
     new MessageObject("user", "Hello, who are you?"),
-    new MessageObject("model", "I'm Gemini, an AI assistant.")
+    new MessageObject("model", "I'm Gemini."),
+    new MessageObject("user", "Tell me a joke."),
 };
-var response = await gemini.ChatAsync(messages);
-
-// Streaming
-await gemini.StreamAsync("Tell me a long story", chunk => Console.Write(chunk));
+var chat = await gemini.ChatAsync(messages);
 ```
 
-### Request Options
-Control generation behavior with predefined or custom options:
+### Streaming (`IAsyncEnumerable`)
 
 ```csharp
-// Predefined options
-var creative = await gemini.GenerateAsync("Write a poem", GeminiRequestOptions.Creative());
-var factual = await gemini.GenerateAsync("Explain physics", GeminiRequestOptions.Factual());
-var code = await gemini.GenerateAsync("Write a function", GeminiRequestOptions.Code());
-var fast = await gemini.GenerateAsync("Quick answer", GeminiRequestOptions.Fast());
-
-// Custom options
-var custom = new GeminiRequestOptions
+await foreach (var chunk in gemini.StreamAsync("Tell me a long story"))
 {
+    Console.Write(chunk.Text());
+}
+
+// Or a simple callback overload:
+await gemini.StreamAsync("Tell me a long story", text => Console.Write(text));
+```
+
+### ⭐ Typed structured output
+
+Get a strongly-typed result back — the JSON schema is derived from your type automatically:
+
+```csharp
+record Recipe(string Title, string[] Ingredients, int Minutes);
+
+Recipe recipe = await gemini.GenerateAsync<Recipe>("A quick pasta recipe");
+Console.WriteLine(recipe.Title);
+```
+
+### Reading responses safely
+
+```csharp
+var response = await gemini.GenerateAsync("...");
+
+string text = response.Text();                 // "" if there was no text (never a placeholder)
+if (response.TryGetText(out var t)) { /* ... */ }
+string guaranteed = response.GetTextOrThrow();  // throws GeminiContentException if blocked/empty
+
+var reason = response.FinishReason;             // e.g. "STOP", "SAFETY"
+var usage  = response.Usage;                    // PromptTokenCount, CandidatesTokenCount, ...
+```
+
+### Request options (system instructions, thinking, JSON, grounding)
+
+```csharp
+var options = new GeminiRequestOptions
+{
+    Model = GeminiConstants.Models.Gemini25Pro,
     Temperature = 0.7f,
-    MaxTokens = 1000,
-    Model = GeminiConstants.Models.Gemini25Pro
+    SystemInstruction = "You are a terse senior engineer.",
+    ThinkingBudget = 1024,        // Gemini 2.5+ reasoning budget
+    EnableGoogleSearch = true,    // ground answers with Google Search
 };
-var response = await gemini.GenerateAsync("Your prompt", custom);
+var grounded = await gemini.GenerateAsync("What shipped in .NET 9?", options);
+foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ?? [])
+    Console.WriteLine($"searched: {q}");
 ```
 
-### Model Selection
-Choose the right model for your use case:
+Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`, `.Fast()`.
+
+### Embeddings
 
 ```csharp
-// Latest and most capable model
-GeminiConstants.Models.Gemini25Pro     // "gemini-2.5-pro"
+var embedding = await embeddings.EmbedContentAsync(
+    "gemini-embedding-001", "Your text",
+    new EmbeddingOptions { TaskType = GeminiConstants.EmbeddingTaskTypes.RetrievalDocument });
 
-// Fastest model for quick responses  
-GeminiConstants.Models.Gemini25Flash   // "gemini-2.5-flash"
-
-// Alternative models
-GeminiConstants.Models.Gemini20Flash   // "gemini-2.0-flash-001"
-GeminiConstants.Models.Gemini15Pro     // "gemini-1.5-pro"
-GeminiConstants.Models.Gemini15Flash   // "gemini-1.5-flash"
-
-// Recommended and fastest shortcuts
-GeminiConstants.Models.Recommended     // Points to Gemini25Pro
-GeminiConstants.Models.Fastest         // Points to Gemini25Flash
+var batch = await embeddings.BatchEmbedContentAsync("gemini-embedding-001", texts);
 ```
 
-### Token Counting
-Monitor and optimize your API usage:
+### Files API & context caching
 
 ```csharp
-// Count tokens for text
-var tokens = await gemini.CountTokensAsync("Your text here");
-Console.WriteLine($"Token count: {tokens.totalTokens}");
+// Upload a file, wait until it's processed, then reference it
+var file = await files.UploadFileAsync(bytes, "video/mp4", "clip.mp4");
+await files.WaitUntilActiveAsync(file.Name!);
 
-// Count tokens for vision
-var visionTokens = await gemini.CountTokensWithImageAsync("Describe image", image);
-
-// Count tokens for chat
-var chatTokens = await gemini.CountTokensChatAsync(messages);
+// Cache a large reusable context, then reference it by name to save tokens
+var cache = await caching.CreateAsync(new CachedContent
+{
+    Model = "models/gemini-2.5-flash",
+    Contents = [ /* large shared context */ ],
+    Ttl = "3600s",
+});
+var answer = await gemini.GenerateAsync("Summarize.", new GeminiRequestOptions { CachedContent = cache.Name });
 ```
 
-## Specialized Services
-
-### Embedding Service
-Generate vector embeddings for semantic analysis:
+### Token counting & model info
 
 ```csharp
-// Single embedding
-var embedding = await embeddingService.EmbedContentAsync("text-embedding-004", "Your text");
+var tokens = await gemini.CountTokensAsync("Your text");
+Console.WriteLine(tokens.TotalTokens);
 
-// Batch embeddings
-var embeddings = await embeddingService.BatchEmbedContentAsync("text-embedding-004", texts);
+var models = await modelInfo.ListModelsAsync();
 ```
 
-### Model Info Service
-Get information about available models:
+## Microsoft.Extensions.AI integration
+
+Use Gemini anywhere the .NET AI abstractions are consumed (Semantic Kernel, agent frameworks, middleware):
 
 ```csharp
-var models = await modelService.ListModelsAsync();
-var modelInfo = await modelService.GetModelAsync("gemini-2.5-pro");
+builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
+builder.Services.AddGeminiChatClient("gemini-2.5-flash");          // registers IChatClient
+builder.Services.AddGeminiEmbeddingGenerator("gemini-embedding-001"); // registers IEmbeddingGenerator
+
+// elsewhere:
+public class MyService(IChatClient chat)
+{
+    public Task<ChatResponse> Ask(string q) =>
+        chat.GetResponseAsync([new ChatMessage(ChatRole.User, q)]);
+}
 ```
 
-### Safety Service
-Configure content safety and analyze responses:
+## Observability (OpenTelemetry)
+
+Traces and metrics are emitted via `System.Diagnostics` following the OTel GenAI conventions — no OpenTelemetry dependency is forced on you. Opt in:
 
 ```csharp
-var strictSafety = safetyService.CreateStrictSafetySettings();
-var moderateSafety = safetyService.CreateModerateSafetySettings();
-var permissiveSafety = safetyService.CreatePermissiveSafetySettings();
-
-var isContentSafe = safetyService.IsContentSafe(response, thresholds);
+builder.Services.AddOpenTelemetry()
+    .WithTracing(t => t.AddSource(GeminiTelemetry.SourceName))
+    .WithMetrics(m => m.AddMeter(GeminiTelemetry.SourceName));
 ```
 
-### Function Service
-Register and call custom functions:
+You get per-call spans (`gen_ai.system`, `gen_ai.request.model`, token counts, finish reasons) and the `gen_ai.client.operation.duration` / `gen_ai.client.token.usage` metrics.
 
-```csharp
-functionService.RegisterFunction(weatherFunction, weatherHandler);
-var result = await functionService.CallFunctionAsync(functionCall);
-```
+## Resilience & rate limiting
 
-## Configuration
+Configured once, applied automatically:
 
-### Modern Configuration
 ```csharp
 builder.Services.AddGemini(options =>
 {
-    options.ApiKey = "your-api-key-here"; // or set GeminiApiKey environment variable
-    options.TimeoutSeconds = 30;
-    options.MaxRetries = 3;
-    options.DefaultModel = GeminiConstants.Models.Recommended;
-    
-    // Configure rate limiting
-    options.RateLimit = new RateLimitOptions
-    {
-        Enabled = true,
-        RequestsPerMinute = 60,
-        TokensPerMinute = 60000
-    };
+    options.MaxRetries = 3;                       // retried on 429/5xx/transient with exponential backoff
+    options.RetryBaseDelay = TimeSpan.FromSeconds(2);
+    options.RateLimit.Enabled = true;             // client-side token bucket
+    options.RateLimit.RequestsPerMinute = 60;
 });
 ```
 
-### Environment Variables
-API key is automatically loaded from `GeminiApiKey` environment variable:
-
-```csharp
-// API key will be automatically loaded from environment
-builder.Services.AddGemini(options =>
-{
-    options.DefaultModel = GeminiConstants.Models.Recommended;
-});
-```
-
-## Examples
-
-Explore comprehensive examples in our [Console Application](https://github.com/jaslam94/Junaid.GoogleGemini.Net/tree/master/Examples/Junaid.GoogleGemini.Net.ExampleConsole) demonstrating:
-
-- Text generation with various options
-- Vision capabilities with image analysis  
-- Chat conversations and streaming
-- Token counting and optimization
-- Safety settings and content analysis
-- Embedding generation
-- Function calling
-- Advanced integration patterns
-
-### Creative Writing
-```csharp
-var story = await gemini.GenerateAsync(
-    "Write a short science fiction story about time travel",
-    GeminiRequestOptions.Creative());
-```
-
-### Code Generation
-```csharp
-var code = await gemini.GenerateAsync(
-    "Create a C# function that reverses a string",
-    GeminiRequestOptions.Code());
-```
-
-### Data Analysis
-```csharp
-var analysis = await gemini.GenerateWithImageAsync(
-    "Analyze this chart and explain the trends",
-    chartImage,
-    GeminiRequestOptions.Factual());
-```
-
-## What's New in v5.1.0
-
-- **Enhanced Function Calling**: Complete implementation with comprehensive examples and robust JSON handling
-- **Interactive Menu System**: New "CHOOSE YOUR ADVENTURE" interface for exploring features selectively
-- **Fixed JsonElement Issues**: Resolved deserialization problems in function parameters
-- **Improved Developer Experience**: Better error handling, type conversion, and organized example demonstrations using a menu-based interface
-
-## Previous Release - v5.0.0
-
-- **Major Cleanup**: Removed all legacy services for simplified architecture
-- **Unified Service**: Single `IGeminiService` for all content generation
-- **Modern Utilities**: Updated configuration and utility system
-- **.NET 8 Optimized**: Enhanced performance with latest .NET features
+Failures surface as typed exceptions: `GeminiApiException` (status + parsed error), `GeminiRateLimitException`, `GeminiTimeoutException`, `GeminiSerializationException`, `GeminiContentException` — all deriving from `GeminiException`.
 
 ## Requirements
 
-- **.NET 8.0** or later
-- **Google AI Studio API Key** - Get yours [here](https://makersuite.google.com/app/apikey)
+- **.NET 8.0 or .NET 9.0**
+- A **Google AI Studio API key**
 
-## Contributing
+## Contributing & support
 
-Contributions are welcome! Please read our [contributing guidelines](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/CONTRIBUTING.md).
-
-## License
-
-This project is licensed under the MIT License.
-
-## Support
-
-- **GitHub**: [Issues and Discussions](https://github.com/jaslam94/Junaid.GoogleGemini.Net)
-- **NuGet**: [Package](https://www.nuget.org/packages/Junaid.GoogleGemini.Net)
-- **Release**: [Notes](https://github.com/jaslam94/Junaid.GoogleGemini.Net/blob/master/Junaid.GoogleGemini.Net/RELEASE.md)
-
-Thanks for using Junaid.GoogleGemini.Net. Feel free to [email me](mailto:aslam.junaid786@hotmail.com) if you have any questions or suggestions.
+Issues and PRs welcome on [GitHub](https://github.com/jaslam94/Junaid.GoogleGemini.Net). Licensed under MIT.
