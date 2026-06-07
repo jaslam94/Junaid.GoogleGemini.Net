@@ -174,6 +174,25 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
         #endregion Safety Configuration
 
+        #region Embeddings
+
+        /// <summary>
+        /// Task types for embeddings — tells the model how the vector will be used so it can optimize it.
+        /// </summary>
+        public static class EmbeddingTaskTypes
+        {
+            public const string RetrievalQuery = "RETRIEVAL_QUERY";
+            public const string RetrievalDocument = "RETRIEVAL_DOCUMENT";
+            public const string SemanticSimilarity = "SEMANTIC_SIMILARITY";
+            public const string Classification = "CLASSIFICATION";
+            public const string Clustering = "CLUSTERING";
+            public const string QuestionAnswering = "QUESTION_ANSWERING";
+            public const string FactVerification = "FACT_VERIFICATION";
+            public const string CodeRetrievalQuery = "CODE_RETRIEVAL_QUERY";
+        }
+
+        #endregion Embeddings
+
         #region API Limits
 
         /// <summary>

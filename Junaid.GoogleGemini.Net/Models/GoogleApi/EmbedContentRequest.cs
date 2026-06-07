@@ -13,13 +13,25 @@ public class BatchEmbedContentRequest
 /// <summary>A single embedding request (used inside a batch).</summary>
 public class EmbedContentRequest
 {
-    /// <summary>The fully-qualified model name, e.g. <c>models/text-embedding-004</c>.</summary>
+    /// <summary>The fully-qualified model name, e.g. <c>models/gemini-embedding-001</c>.</summary>
     [JsonPropertyName("model")]
     public string Model { get; set; } = string.Empty;
 
     /// <summary>The content to embed.</summary>
     [JsonPropertyName("content")]
     public Content Content { get; set; } = new();
+
+    /// <summary>Optional task type the embedding is optimized for (see EmbeddingTaskTypes).</summary>
+    [JsonPropertyName("taskType")]
+    public string? TaskType { get; set; }
+
+    /// <summary>Optional title (used with the RETRIEVAL_DOCUMENT task type).</summary>
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    /// <summary>Optional reduced output dimension.</summary>
+    [JsonPropertyName("outputDimensionality")]
+    public int? OutputDimensionality { get; set; }
 }
 
 /// <summary>
@@ -31,4 +43,16 @@ public class SingleEmbedContentRequest
     /// <summary>The content to embed.</summary>
     [JsonPropertyName("content")]
     public Content Content { get; set; } = new();
+
+    /// <summary>Optional task type the embedding is optimized for (see EmbeddingTaskTypes).</summary>
+    [JsonPropertyName("taskType")]
+    public string? TaskType { get; set; }
+
+    /// <summary>Optional title (used with the RETRIEVAL_DOCUMENT task type).</summary>
+    [JsonPropertyName("title")]
+    public string? Title { get; set; }
+
+    /// <summary>Optional reduced output dimension.</summary>
+    [JsonPropertyName("outputDimensionality")]
+    public int? OutputDimensionality { get; set; }
 }

@@ -103,6 +103,10 @@ public class Candidate
     /// <summary>Safety ratings for this candidate.</summary>
     [JsonPropertyName("safetyRatings")]
     public SafetyRating[]? SafetyRatings { get; set; }
+
+    /// <summary>Grounding information (sources, queries) when a grounding tool was used.</summary>
+    [JsonPropertyName("groundingMetadata")]
+    public GroundingMetadata? GroundingMetadata { get; set; }
 }
 
 /// <summary>A safety rating for a single harm category.</summary>

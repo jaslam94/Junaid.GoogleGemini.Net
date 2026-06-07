@@ -25,6 +25,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 Contents = new List<Content> { content },
                 GenerationConfig = CreateGenerationConfig(options),
                 SystemInstruction = BuildSystemInstruction(options),
+                Tools = BuildTools(options),
+                ToolConfig = options?.ToolConfig,
                 SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
             };
         }
@@ -62,6 +64,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 Contents = new List<Content> { content },
                 GenerationConfig = CreateGenerationConfig(options),
                 SystemInstruction = BuildSystemInstruction(options),
+                Tools = BuildTools(options),
+                ToolConfig = options?.ToolConfig,
                 SafetySettings = options?.SafetySettings ?? ConfigurationUtilities.CreateSafetySettings(ConfigurationUtilities.GetDefaultSafetyThresholds())
             };
         }
@@ -84,6 +88,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 Contents = contents,
                 GenerationConfig = CreateGenerationConfig(options),
                 SystemInstruction = BuildSystemInstruction(options),
+                Tools = BuildTools(options),
+                ToolConfig = options?.ToolConfig,
                 SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
             };
         }
@@ -125,6 +131,44 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
             {
                 Parts = new List<Part> { new() { Text = options!.SystemInstruction } }
             };
+        }
+
+        /// <summary>
+        /// Assembles the tools list: an explicit <see cref="GeminiRequestOptions.Tools"/> wins; otherwise
+        /// tools are built from declared functions and the Enable* flags. Returns null when there are none.
+        /// </summary>
+        private static List<Tool>? BuildTools(GeminiRequestOptions? options)
+        {
+            if (options is null)
+            {
+                return null;
+            }
+
+            if (options.Tools is { Count: > 0 })
+            {
+                return options.Tools;
+            }
+
+            var tools = new List<Tool>();
+
+            if (options.Functions is { Count: > 0 })
+            {
+                tools.Add(new Tool { FunctionDeclarations = options.Functions });
+            }
+            if (options.EnableGoogleSearch)
+            {
+                tools.Add(new Tool { GoogleSearch = new GoogleSearchTool() });
+            }
+            if (options.EnableUrlContext)
+            {
+                tools.Add(new Tool { UrlContext = new UrlContextTool() });
+            }
+            if (options.EnableCodeExecution)
+            {
+                tools.Add(new Tool { CodeExecution = new CodeExecutionTool() });
+            }
+
+            return tools.Count > 0 ? tools : null;
         }
 
         /// <summary>Builds a thinking config from options, or null when neither thinking option is set.</summary>
@@ -217,7 +261,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
         /// <summary>
         /// Creates an embedding request for single text input (without generation config or safety settings)
         /// </summary>
-        public static SingleEmbedContentRequest CreateEmbeddingRequest(string text)
+        public static SingleEmbedContentRequest CreateEmbeddingRequest(string text, EmbeddingOptions? options = null)
         {
             var content = new Content
             {
@@ -227,7 +271,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
 
             return new SingleEmbedContentRequest
             {
-                Content = content
+                Content = content,
+                TaskType = options?.TaskType,
+                Title = options?.Title,
+                OutputDimensionality = options?.OutputDimensionality
             };
         }
 

@@ -1,6 +1,8 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Junaid.GoogleGemini.Net.Infrastructure.Factories;
 using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;
 using Xunit;
@@ -66,5 +68,65 @@ public class GeminiJsonTests
         Assert.Contains("\"responseMimeType\":\"application/json\"", json);
         Assert.Contains("\"thinkingConfig\"", json);
         Assert.Contains("\"thinkingBudget\":0", json);
+    }
+
+    [Fact]
+    public void RequestFactory_BuildsTools_FromFlagsAndFunctions()
+    {
+        var options = new GeminiRequestOptions
+        {
+            EnableGoogleSearch = true,
+            Functions =
+            [
+                new FunctionDeclaration
+                {
+                    Name = "get_weather",
+                    Description = "Get the weather",
+                    Parameters = JsonNode.Parse("""{"type":"object"}""")
+                }
+            ]
+        };
+
+        var request = RequestFactory.CreateTextRequest("weather?", options);
+        var json = JsonSerializer.Serialize(request, GeminiJson.Default);
+
+        Assert.Contains("\"googleSearch\"", json);
+        Assert.Contains("\"functionDeclarations\"", json);
+        Assert.Contains("get_weather", json);
+    }
+
+    [Fact]
+    public void Deserialize_Response_WithFunctionCallAndGrounding()
+    {
+        const string json = """
+        {"candidates":[{"content":{"parts":[{"functionCall":{"name":"get_weather","args":{"city":"Paris"}}}]},
+          "groundingMetadata":{"webSearchQueries":["weather paris"],
+            "groundingChunks":[{"web":{"uri":"https://example.com","title":"Weather"}}]}}]}
+        """;
+
+        var response = JsonSerializer.Deserialize<GenerateContentResponse>(json, GeminiJson.Default)!;
+        var part = response.Candidates![0].Content!.Parts[0];
+
+        Assert.Equal("get_weather", part.FunctionCall!.Name);
+        Assert.Equal("Paris", part.FunctionCall.Args!["city"]!.ToString());
+        Assert.Equal("weather paris", response.Candidates[0].GroundingMetadata!.WebSearchQueries![0]);
+        Assert.Equal("https://example.com", response.Candidates[0].GroundingMetadata!.GroundingChunks![0].Web!.Uri);
+    }
+
+    [Fact]
+    public void EmbeddingRequest_IncludesTaskTypeAndDimensionality()
+    {
+        var request = RequestFactory.CreateEmbeddingRequest("hello", new EmbeddingOptions
+        {
+            TaskType = GeminiConstants.EmbeddingTaskTypes.RetrievalDocument,
+            OutputDimensionality = 256,
+            Title = "Doc"
+        });
+
+        var json = JsonSerializer.Serialize(request, GeminiJson.Default);
+
+        Assert.Contains("\"taskType\":\"RETRIEVAL_DOCUMENT\"", json);
+        Assert.Contains("\"outputDimensionality\":256", json);
+        Assert.Contains("\"title\":\"Doc\"", json);
     }
 }

@@ -13,6 +13,14 @@ public class GenerateContentRequest
     [JsonPropertyName("systemInstruction")]
     public Content? SystemInstruction { get; set; }
 
+    /// <summary>Tools the model may use (function declarations and/or built-in tools).</summary>
+    [JsonPropertyName("tools")]
+    public List<Tool>? Tools { get; set; }
+
+    /// <summary>Controls how the model is allowed to call functions.</summary>
+    [JsonPropertyName("toolConfig")]
+    public ToolConfig? ToolConfig { get; set; }
+
     [JsonPropertyName("generationConfig")]
     public GenerationConfig? GenerationConfig { get; set; }
 

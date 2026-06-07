@@ -3,6 +3,7 @@ using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -33,13 +34,14 @@ namespace Junaid.GoogleGemini.Net.Services
         public async Task<EmbedContentResponse> EmbedContentAsync(
             string model,
             string text,
+            EmbeddingOptions? options = null,
             CancellationToken cancellationToken = default)
         {
             ValidateEmbeddingInputs(model, text);
 
             try
             {
-                var request = RequestFactory.CreateEmbeddingRequest(text);
+                var request = RequestFactory.CreateEmbeddingRequest(text, options);
                 var endpoint = $"models/{model}:embedContent";
 
                 var response = await GeminiClient.PostAsync<SingleEmbedContentRequest, EmbedContentResponse>(
@@ -61,6 +63,7 @@ namespace Junaid.GoogleGemini.Net.Services
         public async Task<BatchEmbedContentResponse> BatchEmbedContentAsync(
             string model,
             string[] texts,
+            EmbeddingOptions? options = null,
             CancellationToken cancellationToken = default)
         {
             ValidateBatchInputs(model, texts);
@@ -70,7 +73,10 @@ namespace Junaid.GoogleGemini.Net.Services
                 var requests = texts.Select(text => new EmbedContentRequest
                 {
                     Model = $"models/{model}",
-                    Content = RequestFactory.CreateEmbeddingContent(text)
+                    Content = RequestFactory.CreateEmbeddingContent(text),
+                    TaskType = options?.TaskType,
+                    Title = options?.Title,
+                    OutputDimensionality = options?.OutputDimensionality
                 });
 
                 var batchRequest = new BatchEmbedContentRequest

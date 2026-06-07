@@ -74,6 +74,27 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public int? CandidateCount { get; set; }
 
         /// <summary>
+        /// Explicit tools to send. If null, tools are assembled from <see cref="Functions"/> and the
+        /// Enable* flags below.
+        /// </summary>
+        public List<Tool>? Tools { get; set; }
+
+        /// <summary>Function-calling configuration (mode / allow-list).</summary>
+        public ToolConfig? ToolConfig { get; set; }
+
+        /// <summary>Functions the model may call.</summary>
+        public List<FunctionDeclaration>? Functions { get; set; }
+
+        /// <summary>Enable grounding with Google Search.</summary>
+        public bool EnableGoogleSearch { get; set; }
+
+        /// <summary>Enable the URL-context tool.</summary>
+        public bool EnableUrlContext { get; set; }
+
+        /// <summary>Enable server-side code execution.</summary>
+        public bool EnableCodeExecution { get; set; }
+
+        /// <summary>
         /// Creates options optimized for creative tasks using the recommended model
         /// </summary>
         public static GeminiRequestOptions Creative(string? model = null) => new()
@@ -169,7 +190,13 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             ThinkingBudget = ThinkingBudget,
             IncludeThoughts = IncludeThoughts,
             Seed = Seed,
-            CandidateCount = CandidateCount
+            CandidateCount = CandidateCount,
+            Tools = Tools,
+            ToolConfig = ToolConfig,
+            Functions = Functions,
+            EnableGoogleSearch = EnableGoogleSearch,
+            EnableUrlContext = EnableUrlContext,
+            EnableCodeExecution = EnableCodeExecution
         };
     }
 }
