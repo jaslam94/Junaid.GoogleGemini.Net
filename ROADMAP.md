@@ -94,7 +94,15 @@ Note: these changes are breaking, so the line was moved from "5.2.0" to the **6.
 
 ---
 
-## Phase 2 — Modern API parity (table stakes) *(→ 6.0.0-preview)*
+## Phase 2 — Modern API parity (table stakes) ✅ DONE *(6.0.0-alpha.2)*
+
+Delivered: system instructions; expanded generation config (JSON mode, thinking, seed, penalties);
+**flagship `GenerateAsync<T>` structured output**; tools (function declarations, Google Search
+grounding, url_context, code_execution) + groundingMetadata; embeddings (taskType, dimensionality);
+**Files API** (resumable upload + polling); **context caching** (cachedContents CRUD + request reuse).
+26 tests on net8.0 + net9.0.
+
+<details><summary>Original checklist</summary>
 
 - [ ] System instructions.
 - [ ] **Structured output**: `responseMimeType` + `responseSchema`, plus generic `GenerateAsync<T>(...)` that auto-derives the schema from a C# type and deserializes. (Flagship DX feature.)
@@ -104,7 +112,7 @@ Note: these changes are breaking, so the line was moved from "5.2.0" to the **6.
 - [ ] Files API (resumable upload + ACTIVE-state polling).
 - [ ] Context caching (`cachedContents` CRUD + use in requests).
 
-**Ships as:** `6.0.0-preview` — modern feature set.
+</details>
 
 ---
 

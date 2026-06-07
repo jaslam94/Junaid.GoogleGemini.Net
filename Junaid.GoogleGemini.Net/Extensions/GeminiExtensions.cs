@@ -135,6 +135,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             services.AddTransient<IModelInfoService, ModelInfoService>();
             services.AddTransient<IEmbeddingService, EmbeddingService>();
             services.AddTransient<IFileService, FileService>();
+            services.AddTransient<ICachingService, CachingService>();
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
 

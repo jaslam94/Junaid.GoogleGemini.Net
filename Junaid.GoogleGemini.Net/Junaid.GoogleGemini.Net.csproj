@@ -19,7 +19,7 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-alpha.1</Version>
+		<Version>6.0.0-alpha.2</Version>
 		<PackageReleaseNotes>
 			6.0 is a modernization release with breaking changes. Phase 1 (foundation + correctness):
 			- Fixed retries: resilience now runs on the HttpClient pipeline (Microsoft.Extensions.Http.Resilience);

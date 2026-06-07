@@ -95,6 +95,11 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public bool EnableCodeExecution { get; set; }
 
         /// <summary>
+        /// Name of a cached-content resource (e.g. <c>cachedContents/abc</c>) to reuse for this request.
+        /// </summary>
+        public string? CachedContent { get; set; }
+
+        /// <summary>
         /// Creates options optimized for creative tasks using the recommended model
         /// </summary>
         public static GeminiRequestOptions Creative(string? model = null) => new()
@@ -196,7 +201,8 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             Functions = Functions,
             EnableGoogleSearch = EnableGoogleSearch,
             EnableUrlContext = EnableUrlContext,
-            EnableCodeExecution = EnableCodeExecution
+            EnableCodeExecution = EnableCodeExecution,
+            CachedContent = CachedContent
         };
     }
 }

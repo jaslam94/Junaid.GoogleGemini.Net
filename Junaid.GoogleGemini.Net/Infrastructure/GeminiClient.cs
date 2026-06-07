@@ -116,6 +116,81 @@ public class GeminiClient : IGeminiClient
         }
     }
 
+    /// <summary>Sends a PATCH request with a JSON body and deserializes the response.</summary>
+    public async Task<TResponse> PatchAsync<TRequest, TResponse>(string endpoint, TRequest data, CancellationToken cancellationToken = default)
+    {
+        var correlationId = Guid.NewGuid().ToString();
+
+        try
+        {
+            using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+            if (!lease.IsAcquired)
+            {
+                throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
+            }
+
+            var json = JsonSerializer.Serialize(data, typeof(TRequest), _jsonOptions);
+            using var request = new HttpRequestMessage(HttpMethod.Patch, endpoint)
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
+                   ?? throw new GeminiException("The API returned a null response.");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GeminiTimeoutException($"The PATCH request to '{endpoint}' timed out.");
+        }
+        catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
+        {
+            _logger.LogError(ex, "PATCH request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
+            throw new GeminiException("Failed to make PATCH request to Gemini API", ex);
+        }
+    }
+
+    /// <summary>Sends a DELETE request, mapping a failure response to a typed exception.</summary>
+    public async Task DeleteAsync(string endpoint, CancellationToken cancellationToken = default)
+    {
+        var correlationId = Guid.NewGuid().ToString();
+
+        try
+        {
+            using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+            if (!lease.IsAcquired)
+            {
+                throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Delete, endpoint);
+            request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            if (response.IsSuccessStatusCode)
+            {
+                return;
+            }
+
+            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
+            throw new GeminiApiException(
+                geminiError?.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}",
+                response.StatusCode,
+                geminiError?.Error);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GeminiTimeoutException($"The DELETE request to '{endpoint}' timed out.");
+        }
+        catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
+        {
+            _logger.LogError(ex, "DELETE request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
+            throw new GeminiException("Failed to make DELETE request to Gemini API", ex);
+        }
+    }
+
     /// <summary>Deserializes a success response or maps an error response to a typed exception.</summary>
     private async Task<T> HandleResponse<T>(HttpResponseMessage response, string correlationId, CancellationToken cancellationToken = default)
     {

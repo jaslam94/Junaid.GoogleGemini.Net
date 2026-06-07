@@ -26,4 +26,10 @@ public class GenerateContentRequest
 
     [JsonPropertyName("safetySettings")]
     public List<SafetySetting>? SafetySettings { get; set; }
+
+    /// <summary>
+    /// Name of a cached-content resource (e.g. <c>cachedContents/abc</c>) to prepend to this request.
+    /// </summary>
+    [JsonPropertyName("cachedContent")]
+    public string? CachedContent { get; set; }
 }

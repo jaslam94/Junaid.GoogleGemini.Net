@@ -27,6 +27,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 SystemInstruction = BuildSystemInstruction(options),
                 Tools = BuildTools(options),
                 ToolConfig = options?.ToolConfig,
+                CachedContent = options?.CachedContent,
                 SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
             };
         }
@@ -66,6 +67,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 SystemInstruction = BuildSystemInstruction(options),
                 Tools = BuildTools(options),
                 ToolConfig = options?.ToolConfig,
+                CachedContent = options?.CachedContent,
                 SafetySettings = options?.SafetySettings ?? ConfigurationUtilities.CreateSafetySettings(ConfigurationUtilities.GetDefaultSafetyThresholds())
             };
         }
@@ -90,6 +92,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 SystemInstruction = BuildSystemInstruction(options),
                 Tools = BuildTools(options),
                 ToolConfig = options?.ToolConfig,
+                CachedContent = options?.CachedContent,
                 SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
             };
         }
