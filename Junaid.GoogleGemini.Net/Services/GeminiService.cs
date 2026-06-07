@@ -50,7 +50,8 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = CreateVisionRequest(prompt, image, options);
-            var endpoint = GetGenerateEndpoint(options?.Model ?? GeminiConstants.Models.Gemini15Pro);
+            // All current Gemini models are multimodal, so vision uses the default model unless overridden.
+            var endpoint = GetGenerateEndpoint(options?.Model);
 
             return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
                 "vision generation",
@@ -206,7 +207,7 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = RequestFactory.CreateTokenCountingVisionRequest(prompt, image);
-            var endpoint = GetCountTokensEndpoint(GeminiConstants.Models.Gemini15Pro);
+            var endpoint = GetCountTokensEndpoint(null);
 
             return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "vision token counting",

@@ -17,10 +17,7 @@ namespace Junaid.GoogleGemini.Net.Services
         private const int MAX_TEXT_LENGTH = 20000;
         private const int MAX_BATCH_SIZE = 100;
 
-        private static readonly string[] ValidModels = {
-            GeminiConstants.Models.Embedding001,
-            GeminiConstants.Models.TextEmbedding004
-        };
+        private static readonly string[] ValidModels = GeminiConstants.Models.EmbeddingModels;
 
         /// <summary>
         /// Initializes a new instance of the EmbeddingService

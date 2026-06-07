@@ -8,9 +8,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         #region API Configuration
 
         /// <summary>
-        /// Default Gemini API base URL
+        /// Default Gemini API base URL. Uses v1beta, where the modern features live (structured
+        /// output, thinking config, grounding, context caching, the Files API, etc.).
         /// </summary>
-        public const string DefaultBaseUrl = "https://generativelanguage.googleapis.com/v1/";
+        public const string DefaultBaseUrl = "https://generativelanguage.googleapis.com/v1beta/";
 
         /// <summary>
         /// Environment variable name for API key
@@ -42,6 +43,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string Embedding001 = "embedding-001";
             public const string TextEmbedding004 = "text-embedding-004";
 
+            /// <summary>The current general-purpose embedding model.</summary>
+            public const string GeminiEmbedding001 = "gemini-embedding-001";
+
             public static readonly string[] ContentGenerationModels =
             {
                 Gemini25Pro,
@@ -55,8 +59,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
             public static readonly string[] EmbeddingModels =
             {
-                Embedding001,
-                TextEmbedding004
+                GeminiEmbedding001,
+                TextEmbedding004,
+                Embedding001
             };
 
             public static readonly string[] MultimodalModels =

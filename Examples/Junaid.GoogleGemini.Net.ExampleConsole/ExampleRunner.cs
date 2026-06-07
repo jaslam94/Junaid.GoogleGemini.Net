@@ -111,9 +111,9 @@ public class ExampleRunner
                 }
             });
 
-            await RunExampleAsync("Getting specific model information (gemini-1.5-pro)", async () =>
+            await RunExampleAsync("Getting specific model information (gemini-2.5-flash)", async () =>
             {
-                var modelInfo = await _modelInfoService.GetModelAsync(GeminiConstants.Models.Gemini15Pro);
+                var modelInfo = await _modelInfoService.GetModelAsync(GeminiConstants.Models.Gemini25Flash);
                 Console.WriteLine($"Model Details for {modelInfo.Name}:");
                 Console.WriteLine($"  Display Name: {modelInfo.DisplayName}");
                 Console.WriteLine($"  Input Token Limit: {modelInfo.InputTokenLimit:N0}");

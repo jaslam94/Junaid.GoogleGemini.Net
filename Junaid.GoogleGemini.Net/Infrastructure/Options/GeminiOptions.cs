@@ -12,7 +12,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// Base URL for the Gemini API
         /// </summary>
         [Required]
-        public Uri BaseUrl { get; set; } = new Uri("https://generativelanguage.googleapis.com/v1/");
+        public Uri BaseUrl { get; set; } = new Uri(GeminiConstants.DefaultBaseUrl);
 
         /// <summary>
         /// API key for authentication
