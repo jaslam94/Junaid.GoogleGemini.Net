@@ -16,7 +16,7 @@
 
 		<!-- Package metadata -->
 		<Title>Junaid.GoogleGemini.Net</Title>
-		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
+		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Version>6.0.0-alpha.4</Version>
