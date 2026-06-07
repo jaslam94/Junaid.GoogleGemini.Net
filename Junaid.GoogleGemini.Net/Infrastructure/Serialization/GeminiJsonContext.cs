@@ -35,6 +35,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 [JsonSerializable(typeof(ListModelInfoResponse))]
 [JsonSerializable(typeof(ModelInfo))]
 [JsonSerializable(typeof(ApiErrorResponse))]
+[JsonSerializable(typeof(FileResource))]
+[JsonSerializable(typeof(FileUploadResponse))]
+[JsonSerializable(typeof(FileListResponse))]
+[JsonSerializable(typeof(FileUploadStartRequest))]
 internal partial class GeminiJsonContext : JsonSerializerContext
 {
 }

@@ -111,6 +111,16 @@ namespace Junaid.GoogleGemini.Net.Extensions
                 });
             });
 
+            // Dedicated client for the Files API (host root + auth; no retry, since a partially
+            // completed upload isn't safe to blindly replay).
+            services.AddHttpClient(GeminiHttpClients.Files, (sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                client.BaseAddress = new Uri(options.BaseUrl.GetLeftPart(UriPartial.Authority) + "/");
+                client.Timeout = TimeSpan.FromMinutes(5); // uploads of large media can be slow
+            })
+            .AddHttpMessageHandler<GeminiAuthHandler>();
+
             // Register authentication handler
             services.AddTransient<GeminiAuthHandler>();
             
@@ -124,6 +134,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             // Keep specialized services that have unique functionality
             services.AddTransient<IModelInfoService, ModelInfoService>();
             services.AddTransient<IEmbeddingService, EmbeddingService>();
+            services.AddTransient<IFileService, FileService>();
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
 

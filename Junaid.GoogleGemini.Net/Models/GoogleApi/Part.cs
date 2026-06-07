@@ -16,6 +16,10 @@ public class Part
     [JsonPropertyName("inlineData")]
     public InlineData? InlineData { get; set; }
 
+    /// <summary>A reference to a file uploaded via the Files API.</summary>
+    [JsonPropertyName("fileData")]
+    public FileData? FileData { get; set; }
+
     /// <summary>A function call requested by the model.</summary>
     [JsonPropertyName("functionCall")]
     public FunctionCallPart? FunctionCall { get; set; }
@@ -27,6 +31,18 @@ public class Part
     /// <summary>True when this part is a thought summary (only present when thoughts are included).</summary>
     [JsonPropertyName("thought")]
     public bool? Thought { get; set; }
+}
+
+/// <summary>References a file uploaded via the Files API.</summary>
+public class FileData
+{
+    /// <summary>The file's MIME type.</summary>
+    [JsonPropertyName("mimeType")]
+    public string? MimeType { get; set; }
+
+    /// <summary>The file URI returned by the upload (<see cref="FileResource.Uri"/>).</summary>
+    [JsonPropertyName("fileUri")]
+    public string? FileUri { get; set; }
 }
 
 /// <summary>A function call emitted by the model.</summary>
