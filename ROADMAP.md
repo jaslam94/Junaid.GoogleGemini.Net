@@ -60,7 +60,7 @@ doubles as a "how to build a good .NET library" reference.
 
 ---
 
-## Phase 0 — Foundation & safety net *(no user-visible behavior change)*
+## Phase 0 — Foundation & safety net ✅ DONE *(no user-visible behavior change)*
 
 Goal: make the repo a professional, testable, CI-gated project before touching logic.
 
@@ -75,9 +75,10 @@ Goal: make the repo a professional, testable, CI-gated project before touching l
 
 ---
 
-## Phase 1 — Fix the broken core *(credibility release → 5.2.0)*
+## Phase 1 — Fix the broken core ✅ DONE *(version bumped to 6.0.0-alpha.1)*
 
-Goal: everything advertised today actually works.
+Goal: everything advertised today actually works. Completed in 6 commits; 14 tests on net8.0+net9.0.
+Note: these changes are breaking, so the line was moved from "5.2.0" to the **6.0** major.
 
 - [ ] Rewrite transport: per-attempt request + content construction; adopt `AddStandardResilienceHandler`.
 - [ ] Proper SSE streaming → `IAsyncEnumerable<GeminiResponseChunk>` (+ callback overload).

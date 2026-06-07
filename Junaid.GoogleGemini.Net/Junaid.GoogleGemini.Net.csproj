@@ -19,12 +19,20 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>5.1.0</Version>
+		<Version>6.0.0-alpha.1</Version>
 		<PackageReleaseNotes>
-			- Enhanced Function Calling: Complete implementation with comprehensive examples and robust JSON handling
-			- Interactive Menu System: New "CHOOSE YOUR ADVENTURE" interface for exploring features selectively
-			- Fixed JsonElement Issues: Resolved deserialization problems in function parameters
-			- Improved Developer Experience: Better error handling, type conversion, and organized example demonstrations using a menu-based interface
+			6.0 is a modernization release with breaking changes. Phase 1 (foundation + correctness):
+			- Fixed retries: resilience now runs on the HttpClient pipeline (Microsoft.Extensions.Http.Resilience);
+			  the previous hand-rolled retry reused disposed content and never worked.
+			- Real Server-Sent-Events streaming exposed as IAsyncEnumerable&lt;GenerateContentResponse&gt;
+			  (callback overloads retained); proper cancellation and timeout handling throughout.
+			- Unified, source-generated JSON serialization (AOT-friendly) with one consistent wire contract.
+			- Typed exception hierarchy (GeminiApiException, GeminiRateLimitException, GeminiTimeoutException,
+			  GeminiSerializationException, GeminiContentException) replacing string-matched errors.
+			- Honest response accessors (Text(), TryGetText, GetTextOrThrow, FinishReason, Usage) instead of
+			  placeholder strings.
+			- Multi-targets net8.0 and net9.0; defaults to the v1beta API; refreshed model constants.
+			BREAKING: response DTOs are PascalCase; streaming returns IAsyncEnumerable; exception types changed.
 		</PackageReleaseNotes>
 
 		<!--
@@ -35,6 +43,8 @@
 			- Pack on Release build so `dotnet build -c Release` yields a ready-to-publish .nupkg.
 		-->
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- The shipped library must stay warning-clean. Examples/tests don't set this. -->
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
 		<!-- TEMPORARY: suppress "missing XML comment" until the public surface is fully documented
 		     in Phase 2/3. Docs are still generated for members that have them. -->
 		<NoWarn>$(NoWarn);CS1591</NoWarn>
