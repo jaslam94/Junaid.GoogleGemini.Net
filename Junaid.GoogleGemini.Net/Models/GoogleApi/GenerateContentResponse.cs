@@ -131,4 +131,12 @@ public class UsageMetadata
     /// <summary>Total tokens billed for the request.</summary>
     [JsonPropertyName("totalTokenCount")]
     public int TotalTokenCount { get; set; }
+
+    /// <summary>Tokens spent on internal "thinking" (billed as output), when thinking is enabled.</summary>
+    [JsonPropertyName("thoughtsTokenCount")]
+    public int ThoughtsTokenCount { get; set; }
+
+    /// <summary>Tokens served from cached content, when context caching is used.</summary>
+    [JsonPropertyName("cachedContentTokenCount")]
+    public int CachedContentTokenCount { get; set; }
 }

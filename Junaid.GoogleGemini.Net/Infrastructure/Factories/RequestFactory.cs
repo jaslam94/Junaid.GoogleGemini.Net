@@ -24,6 +24,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
             {
                 Contents = new List<Content> { content },
                 GenerationConfig = CreateGenerationConfig(options),
+                SystemInstruction = BuildSystemInstruction(options),
                 SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
             };
         }
@@ -60,6 +61,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
             {
                 Contents = new List<Content> { content },
                 GenerationConfig = CreateGenerationConfig(options),
+                SystemInstruction = BuildSystemInstruction(options),
                 SafetySettings = options?.SafetySettings ?? ConfigurationUtilities.CreateSafetySettings(ConfigurationUtilities.GetDefaultSafetyThresholds())
             };
         }
@@ -81,6 +83,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
             {
                 Contents = contents,
                 GenerationConfig = CreateGenerationConfig(options),
+                SystemInstruction = BuildSystemInstruction(options),
                 SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
             };
         }
@@ -101,7 +104,41 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 MaxOutputTokens = options.MaxTokens,
                 TopP = options.TopP,
                 TopK = options.TopK,
-                StopSequences = options.StopSequences
+                StopSequences = options.StopSequences,
+                CandidateCount = options.CandidateCount,
+                Seed = options.Seed,
+                ResponseMimeType = options.ResponseMimeType,
+                ResponseSchema = options.ResponseSchema,
+                ThinkingConfig = BuildThinkingConfig(options)
+            };
+        }
+
+        /// <summary>Builds a system-instruction content block from options, or null when none is set.</summary>
+        private static Content? BuildSystemInstruction(GeminiRequestOptions? options)
+        {
+            if (string.IsNullOrWhiteSpace(options?.SystemInstruction))
+            {
+                return null;
+            }
+
+            return new Content
+            {
+                Parts = new List<Part> { new() { Text = options!.SystemInstruction } }
+            };
+        }
+
+        /// <summary>Builds a thinking config from options, or null when neither thinking option is set.</summary>
+        private static ThinkingConfig? BuildThinkingConfig(GeminiRequestOptions options)
+        {
+            if (options.ThinkingBudget is null && options.IncludeThoughts is null)
+            {
+                return null;
+            }
+
+            return new ThinkingConfig
+            {
+                ThinkingBudget = options.ThinkingBudget,
+                IncludeThoughts = options.IncludeThoughts
             };
         }
 

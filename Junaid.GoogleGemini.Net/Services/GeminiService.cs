@@ -1,4 +1,6 @@
+using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Infrastructure.Factories;
+using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
@@ -8,6 +10,7 @@ using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Runtime.CompilerServices;
+using System.Text.Json;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
@@ -37,6 +40,35 @@ namespace Junaid.GoogleGemini.Net.Services
                 request,
                 new { PromptLength = prompt.Length, Model = options?.Model ?? Options?.DefaultModel },
                 cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async Task<T> GenerateAsync<T>(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+
+            // Constrain the request to JSON and derive a schema from T (unless the caller set them).
+            var structuredOptions = options?.Clone() ?? new GeminiRequestOptions();
+            structuredOptions.ResponseMimeType ??= "application/json";
+            structuredOptions.ResponseSchema ??= JsonSchemaGenerator.Generate(typeof(T));
+
+            var response = await GenerateAsync(prompt, structuredOptions, cancellationToken);
+            var json = response.GetTextOrThrow();
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(json, GeminiJson.Default)
+                    ?? throw new GeminiSerializationException(
+                        $"The structured response for {typeof(T).Name} deserialized to null.");
+            }
+            catch (JsonException ex)
+            {
+                throw new GeminiSerializationException(
+                    $"Failed to deserialize the structured response into {typeof(T).Name}.", ex);
+            }
         }
 
         /// <inheritdoc/>

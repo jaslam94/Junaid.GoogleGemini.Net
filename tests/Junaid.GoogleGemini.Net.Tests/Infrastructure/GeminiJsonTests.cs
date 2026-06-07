@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Junaid.GoogleGemini.Net.Infrastructure.Factories;
 using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Models.Requests;
 using Xunit;
 
 namespace Junaid.GoogleGemini.Net.Tests.Infrastructure;
@@ -43,5 +45,26 @@ public class GeminiJsonTests
         Assert.Equal("ok", response.Text());
         Assert.Equal("STOP", response.Candidates![0].FinishReason);
         Assert.Equal(4, response.UsageMetadata!.TotalTokenCount);
+    }
+
+    [Fact]
+    public void RequestFactory_AppliesSystemInstructionThinkingAndJsonMode()
+    {
+        var options = new GeminiRequestOptions
+        {
+            Temperature = 0.2f,
+            SystemInstruction = "You are a helpful assistant.",
+            ResponseMimeType = "application/json",
+            ThinkingBudget = 0,
+        };
+
+        var request = RequestFactory.CreateTextRequest("hi", options);
+        var json = JsonSerializer.Serialize(request, GeminiJson.Default);
+
+        Assert.Contains("\"systemInstruction\"", json);
+        Assert.Contains("You are a helpful assistant.", json);
+        Assert.Contains("\"responseMimeType\":\"application/json\"", json);
+        Assert.Contains("\"thinkingConfig\"", json);
+        Assert.Contains("\"thinkingBudget\":0", json);
     }
 }

@@ -15,7 +15,21 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <param name="options">Optional generation options</param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<GenerateContentResponse> GenerateAsync(
-            string prompt, 
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Generates content and deserializes the model's JSON response into <typeparamref name="T"/>.
+        /// A response schema is derived from <typeparamref name="T"/> automatically (unless you set one
+        /// in <paramref name="options"/>), and the request is constrained to JSON output.
+        /// </summary>
+        /// <typeparam name="T">The shape to return. Use a class/record with simple properties.</typeparam>
+        /// <param name="prompt">The text prompt</param>
+        /// <param name="options">Optional generation options (schema/MIME type are filled in if unset)</param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<T> GenerateAsync<T>(
+            string prompt,
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default);
 
