@@ -12,7 +12,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// Base URL for the Gemini API
         /// </summary>
         [Required]
-        public Uri BaseUrl { get; set; } = new Uri("https://generativelanguage.googleapis.com/v1/");
+        public Uri BaseUrl { get; set; } = new Uri(GeminiConstants.DefaultBaseUrl);
 
         /// <summary>
         /// API key for authentication
@@ -28,10 +28,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         public int TimeoutSeconds { get; set; } = 30;
 
         /// <summary>
-        /// Maximum number of retries for failed requests
+        /// Maximum number of retries for transient failures (HTTP 429, 5xx, network errors).
         /// </summary>
         [Range(0, 5)]
         public int MaxRetries { get; set; } = 3;
+
+        /// <summary>
+        /// Base delay for the exponential backoff between retries. Lower it (e.g. to near-zero) in
+        /// tests to keep them fast.
+        /// </summary>
+        public TimeSpan RetryBaseDelay { get; set; } = TimeSpan.FromSeconds(2);
 
         /// <summary>
         /// Default model to use for requests

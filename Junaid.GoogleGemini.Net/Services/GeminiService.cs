@@ -1,5 +1,6 @@
-using Junaid.GoogleGemini.Net.Infrastructure.Builders;
+using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Infrastructure.Factories;
+using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
@@ -8,6 +9,8 @@ using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Runtime.CompilerServices;
+using System.Text.Json;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
@@ -40,6 +43,35 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public async Task<T> GenerateAsync<T>(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+
+            // Constrain the request to JSON and derive a schema from T (unless the caller set them).
+            var structuredOptions = options?.Clone() ?? new GeminiRequestOptions();
+            structuredOptions.ResponseMimeType ??= "application/json";
+            structuredOptions.ResponseSchema ??= JsonSchemaGenerator.Generate(typeof(T));
+
+            var response = await GenerateAsync(prompt, structuredOptions, cancellationToken);
+            var json = response.GetTextOrThrow();
+
+            try
+            {
+                return JsonSerializer.Deserialize<T>(json, GeminiJson.Default)
+                    ?? throw new GeminiSerializationException(
+                        $"The structured response for {typeof(T).Name} deserialized to null.");
+            }
+            catch (JsonException ex)
+            {
+                throw new GeminiSerializationException(
+                    $"Failed to deserialize the structured response into {typeof(T).Name}.", ex);
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task<GenerateContentResponse> GenerateWithImageAsync(
             string prompt,
             FileObject image,
@@ -50,7 +82,8 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = CreateVisionRequest(prompt, image, options);
-            var endpoint = GetGenerateEndpoint(options?.Model ?? GeminiConstants.Models.Gemini15Pro);
+            // All current Gemini models are multimodal, so vision uses the default model unless overridden.
+            var endpoint = GetGenerateEndpoint(options?.Model);
 
             return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
                 "vision generation",
@@ -80,25 +113,71 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public async IAsyncEnumerable<GenerateContentResponse> StreamAsync(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+
+            var request = CreateTextRequest(prompt, options);
+            var endpoint = GetStreamEndpoint(options?.Model);
+
+            await foreach (var chunk in StreamRequestAsync(endpoint, request, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async IAsyncEnumerable<GenerateContentResponse> StreamWithImageAsync(
+            string prompt,
+            FileObject image,
+            GeminiRequestOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+            ValidationUtilities.ValidateFileObject(image, nameof(image));
+
+            var request = CreateVisionRequest(prompt, image, options);
+            var endpoint = GetStreamEndpoint(options?.Model);
+
+            await foreach (var chunk in StreamRequestAsync(endpoint, request, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async IAsyncEnumerable<GenerateContentResponse> StreamChatAsync(
+            MessageObject[] messages,
+            GeminiRequestOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            ValidationUtilities.ValidateMessages(messages, nameof(messages));
+
+            var request = CreateChatRequest(messages, options);
+            var endpoint = GetStreamEndpoint(options?.Model);
+
+            await foreach (var chunk in StreamRequestAsync(endpoint, request, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task StreamAsync(
             string prompt,
             Action<string> handleResponse,
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
             ValidationUtilities.ValidateStreamHandler(handleResponse, nameof(handleResponse));
 
-            var request = CreateTextRequest(prompt, options, streaming: true);
-            var endpoint = GetStreamEndpoint(options?.Model);
-
-            await ExecuteStreamRequestAsync(
-                "text streaming",
-                endpoint,
-                request,
-                handleResponse,
-                new { PromptLength = prompt.Length },
-                cancellationToken);
+            await foreach (var chunk in StreamAsync(prompt, options, cancellationToken))
+            {
+                handleResponse(chunk.Text());
+            }
         }
 
         /// <inheritdoc/>
@@ -109,20 +188,12 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
-            ValidationUtilities.ValidateFileObject(image, nameof(image));
             ValidationUtilities.ValidateStreamHandler(handleResponse, nameof(handleResponse));
 
-            var request = CreateVisionRequest(prompt, image, options, streaming: true);
-            var endpoint = GetStreamEndpoint(options?.Model ?? GeminiConstants.Models.Gemini15Pro);
-
-            await ExecuteStreamRequestAsync(
-                "vision streaming",
-                endpoint,
-                request,
-                handleResponse,
-                new { PromptLength = prompt.Length, ImageSize = image.FileContent.Length },
-                cancellationToken);
+            await foreach (var chunk in StreamWithImageAsync(prompt, image, options, cancellationToken))
+            {
+                handleResponse(chunk.Text());
+            }
         }
 
         /// <inheritdoc/>
@@ -132,19 +203,12 @@ namespace Junaid.GoogleGemini.Net.Services
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default)
         {
-            ValidationUtilities.ValidateMessages(messages, nameof(messages));
             ValidationUtilities.ValidateStreamHandler(handleResponse, nameof(handleResponse));
 
-            var request = CreateChatRequest(messages, options, streaming: true);
-            var endpoint = GetStreamEndpoint(options?.Model);
-
-            await ExecuteStreamRequestAsync(
-                "chat streaming",
-                endpoint,
-                request,
-                handleResponse,
-                new { MessageCount = messages.Length },
-                cancellationToken);
+            await foreach (var chunk in StreamChatAsync(messages, options, cancellationToken))
+            {
+                handleResponse(chunk.Text());
+            }
         }
 
         /// <inheritdoc/>
@@ -175,7 +239,7 @@ namespace Junaid.GoogleGemini.Net.Services
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = RequestFactory.CreateTokenCountingVisionRequest(prompt, image);
-            var endpoint = GetCountTokensEndpoint(GeminiConstants.Models.Gemini15Pro);
+            var endpoint = GetCountTokensEndpoint(null);
 
             return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "vision token counting",
@@ -205,102 +269,23 @@ namespace Junaid.GoogleGemini.Net.Services
 
         #region Private Helper Methods
 
-        private static GenerateContentRequest CreateTextRequest(string prompt, GeminiRequestOptions? options, bool streaming = false)
-        {
-            var request = RequestFactory.CreateTextRequest(prompt, options);
+        // Streaming and non-streaming requests have identical bodies (streaming is purely an endpoint
+        // concern), so both paths build the request the same way via the factory.
+        private static GenerateContentRequest CreateTextRequest(string prompt, GeminiRequestOptions? options) =>
+            RequestFactory.CreateTextRequest(prompt, options);
 
-            if (streaming)
-            {
-                // For streaming, we need the builder
-                var builder = new ContentRequestBuilder()
-                    .WithRole("user")
-                    .AddText(prompt)
-                    .AddMessage()
-                    .EnableStreaming(true);
+        private static GenerateContentRequest CreateVisionRequest(string prompt, FileObject image, GeminiRequestOptions? options) =>
+            RequestFactory.CreateVisionRequest(prompt, image, options);
 
-                ApplyOptionsToBuilder(builder, options);
-                return builder.Build();
-            }
-
-            return request;
-        }
-
-        private static GenerateContentRequest CreateVisionRequest(string prompt, FileObject image, GeminiRequestOptions? options, bool streaming = false)
-        {
-            if (!streaming)
-            {
-                return RequestFactory.CreateVisionRequest(prompt, image, options);
-            }
-
-            // For streaming, we need the builder
-            var builder = new ContentRequestBuilder()
-                .WithRole("user")
-                .AddText(prompt)
-                .AddImage(
-                    Convert.ToBase64String(image.FileContent),
-                    FileUtilities.GetMimeType(image.FileName))
-                .AddMessage()
-                .EnableStreaming(true);
-
-            ApplyOptionsToBuilder(builder, options);
-            return builder.Build();
-        }
-
-        private static GenerateContentRequest CreateChatRequest(MessageObject[] messages, GeminiRequestOptions? options, bool streaming = false)
-        {
-            if (!streaming)
-            {
-                return RequestFactory.CreateChatRequest(messages, options);
-            }
-
-            // For streaming, we need the builder
-            var builder = new ContentRequestBuilder();
-            foreach (var message in messages)
-            {
-                builder
-                    .WithRole(message.Role)
-                    .AddText(message.Text)
-                    .AddMessage();
-            }
-
-            builder.EnableStreaming(true);
-            ApplyOptionsToBuilder(builder, options);
-            return builder.Build();
-        }
-
-        private static void ApplyOptionsToBuilder(ContentRequestBuilder builder, GeminiRequestOptions? options)
-        {
-            if (options == null) return;
-
-            if (!string.IsNullOrEmpty(options.Model))
-            {
-                ValidationUtilities.ValidateModelName(options.Model);
-            }
-
-            if (options.Temperature.HasValue)
-                builder.WithTemperature(options.Temperature.Value);
-
-            if (options.TopP.HasValue)
-                builder.WithTopP(options.TopP.Value);
-
-            if (options.TopK.HasValue)
-                builder.WithTopK(options.TopK.Value);
-
-            if (options.MaxTokens.HasValue)
-                builder.WithMaxOutputTokens(options.MaxTokens.Value);
-
-            if (options.StopSequences?.Count > 0)
-                builder.WithStopSequences(options.StopSequences.ToArray());
-
-            if (options.SafetySettings?.Count > 0)
-                builder.WithSafetySettings(options.SafetySettings);
-        }
+        private static GenerateContentRequest CreateChatRequest(MessageObject[] messages, GeminiRequestOptions? options) =>
+            RequestFactory.CreateChatRequest(messages, options);
 
         private string GetGenerateEndpoint(string? model) =>
             $"models/{FormatModelName(model, Options?.DefaultModel)}:generateContent";
 
+        // ?alt=sse makes the API emit Server-Sent Events ("data: {json}" lines), which the client parses.
         private string GetStreamEndpoint(string? model) =>
-            $"models/{FormatModelName(model, Options?.DefaultModel)}:streamGenerateContent";
+            $"models/{FormatModelName(model, Options?.DefaultModel)}:streamGenerateContent?alt=sse";
 
         private string GetCountTokensEndpoint(string? model) =>
             $"models/{FormatModelName(model, Options?.DefaultModel)}:countTokens";

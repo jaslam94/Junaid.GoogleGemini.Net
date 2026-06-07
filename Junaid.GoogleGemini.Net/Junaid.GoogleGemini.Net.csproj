@@ -1,24 +1,53 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+	<!--
+		Shared settings (LangVersion, Nullable, analyzers, package identity, deterministic builds)
+		come from ../Directory.Build.props. This file only declares what is specific to producing
+		THIS package.
+	-->
+
 	<PropertyGroup>
-		<TargetFrameworks>net8.0</TargetFrameworks>
-		<ImplicitUsings>enable</ImplicitUsings>
-		<Nullable>enable</Nullable>
-		<GeneratePackageOnBuild>False</GeneratePackageOnBuild>
-		<Authors>Junaid Aslam</Authors>
+		<!--
+			Multi-target: net8.0 (current LTS) and net9.0 (current STS). netstandard2.0 is planned
+			for Phase 1, where the transport rewrite lets us add the needed polyfills cleanly
+			(IAsyncEnumerable, CancellationToken stream overloads).
+		-->
+		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+
+		<!-- Package metadata -->
 		<Title>Junaid.GoogleGemini.Net</Title>
-		<Description>An open-source .NET library to use Gemini (Google's largest and most capable AI model yet).</Description>
+		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics.</Description>
+		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<RepositoryUrl>https://github.com/jaslam94/Junaid.GoogleGemini.Net</RepositoryUrl>
-		<PackageTags>GoogleGemini.Net; Google; Gemini; Gemini.Net; GenerativeAI; dotnet;</PackageTags>
-		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<Version>6.0.0-alpha.3</Version>
 		<PackageReleaseNotes>
-			- Enhanced Function Calling: Complete implementation with comprehensive examples and robust JSON handling
-			- Interactive Menu System: New "CHOOSE YOUR ADVENTURE" interface for exploring features selectively
-			- Fixed JsonElement Issues: Resolved deserialization problems in function parameters
-			- Improved Developer Experience: Better error handling, type conversion, and organized example demonstrations using a menu-based interface
+			6.0 alpha.3 adds the differentiation layer on top of the modern feature set:
+			- Microsoft.Extensions.AI adapters (IChatClient / IEmbeddingGenerator) via the
+			  companion package Junaid.GoogleGemini.Net.Extensions.AI.
+			- OpenTelemetry-native tracing + token/latency metrics (GenAI semantic conventions),
+			  with no OpenTelemetry dependency — opt in via AddSource/AddMeter("Junaid.GoogleGemini.Net").
+			Earlier 6.0 alphas delivered: correct retries/streaming/serialization/typed errors (Phase 1)
+			and the modern API — structured output GenerateAsync&lt;T&gt;, system instructions, thinking,
+			tools/grounding, Files API, context caching (Phase 2).
 		</PackageReleaseNotes>
-		<Version>5.1.0</Version>
+
+		<!--
+			Production settings for the package itself:
+			- XML docs ship with the package so consumers get IntelliSense.
+			- A .snupkg symbol package + embedded untracked sources enable step-through debugging
+			  and Source Link navigation from a consumer's IDE straight to our source on GitHub.
+			- Pack on Release build so `dotnet build -c Release` yields a ready-to-publish .nupkg.
+		-->
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<!-- The shipped library must stay warning-clean. Examples/tests don't set this. -->
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<!-- TEMPORARY: suppress "missing XML comment" until the public surface is fully documented
+		     in Phase 2/3. Docs are still generated for members that have them. -->
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -29,14 +58,17 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<!-- Versions aligned with Microsoft.Extensions.Http.Resilience's transitive requirements
+		     (avoids NU1605 package-downgrade errors). -->
 		<PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Configuration.Binder" Version="8.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.0" />
-		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.0" />
+		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+		<PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
 		<PackageReference Include="Microsoft.Extensions.Options.DataAnnotations" Version="8.0.0" />
-		<PackageReference Include="Polly" Version="8.2.0" />
-		<PackageReference Include="Polly.Extensions.Http" Version="3.0.0" />
+		<!-- Modern resilience (Polly v8 under the hood). Replaces the deprecated Polly.Extensions.Http
+		     and the hand-rolled retry cache: resilience now lives on the HttpClient pipeline. -->
+		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
 		<PackageReference Include="System.Threading.RateLimiting" Version="8.0.0" />
 	</ItemGroup>
 

@@ -266,7 +266,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <exception cref="InvalidOperationException">Thrown for invalid responses</exception>
         public static void ValidateContentResponse(GenerateContentResponse? response, string operation = "operation")
         {
-            if (response?.candidates == null || response.candidates.Length == 0)
+            if (response?.Candidates == null || response.Candidates.Length == 0)
             {
                 throw new InvalidOperationException($"No content was generated for {operation}");
             }
@@ -284,14 +284,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <exception cref="InvalidOperationException">Thrown for invalid responses</exception>
         public static void ValidateEmbeddingResponse(EmbedContentResponse? response, string operation = "embedding")
         {
-            if (response?.embedding?.values == null || response.embedding.values.Length == 0)
+            if (response?.Embedding?.Values == null || response.Embedding.Values.Length == 0)
             {
                 throw new InvalidOperationException($"No embedding was generated for {operation}");
             }
 
-            if (response.embedding.values.Length < 50) // Reasonable minimum dimension count
+            if (response.Embedding.Values.Length < 50) // Reasonable minimum dimension count
             {
-                throw new InvalidOperationException($"Generated embedding has unexpectedly low dimensions ({response.embedding.values.Length}) for {operation}");
+                throw new InvalidOperationException($"Generated embedding has unexpectedly low dimensions ({response.Embedding.Values.Length}) for {operation}");
             }
         }
 
@@ -307,23 +307,23 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             int expectedCount, 
             string operation = "batch embedding")
         {
-            if (response?.embeddings == null || response.embeddings.Length == 0)
+            if (response?.Embeddings == null || response.Embeddings.Length == 0)
             {
                 throw new InvalidOperationException($"No embeddings were generated for {operation}");
             }
 
-            if (response.embeddings.Length != expectedCount)
+            if (response.Embeddings.Length != expectedCount)
             {
                 throw new InvalidOperationException(
-                    $"Expected {expectedCount} embeddings but got {response.embeddings.Length} for {operation}");
+                    $"Expected {expectedCount} embeddings but got {response.Embeddings.Length} for {operation}");
             }
 
-            for (int i = 0; i < response.embeddings.Length; i++)
+            for (int i = 0; i < response.Embeddings.Length; i++)
             {
                 try
                 {
                     ValidateEmbeddingResponse(
-                        new EmbedContentResponse { embedding = response.embeddings[i] }, 
+                        new EmbedContentResponse { Embedding = response.Embeddings[i] },
                         $"{operation}[{i}]");
                 }
                 catch (InvalidOperationException ex)

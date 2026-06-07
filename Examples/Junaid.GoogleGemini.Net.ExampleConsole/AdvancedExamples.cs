@@ -51,7 +51,7 @@ public class AdvancedExamples
                 tokenOptimizedOptions);
 
             var tokenCount = await _gemini.CountTokensAsync(conciseResponse.Text());
-            Console.WriteLine($"Concise Response ({tokenCount.totalTokens} tokens): {conciseResponse.Text()}");
+            Console.WriteLine($"Concise Response ({tokenCount.TotalTokens} tokens): {conciseResponse.Text()}");
             Console.WriteLine();
 
             // 3. Batch processing simulation
@@ -270,7 +270,7 @@ public class AdvancedExamples
 
             // Step 1: Count tokens in original content
             var originalTokens = await _gemini.CountTokensAsync(longContent);
-            Console.WriteLine($"Original content: {originalTokens.totalTokens} tokens");
+            Console.WriteLine($"Original content: {originalTokens.TotalTokens} tokens");
 
             // Step 2: Generate summary
             var summary = await _gemini.GenerateAsync(
@@ -279,8 +279,8 @@ public class AdvancedExamples
 
             // Step 3: Count tokens in summary
             var summaryTokens = await _gemini.CountTokensAsync(summary.Text());
-            Console.WriteLine($"Summary: {summaryTokens.totalTokens} tokens");
-            Console.WriteLine($"Compression ratio: {(double)summaryTokens.totalTokens / originalTokens.totalTokens:P1}");
+            Console.WriteLine($"Summary: {summaryTokens.TotalTokens} tokens");
+            Console.WriteLine($"Compression ratio: {(double)summaryTokens.TotalTokens / originalTokens.TotalTokens:P1}");
             Console.WriteLine($"Summary: {summary.Text()}");
             Console.WriteLine();
 
@@ -355,11 +355,11 @@ public class AdvancedExamples
                 var endTime = DateTime.UtcNow;
                 var tokens = await _gemini.CountTokensAsync(response.Text());
 
-                requests.Add((prompt, startTime, endTime, tokens.totalTokens));
+                requests.Add((prompt, startTime, endTime, tokens.TotalTokens));
 
                 Console.WriteLine($"Request: \"{prompt}\"");
                 Console.WriteLine($"Duration: {(endTime - startTime).TotalMilliseconds:F0}ms");
-                Console.WriteLine($"Tokens: {tokens.totalTokens}");
+                Console.WriteLine($"Tokens: {tokens.TotalTokens}");
                 Console.WriteLine($"Response: {response.Text()[..Math.Min(100, response.Text().Length)]}...");
                 Console.WriteLine();
             }
@@ -402,28 +402,28 @@ public class AdvancedExamples
             Console.WriteLine();
 
             Console.WriteLine("Key Concepts:");
-            Console.WriteLine("  • Function Registration - Define functions the model can call");
-            Console.WriteLine("  • Parameter Validation - Ensure type safety and data integrity");
-            Console.WriteLine("  • Error Handling - Graceful handling of function call failures");
-            Console.WriteLine("  • Asynchronous Execution - Support for async external API calls");
-            Console.WriteLine("  • Result Processing - Transform function results for the model");
+            Console.WriteLine("  ï¿½ Function Registration - Define functions the model can call");
+            Console.WriteLine("  ï¿½ Parameter Validation - Ensure type safety and data integrity");
+            Console.WriteLine("  ï¿½ Error Handling - Graceful handling of function call failures");
+            Console.WriteLine("  ï¿½ Asynchronous Execution - Support for async external API calls");
+            Console.WriteLine("  ï¿½ Result Processing - Transform function results for the model");
             Console.WriteLine();
 
             Console.WriteLine("Common Use Cases:");
-            Console.WriteLine("  • Database Queries - Let AI query your data safely");
-            Console.WriteLine("  • API Integration - Connect to weather, maps, or other services");
-            Console.WriteLine("  • File Operations - Safe file system interactions");
-            Console.WriteLine("  • Calculations - Complex mathematical operations");
-            Console.WriteLine("  • System Actions - Controlled system administration tasks");
+            Console.WriteLine("  ï¿½ Database Queries - Let AI query your data safely");
+            Console.WriteLine("  ï¿½ API Integration - Connect to weather, maps, or other services");
+            Console.WriteLine("  ï¿½ File Operations - Safe file system interactions");
+            Console.WriteLine("  ï¿½ Calculations - Complex mathematical operations");
+            Console.WriteLine("  ï¿½ System Actions - Controlled system administration tasks");
             Console.WriteLine();
 
             Console.WriteLine("Best Practices:");
-            Console.WriteLine("  • Validate all inputs thoroughly");
-            Console.WriteLine("  • Implement proper error handling and logging");
-            Console.WriteLine("  • Use type-safe parameter definitions");
-            Console.WriteLine("  • Implement timeout and rate limiting for external calls");
-            Console.WriteLine("  • Follow principle of least privilege for system access");
-            Console.WriteLine("  • Cache results when appropriate to improve performance");
+            Console.WriteLine("  ï¿½ Validate all inputs thoroughly");
+            Console.WriteLine("  ï¿½ Implement proper error handling and logging");
+            Console.WriteLine("  ï¿½ Use type-safe parameter definitions");
+            Console.WriteLine("  ï¿½ Implement timeout and rate limiting for external calls");
+            Console.WriteLine("  ï¿½ Follow principle of least privilege for system access");
+            Console.WriteLine("  ï¿½ Cache results when appropriate to improve performance");
             Console.WriteLine();
 
             Console.WriteLine("Example Integration Architecture:");

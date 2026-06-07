@@ -5,7 +5,9 @@ using Junaid.GoogleGemini.Net.Services;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Http.Resilience;
 using Microsoft.Extensions.Options;
+using Polly;
 using System.Net;
 
 namespace Junaid.GoogleGemini.Net.Extensions
@@ -90,6 +92,33 @@ namespace Junaid.GoogleGemini.Net.Extensions
 
                 return handler;
             })
+            // Auth handler is registered first => it is the OUTERMOST handler, so it runs once and
+            // adds the API key a single time...
+            .AddHttpMessageHandler<GeminiAuthHandler>()
+            // ...and the resilience handler is INNER, so it retries the network send without
+            // re-running auth. Retries/backoff/transient-fault handling live here (not in the client),
+            // which is what makes retries correct: the buffered request is re-sent internally.
+            .AddResilienceHandler("gemini", static (builder, context) =>
+            {
+                var resilienceOptions = context.ServiceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                builder.AddRetry(new HttpRetryStrategyOptions
+                {
+                    // Defaults already retry on 5xx, 408, 429, HttpRequestException and timeouts.
+                    MaxRetryAttempts = resilienceOptions.MaxRetries,
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,
+                    Delay = resilienceOptions.RetryBaseDelay,
+                });
+            });
+
+            // Dedicated client for the Files API (host root + auth; no retry, since a partially
+            // completed upload isn't safe to blindly replay).
+            services.AddHttpClient(GeminiHttpClients.Files, (sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                client.BaseAddress = new Uri(options.BaseUrl.GetLeftPart(UriPartial.Authority) + "/");
+                client.Timeout = TimeSpan.FromMinutes(5); // uploads of large media can be slow
+            })
             .AddHttpMessageHandler<GeminiAuthHandler>();
 
             // Register authentication handler
@@ -105,6 +134,8 @@ namespace Junaid.GoogleGemini.Net.Extensions
             // Keep specialized services that have unique functionality
             services.AddTransient<IModelInfoService, ModelInfoService>();
             services.AddTransient<IEmbeddingService, EmbeddingService>();
+            services.AddTransient<IFileService, FileService>();
+            services.AddTransient<ICachingService, CachingService>();
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
 

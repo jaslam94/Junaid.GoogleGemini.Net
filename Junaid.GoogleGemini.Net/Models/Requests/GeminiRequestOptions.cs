@@ -1,5 +1,6 @@
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
+using System.Text.Json.Nodes;
 
 namespace Junaid.GoogleGemini.Net.Models.Requests
 {
@@ -42,6 +43,61 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// Stop sequences for generation
         /// </summary>
         public List<string>? StopSequences { get; set; }
+
+        /// <summary>
+        /// System-level instruction applied to the request (persona, tone, rules). Text only.
+        /// </summary>
+        public string? SystemInstruction { get; set; }
+
+        /// <summary>
+        /// Output MIME type (e.g. <c>application/json</c> for structured output). When using
+        /// <c>GenerateAsync&lt;T&gt;</c> this is set for you.
+        /// </summary>
+        public string? ResponseMimeType { get; set; }
+
+        /// <summary>A response schema (OpenAPI subset) the JSON output must conform to.</summary>
+        public JsonNode? ResponseSchema { get; set; }
+
+        /// <summary>
+        /// Thinking/reasoning token budget (Gemini 2.5+). <c>0</c> disables thinking where allowed;
+        /// <c>-1</c> lets the model decide.
+        /// </summary>
+        public int? ThinkingBudget { get; set; }
+
+        /// <summary>When true, includes thought-summary parts in the response.</summary>
+        public bool? IncludeThoughts { get; set; }
+
+        /// <summary>Deterministic sampling seed.</summary>
+        public int? Seed { get; set; }
+
+        /// <summary>Number of candidate responses to generate.</summary>
+        public int? CandidateCount { get; set; }
+
+        /// <summary>
+        /// Explicit tools to send. If null, tools are assembled from <see cref="Functions"/> and the
+        /// Enable* flags below.
+        /// </summary>
+        public List<Tool>? Tools { get; set; }
+
+        /// <summary>Function-calling configuration (mode / allow-list).</summary>
+        public ToolConfig? ToolConfig { get; set; }
+
+        /// <summary>Functions the model may call.</summary>
+        public List<FunctionDeclaration>? Functions { get; set; }
+
+        /// <summary>Enable grounding with Google Search.</summary>
+        public bool EnableGoogleSearch { get; set; }
+
+        /// <summary>Enable the URL-context tool.</summary>
+        public bool EnableUrlContext { get; set; }
+
+        /// <summary>Enable server-side code execution.</summary>
+        public bool EnableCodeExecution { get; set; }
+
+        /// <summary>
+        /// Name of a cached-content resource (e.g. <c>cachedContents/abc</c>) to reuse for this request.
+        /// </summary>
+        public string? CachedContent { get; set; }
 
         /// <summary>
         /// Creates options optimized for creative tasks using the recommended model
@@ -118,17 +174,35 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// <param name="model">The model to use</param>
         public GeminiRequestOptions UseModel(string model)
         {
-            var copy = new GeminiRequestOptions
-            {
-                Temperature = this.Temperature,
-                MaxTokens = this.MaxTokens,
-                TopP = this.TopP,
-                TopK = this.TopK,
-                Model = model,
-                SafetySettings = this.SafetySettings,
-                StopSequences = this.StopSequences
-            };
+            var copy = Clone();
+            copy.Model = model;
             return copy;
         }
+
+        /// <summary>Creates a shallow copy of these options (used to avoid mutating a caller's instance).</summary>
+        public GeminiRequestOptions Clone() => new()
+        {
+            Temperature = Temperature,
+            MaxTokens = MaxTokens,
+            TopP = TopP,
+            TopK = TopK,
+            Model = Model,
+            SafetySettings = SafetySettings,
+            StopSequences = StopSequences,
+            SystemInstruction = SystemInstruction,
+            ResponseMimeType = ResponseMimeType,
+            ResponseSchema = ResponseSchema,
+            ThinkingBudget = ThinkingBudget,
+            IncludeThoughts = IncludeThoughts,
+            Seed = Seed,
+            CandidateCount = CandidateCount,
+            Tools = Tools,
+            ToolConfig = ToolConfig,
+            Functions = Functions,
+            EnableGoogleSearch = EnableGoogleSearch,
+            EnableUrlContext = EnableUrlContext,
+            EnableCodeExecution = EnableCodeExecution,
+            CachedContent = CachedContent
+        };
     }
 }

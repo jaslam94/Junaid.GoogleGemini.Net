@@ -100,25 +100,25 @@ public class ExampleRunner
             {
                 var models = await _modelInfoService.ListModelsAsync();
                 Console.WriteLine("Available Models:");
-                foreach (var model in models.models.Take(MaxDisplayedModels))
+                foreach (var model in models.Models.Take(MaxDisplayedModels))
                 {
-                    Console.WriteLine($"  - {model.name} (Version: {model.version})");
-                    var description = TruncateText(model.description, MaxDescriptionLength);
+                    Console.WriteLine($"  - {model.Name} (Version: {model.Version})");
+                    var description = TruncateText(model.Description, MaxDescriptionLength);
                     Console.WriteLine($"    Description: {description}...");
-                    Console.WriteLine($"    Input Token Limit: {model.inputTokenLimit:N0}");
-                    Console.WriteLine($"    Output Token Limit: {model.outputTokenLimit:N0}");
+                    Console.WriteLine($"    Input Token Limit: {model.InputTokenLimit:N0}");
+                    Console.WriteLine($"    Output Token Limit: {model.OutputTokenLimit:N0}");
                     Console.WriteLine();
                 }
             });
 
-            await RunExampleAsync("Getting specific model information (gemini-1.5-pro)", async () =>
+            await RunExampleAsync("Getting specific model information (gemini-2.5-flash)", async () =>
             {
-                var modelInfo = await _modelInfoService.GetModelAsync(GeminiConstants.Models.Gemini15Pro);
-                Console.WriteLine($"Model Details for {modelInfo.name}:");
-                Console.WriteLine($"  Display Name: {modelInfo.displayName}");
-                Console.WriteLine($"  Input Token Limit: {modelInfo.inputTokenLimit:N0}");
-                Console.WriteLine($"  Output Token Limit: {modelInfo.outputTokenLimit:N0}");
-                Console.WriteLine($"  Temperature: {modelInfo.temperature}");
+                var modelInfo = await _modelInfoService.GetModelAsync(GeminiConstants.Models.Gemini25Flash);
+                Console.WriteLine($"Model Details for {modelInfo.Name}:");
+                Console.WriteLine($"  Display Name: {modelInfo.DisplayName}");
+                Console.WriteLine($"  Input Token Limit: {modelInfo.InputTokenLimit:N0}");
+                Console.WriteLine($"  Output Token Limit: {modelInfo.OutputTokenLimit:N0}");
+                Console.WriteLine($"  Temperature: {modelInfo.Temperature}");
                 Console.WriteLine();
             });
         }
@@ -453,7 +453,7 @@ public class ExampleRunner
         await RunExampleAsync("Token counting for vision input", async () =>
         {
             var tokens = await _gemini.CountTokensWithImageAsync("Describe this image", image);
-            Console.WriteLine($"Vision Token Count: {tokens.totalTokens}\n");
+            Console.WriteLine($"Vision Token Count: {tokens.TotalTokens}\n");
         });
     }
 
@@ -463,7 +463,7 @@ public class ExampleRunner
         {
             var messages = CreateSimpleChatMessages();
             var tokens = await _gemini.CountTokensChatAsync(messages);
-            Console.WriteLine($"Chat Token Count: {tokens.totalTokens}\n");
+            Console.WriteLine($"Chat Token Count: {tokens.TotalTokens}\n");
         });
     }
 
@@ -481,7 +481,7 @@ public class ExampleRunner
             for (int i = 0; i < testTexts.Length; i++)
             {
                 var tokens = await _gemini.CountTokensAsync(testTexts[i]);
-                Console.WriteLine($"Text {i + 1} ({testTexts[i].Length} chars): {tokens.totalTokens} tokens");
+                Console.WriteLine($"Text {i + 1} ({testTexts[i].Length} chars): {tokens.TotalTokens} tokens");
                 var preview = testTexts[i].Length > 50 ? testTexts[i][..50] + "..." : testTexts[i];
                 Console.WriteLine($"  Text: \"{preview}\"");
                 Console.WriteLine();
@@ -498,8 +498,8 @@ public class ExampleRunner
 
             Console.WriteLine($"Sample text: \"{sampleText}\"");
             Console.WriteLine($"Character count: {sampleText.Length}");
-            Console.WriteLine($"Token count: {tokenCount.totalTokens}");
-            Console.WriteLine($"Characters per token: {(double)sampleText.Length / tokenCount.totalTokens:F2}");
+            Console.WriteLine($"Token count: {tokenCount.TotalTokens}");
+            Console.WriteLine($"Characters per token: {(double)sampleText.Length / tokenCount.TotalTokens:F2}");
             Console.WriteLine();
         });
     }
@@ -546,10 +546,10 @@ public class ExampleRunner
                 embeddings.Add((text, embedding));
 
                 Console.WriteLine($"Text: \"{text}\"");
-                Console.WriteLine($"Embedding generated successfully (dimension: {embedding.embedding?.values?.Length ?? 0})");
-                if (embedding.embedding?.values?.Length > 0)
+                Console.WriteLine($"Embedding generated successfully (dimension: {embedding.Embedding?.Values?.Length ?? 0})");
+                if (embedding.Embedding?.Values?.Length > 0)
                 {
-                    var firstValues = string.Join(", ", embedding.embedding.values.Take(5).Select(v => v.ToString("F4")));
+                    var firstValues = string.Join(", ", embedding.Embedding.Values.Take(5).Select(v => v.ToString("F4")));
                     Console.WriteLine($"First 5 values: [{firstValues}...]");
                 }
                 Console.WriteLine();
