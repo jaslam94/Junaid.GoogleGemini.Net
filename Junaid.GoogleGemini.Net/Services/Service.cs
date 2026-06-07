@@ -5,6 +5,7 @@ using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using System.Runtime.CompilerServices;
 
 namespace Junaid.GoogleGemini.Net.Services
 {
@@ -67,27 +68,17 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <summary>
-        /// Common method to execute streaming requests with consistent error handling and logging
+        /// Streams a request through the client, yielding each response chunk. Cancellation flows to
+        /// the underlying HTTP read.
         /// </summary>
-        protected async Task ExecuteStreamRequestAsync<TRequest>(
-            string operation,
+        protected async IAsyncEnumerable<GenerateContentResponse> StreamRequestAsync<TRequest>(
             string endpoint,
             TRequest request,
-            Action<string> handleStreamResponse,
-            object? logContext = null,
-            CancellationToken cancellationToken = default)
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            try
+            await foreach (var chunk in GeminiClient.StreamAsync(endpoint, request, cancellationToken))
             {
-                await foreach (var data in GeminiClient.SendAsync(endpoint, request).WithCancellation(cancellationToken))
-                {
-                    handleStreamResponse(data);
-                }
-            }
-            catch (Exception ex)
-            {
-                Logger?.LogError(ex, "API {Operation} streaming failed", operation);
-                throw;
+                yield return chunk;
             }
         }
 

@@ -77,4 +77,46 @@ public class GeminiClientTests
             client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
                 "models/x:generateContent", new GenerateContentRequest()));
     }
+
+    [Fact]
+    public async Task StreamAsync_ParsesSseEventsIntoChunks()
+    {
+        const string sse =
+            "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"Hello \"}]}}]}\n" +
+            "\n" +
+            "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"world\"}]}}]}\n" +
+            "\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var client = CreateClient(handler);
+
+        var chunks = new List<string>();
+        await foreach (var chunk in client.StreamAsync(
+            "models/x:streamGenerateContent?alt=sse", new GenerateContentRequest()))
+        {
+            chunks.Add(chunk.Text());
+        }
+
+        Assert.Equal(["Hello ", "world"], chunks);
+    }
+
+    [Fact]
+    public async Task StreamAsync_SkipsMalformedEvents()
+    {
+        const string sse =
+            "data: this-is-not-json\n" +
+            "\n" +
+            "data: {\"candidates\":[{\"content\":{\"parts\":[{\"text\":\"ok\"}]}}]}\n" +
+            "\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var client = CreateClient(handler);
+
+        var chunks = new List<string>();
+        await foreach (var chunk in client.StreamAsync(
+            "models/x:streamGenerateContent?alt=sse", new GenerateContentRequest()))
+        {
+            chunks.Add(chunk.Text());
+        }
+
+        Assert.Equal(["ok"], chunks);
+    }
 }

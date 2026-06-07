@@ -7,7 +7,6 @@ using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 
 namespace Junaid.GoogleGemini.Net.Infrastructure;
 
@@ -159,14 +158,15 @@ public class GeminiClient : IGeminiClient
     }
 
     /// <summary>
-    /// Sends a streaming request and yields text chunks as they arrive.
+    /// Streams a generate-content request over Server-Sent Events, yielding each response chunk.
     /// </summary>
     /// <remarks>
-    /// Phase 1, Step 4 replaces this line-sniffing parser with a proper Server-Sent-Events reader
-    /// (<c>?alt=sse</c>) that surfaces structured chunks. For now it remains a text-only stream but
-    /// goes through the same resilient pipeline and honors cancellation.
+    /// The endpoint must request SSE (<c>...:streamGenerateContent?alt=sse</c>). The server sends one
+    /// <c>data: {GenerateContentResponse}</c> event per chunk, separated by blank lines; we parse each
+    /// event into a full <see cref="GenerateContentResponse"/>. Malformed events are logged and
+    /// skipped rather than tearing down the whole stream.
     /// </remarks>
-    public async IAsyncEnumerable<string> SendAsync<TRequest>(
+    public async IAsyncEnumerable<GenerateContentResponse> StreamAsync<TRequest>(
         string endpoint,
         TRequest data,
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
@@ -185,18 +185,18 @@ public class GeminiClient : IGeminiClient
         {
             Content = new StringContent(json, Encoding.UTF8, "application/json")
         };
-        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
         request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
 
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (!response.IsSuccessStatusCode)
         {
-            var content = await response.Content.ReadAsStringAsync(cancellationToken);
+            var errorContent = await response.Content.ReadAsStringAsync(cancellationToken);
             _logger.LogError("Stream request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
-                response.StatusCode, content, correlationId);
+                response.StatusCode, errorContent, correlationId);
 
-            var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(content, _jsonOptions);
+            var geminiError = JsonSerializer.Deserialize<ApiErrorResponse>(errorContent, _jsonOptions);
             throw new GeminiApiException(
                 geminiError?.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}",
                 response.StatusCode,
@@ -204,41 +204,69 @@ public class GeminiClient : IGeminiClient
         }
 
         var responseStream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        var streamReader = new StreamReader(responseStream);
-        var messageCount = 0;
+        using var reader = new StreamReader(responseStream);
+        var chunkCount = 0;
+        var dataBuffer = new StringBuilder();
 
         try
         {
-            string? line;
-            while ((line = await streamReader.ReadLineAsync(cancellationToken)) is not null)
+            while (true)
             {
-                if (!line.Contains(@"""text""", StringComparison.Ordinal)) continue;
+                var line = await reader.ReadLineAsync(cancellationToken);
+                if (line is null) break; // end of stream
 
-                string? processedText = null;
-                try
+                if (line.Length == 0)
                 {
-                    var jsonString = "{" + line + "}";
-                    var jsonObject = JsonSerializer.Deserialize<JsonObject>(jsonString);
-                    processedText = jsonObject?["text"]?.ToString();
-                }
-                catch (JsonException ex)
-                {
-                    _logger.LogError(ex, "Failed to parse stream message: {Line} [ID: {CorrelationId}]", line, correlationId);
-                    continue; // Skip malformed messages instead of failing the entire stream.
+                    // A blank line terminates an SSE event; parse whatever data we accumulated.
+                    var chunk = ParseEvent(dataBuffer, correlationId);
+                    dataBuffer.Clear();
+                    if (chunk is not null)
+                    {
+                        chunkCount++;
+                        yield return chunk;
+                    }
+                    continue;
                 }
 
-                if (processedText is not null)
+                // We only care about the "data:" field; ignore comments (":..."), "event:", "id:", etc.
+                if (line.StartsWith("data:", StringComparison.Ordinal))
                 {
-                    messageCount++;
-                    yield return processedText;
+                    dataBuffer.Append(line.AsSpan(5).TrimStart());
                 }
+            }
+
+            // Flush a trailing event that had no terminating blank line.
+            var lastChunk = ParseEvent(dataBuffer, correlationId);
+            if (lastChunk is not null)
+            {
+                chunkCount++;
+                yield return lastChunk;
             }
         }
         finally
         {
-            streamReader.Dispose();
+            reader.Dispose();
             await responseStream.DisposeAsync();
-            _logger.LogDebug("Stream completed with {MessageCount} messages [ID: {CorrelationId}]", messageCount, correlationId);
+            _logger.LogDebug("Stream completed with {ChunkCount} chunks [ID: {CorrelationId}]", chunkCount, correlationId);
+        }
+    }
+
+    /// <summary>Parses one SSE event's accumulated data into a response chunk; returns null to skip.</summary>
+    private GenerateContentResponse? ParseEvent(StringBuilder dataBuffer, string correlationId)
+    {
+        if (dataBuffer.Length == 0) return null;
+
+        var payload = dataBuffer.ToString();
+        if (payload == "[DONE]") return null; // Some servers emit a sentinel; Gemini doesn't, but be safe.
+
+        try
+        {
+            return JsonSerializer.Deserialize<GenerateContentResponse>(payload, _jsonOptions);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse stream event: {Payload} [ID: {CorrelationId}]", payload, correlationId);
+            return null; // Skip malformed events rather than failing the whole stream.
         }
     }
 }
