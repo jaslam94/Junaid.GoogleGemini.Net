@@ -1,8 +1,10 @@
 using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
+using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Microsoft.Extensions.Logging;
+using System.Diagnostics;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -83,6 +85,9 @@ public class GeminiClient : IGeminiClient
     public async Task<TResponse> PostAsync<TRequest, TResponse>(string endpoint, TRequest data, CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
+        var (operation, model) = GeminiTelemetry.Parse(endpoint);
+        using var activity = GeminiTelemetry.StartOperation(operation, model);
+        var startedAt = Stopwatch.GetTimestamp();
 
         try
         {
@@ -102,17 +107,35 @@ public class GeminiClient : IGeminiClient
             request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
 
             using var response = await _httpClient.SendAsync(request, cancellationToken);
-            return await HandleResponse<TResponse>(response, correlationId, cancellationToken)
+            var result = await HandleResponse<TResponse>(response, correlationId, cancellationToken)
                    ?? throw new GeminiException("The API returned a null response.");
+
+            if (result is GenerateContentResponse contentResponse)
+            {
+                GeminiTelemetry.RecordUsage(operation, model, contentResponse.Usage, contentResponse.FinishReason, activity);
+            }
+
+            return result;
+        }
+        catch (GeminiException)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error);
+            throw;
         }
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
+            activity?.SetStatus(ActivityStatusCode.Error, "timeout");
             throw new GeminiTimeoutException($"The POST request to '{endpoint}' timed out.");
         }
-        catch (Exception ex) when (ex is not GeminiException and not OperationCanceledException)
+        catch (Exception ex) when (ex is not OperationCanceledException)
         {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
             _logger.LogError(ex, "POST request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
             throw new GeminiException("Failed to make POST request to Gemini API", ex);
+        }
+        finally
+        {
+            GeminiTelemetry.RecordDuration(operation, model, Stopwatch.GetElapsedTime(startedAt).TotalSeconds);
         }
     }
 

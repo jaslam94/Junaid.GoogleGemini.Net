@@ -1,7 +1,9 @@
+using System.Diagnostics;
 using System.Net;
 using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
@@ -118,5 +120,32 @@ public class GeminiClientTests
         }
 
         Assert.Equal(["ok"], chunks);
+    }
+
+    [Fact]
+    public async Task PostAsync_EmitsActivity_WithGenAiTags()
+    {
+        var activities = new List<Activity>();
+        using var listener = new ActivityListener
+        {
+            ShouldListenTo = source => source.Name == GeminiTelemetry.SourceName,
+            Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
+            ActivityStopped = activities.Add,
+        };
+        ActivitySource.AddActivityListener(listener);
+
+        const string json =
+            """{"candidates":[{"content":{"role":"model","parts":[{"text":"hi"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}""";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
+        var client = CreateClient(handler);
+
+        await client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+            "models/gemini-2.5-pro:generateContent", new GenerateContentRequest());
+
+        var activity = Assert.Single(activities);
+        Assert.Equal("generateContent gemini-2.5-pro", activity.DisplayName);
+        Assert.Equal("gemini", activity.GetTagItem("gen_ai.system"));
+        Assert.Equal("gemini-2.5-pro", activity.GetTagItem("gen_ai.request.model"));
+        Assert.Equal(5, activity.GetTagItem("gen_ai.usage.input_tokens"));
     }
 }
