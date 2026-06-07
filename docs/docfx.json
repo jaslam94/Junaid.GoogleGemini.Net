@@ -1,0 +1,34 @@
+{
+  "metadata": [
+    {
+      "src": [
+        {
+          "files": [
+            "Junaid.GoogleGemini.Net/Junaid.GoogleGemini.Net.csproj",
+            "Junaid.GoogleGemini.Net.Extensions.AI/Junaid.GoogleGemini.Net.Extensions.AI.csproj"
+          ],
+          "src": ".."
+        }
+      ],
+      "dest": "api",
+      "properties": {
+        "TargetFramework": "net9.0"
+      }
+    }
+  ],
+  "build": {
+    "content": [
+      { "files": ["api/**.yml", "api/index.md"] },
+      { "files": ["articles/**.md", "articles/**/toc.yml", "toc.yml", "*.md"] }
+    ],
+    "output": "_site",
+    "template": ["default", "modern"],
+    "globalMetadata": {
+      "_appName": "Junaid.GoogleGemini.Net",
+      "_appTitle": "Junaid.GoogleGemini.Net",
+      "_description": "A production-ready .NET client for the Google Gemini API.",
+      "_enableSearch": true,
+      "_disableContribution": true
+    }
+  }
+}
