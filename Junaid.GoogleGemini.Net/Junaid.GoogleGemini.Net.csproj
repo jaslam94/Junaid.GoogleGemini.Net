@@ -19,12 +19,16 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-alpha.4</Version>
+		<Version>6.0.0-beta.1</Version>
 		<PackageReleaseNotes>
-			6.0 alpha.4 adds a netstandard2.0 target for maximum reach (.NET Framework 4.6.1+, Mono,
+			6.0 beta.1: the core surface is now validated end-to-end against the live Gemini API
+			(text, structured output, streaming, embeddings, token counting, model listing, IChatClient,
+			and error mapping). Feature-complete and validated; still a prerelease while extended
+			features (Files, caching, grounding) and real-world usage are exercised before stable.
+			alpha.4 added a netstandard2.0 target for maximum reach (.NET Framework 4.6.1+, Mono,
 			Unity, Xamarin), using polyfills and a built-in retry handler where the modern resilience
-			package isn't available. net8/net9 are unchanged.
-			6.0 alpha.3 added the differentiation layer on top of the modern feature set:
+			package isn't available.
+			alpha.3 added the differentiation layer on top of the modern feature set:
 			- Microsoft.Extensions.AI adapters (IChatClient / IEmbeddingGenerator) via the
 			  companion package Junaid.GoogleGemini.Net.Extensions.AI.
 			- OpenTelemetry-native tracing + token/latency metrics (GenAI semantic conventions),
