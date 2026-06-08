@@ -55,10 +55,16 @@ jobs:
             8.0.x
             9.0.x
 
+      # Build everything first (all TFMs, incl. core's netstandard2.0), then pack with --no-build.
+      # Packing without a prior build trips NU5026 here because GeneratePackageOnBuild=true changes
+      # the pack/build target ordering on a clean checkout.
+      - name: Build
+        run: dotnet build -c Release
+
       - name: Pack
         run: |
-          dotnet pack Junaid.GoogleGemini.Net/Junaid.GoogleGemini.Net.csproj -c Release -o ${{ github.workspace }}/artifacts
-          dotnet pack Junaid.GoogleGemini.Net.Extensions.AI/Junaid.GoogleGemini.Net.Extensions.AI.csproj -c Release -o ${{ github.workspace }}/artifacts
+          dotnet pack Junaid.GoogleGemini.Net/Junaid.GoogleGemini.Net.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
+          dotnet pack Junaid.GoogleGemini.Net.Extensions.AI/Junaid.GoogleGemini.Net.Extensions.AI.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
 
       - name: Push to NuGet
         # NUGET_API_KEY must be added under Settings → Secrets and variables → Actions.
