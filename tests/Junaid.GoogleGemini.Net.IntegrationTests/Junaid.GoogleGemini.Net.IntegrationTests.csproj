@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Live integration tests against the real Gemini API. These are OPT-IN: every test is marked
+    [RequiresGeminiKey] and self-skips unless the GeminiApiKey environment variable is set. So this
+    project is safe to keep in the solution — normal `dotnet test` runs simply skip these.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.12.0" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Junaid.GoogleGemini.Net\Junaid.GoogleGemini.Net.csproj" />
+    <ProjectReference Include="..\..\Junaid.GoogleGemini.Net.Extensions.AI\Junaid.GoogleGemini.Net.Extensions.AI.csproj" />
+  </ItemGroup>
+
+</Project>

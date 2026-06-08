@@ -1,0 +1,27 @@
+name: Integration (live)
+
+# Live tests against the real Gemini API. MANUAL ONLY — run from the Actions tab.
+# Add a repo secret named GEMINI_API_KEY (Settings → Secrets and variables → Actions).
+# Without it, the tests self-skip (the run stays green).
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live:
+    name: Live integration tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+      - name: Run live integration tests
+        env:
+          # The library reads the key from the GeminiApiKey environment variable.
+          GeminiApiKey: ${{ secrets.GEMINI_API_KEY }}
+        run: dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal
