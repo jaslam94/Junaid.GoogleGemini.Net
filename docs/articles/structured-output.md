@@ -22,7 +22,7 @@ filled in only if you didn't set them:
 ```csharp
 var person = await gemini.GenerateAsync<Person>(
     "Pick a famous scientist.",
-    new GeminiRequestOptions { Model = "gemini-2.5-pro", Temperature = 0.2f });
+    new GeminiRequestOptions { Model = "gemini-3.5-flash", Temperature = 0.2f });
 ```
 
 ## Tips
