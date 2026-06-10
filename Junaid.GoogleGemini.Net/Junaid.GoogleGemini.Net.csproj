@@ -19,8 +19,13 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-beta.3</Version>
+		<Version>6.0.0-beta.4</Version>
 		<PackageReleaseNotes>
+			6.0 beta.4: fix netstandard2.0 usage on .NET Framework. AddGemini's options validation
+			needs System.ComponentModel.Annotations, which the .NET Framework GAC ships at an older
+			version than required — so it's now declared as a netstandard2.0 dependency and deployed
+			automatically (previously threw FileNotFoundException on first use). Verified live on
+			.NET Framework 4.8. .NET Framework consumers should also enable AutoGenerateBindingRedirects.
 			6.0 beta.3: default request timeout raised from 30s to 100s. Gemini 3 "thinking" models
 			default to high reasoning depth and a single call can take well over a minute; the old
 			30s default caused spurious GeminiTimeoutExceptions. (Lower TimeoutSeconds, or set a lower
@@ -98,12 +103,16 @@
 		Polyfills for the netstandard2.0 target only:
 		- System.Text.Json: in-box on net8/9, a package here (brings the source generator too).
 		- Microsoft.Bcl.AsyncInterfaces: IAsyncEnumerable / IAsyncDisposable.
+		- System.ComponentModel.Annotations: in-box on net8/9, but on .NET Framework the GAC ships an
+		  older version than the options DataAnnotations validation binds against — declare it so it's
+		  deployed to .NET Framework consumers (otherwise AddGemini throws FileNotFoundException).
 		- PolySharp: generates compiler-required shims (init/record, required members, nullable and
 		  [EnumeratorCancellation] attributes) so modern C# compiles on the old surface. Dev-only.
 	-->
 	<ItemGroup Condition="'$(TargetFramework)' == 'netstandard2.0'">
 		<PackageReference Include="System.Text.Json" Version="8.0.5" />
 		<PackageReference Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
+		<PackageReference Include="System.ComponentModel.Annotations" Version="5.0.0" />
 		<PackageReference Include="PolySharp" Version="1.14.1">
 			<PrivateAssets>all</PrivateAssets>
 			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
