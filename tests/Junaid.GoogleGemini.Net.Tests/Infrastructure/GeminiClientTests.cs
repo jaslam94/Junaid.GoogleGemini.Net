@@ -139,13 +139,14 @@ public class GeminiClientTests
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
         var client = CreateClient(handler);
 
+        // A unique model name keeps this assertion isolated from activities that other test classes
+        // emit in parallel onto the same (process-global) ActivitySource.
         await client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
-            "models/gemini-2.5-pro:generateContent", new GenerateContentRequest());
+            "models/gemini-activity-probe:generateContent", new GenerateContentRequest());
 
-        var activity = Assert.Single(activities);
-        Assert.Equal("generateContent gemini-2.5-pro", activity.DisplayName);
+        var activity = Assert.Single(activities, a => a.DisplayName == "generateContent gemini-activity-probe");
         Assert.Equal("gemini", activity.GetTagItem("gen_ai.system"));
-        Assert.Equal("gemini-2.5-pro", activity.GetTagItem("gen_ai.request.model"));
+        Assert.Equal("gemini-activity-probe", activity.GetTagItem("gen_ai.request.model"));
         Assert.Equal(5, activity.GetTagItem("gen_ai.usage.input_tokens"));
     }
 }
