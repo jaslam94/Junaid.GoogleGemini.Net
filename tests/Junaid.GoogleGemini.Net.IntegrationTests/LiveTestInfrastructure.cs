@@ -21,6 +21,26 @@ public sealed class RequiresGeminiKeyAttribute : FactAttribute
 }
 
 /// <summary>
+/// Like <see cref="RequiresGeminiKeyAttribute"/>, but also requires <c>GeminiPaidTier=1</c> — for
+/// features the Gemini free tier blocks outright (e.g. context-cache storage has a free-tier limit
+/// of 0). Skips cleanly otherwise so the suite stays green on free-tier keys.
+/// </summary>
+public sealed class RequiresPaidGeminiKeyAttribute : FactAttribute
+{
+    public RequiresPaidGeminiKeyAttribute()
+    {
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GeminiApiKey")))
+        {
+            Skip = "Set the GeminiApiKey environment variable to run live integration tests.";
+        }
+        else if (Environment.GetEnvironmentVariable("GeminiPaidTier") != "1")
+        {
+            Skip = "Requires a billing-enabled key (free tier blocks this feature). Set GeminiPaidTier=1 to run.";
+        }
+    }
+}
+
+/// <summary>
 /// Builds a real DI container once for the whole suite (reading the key from the environment), the
 /// same way a consuming app would. Constructing this does not call the API or validate the key —
 /// validation happens lazily on first use, which only occurs when a test actually runs.
