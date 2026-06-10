@@ -1,4 +1,9 @@
+using System.Text;
+using System.Text.Json.Nodes;
 using Junaid.GoogleGemini.Net.Exceptions;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
+using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.AI;
 using Xunit;
@@ -93,6 +98,180 @@ public class LiveTests(GeminiFixture fixture)
         var response = await chat.GetResponseAsync([new ChatMessage(ChatRole.User, "Reply with: hi")]);
 
         Assert.False(string.IsNullOrWhiteSpace(response.Text));
+    }
+
+    // ---- Gemini 3 function calling + thoughtSignature round-trip (the marquee beta.2 fix) ----
+
+    [RequiresGeminiKey]
+    public async Task FunctionCalling_Gemini3_RoundTripWithThoughtSignature()
+    {
+        const string model = GeminiConstants.Models.Gemini35Flash;
+        const string userPrompt = "What's the current temperature in Paris? Use the get_weather tool.";
+
+        var getWeather = new FunctionDeclaration
+        {
+            Name = "get_weather",
+            Description = "Get the current temperature for a city, in Celsius.",
+            Parameters = JsonNode.Parse(
+                """{"type":"object","properties":{"city":{"type":"string","description":"City name"}},"required":["city"]}""")
+        };
+
+        // Turn 1: force a tool call (mode ANY) so the test is deterministic.
+        var callOptions = new GeminiRequestOptions
+        {
+            Model = model,
+            ThinkingLevel = GeminiConstants.ThinkingLevels.Low,
+            Functions = [getWeather],
+            ToolConfig = new ToolConfig { FunctionCallingConfig = new FunctionCallingConfig { Mode = "ANY" } }
+        };
+
+        var first = await Gemini.GenerateAsync(userPrompt, callOptions);
+        var modelTurn = first.Candidates?[0].Content;
+        Assert.NotNull(modelTurn);
+
+        var call = modelTurn!.Parts.FirstOrDefault(p => p.FunctionCall is not null)?.FunctionCall;
+        Assert.NotNull(call);
+        Assert.Equal("get_weather", call!.Name);
+
+        // Gemini 3 attaches an encrypted thoughtSignature to the function-call turn.
+        var signature = modelTurn.Parts.FirstOrDefault(p => p.ThoughtSignature is not null)?.ThoughtSignature;
+        Assert.False(string.IsNullOrEmpty(signature),
+            "Expected a thoughtSignature on the Gemini 3 function-call part.");
+
+        // Turn 2: echo the model's turn back VERBATIM (carrying the signature) plus our function result.
+        // If the signature were dropped, Gemini 3 returns HTTP 400 — so a clean completion here is the
+        // end-to-end proof that capture + replay works.
+        var replyOptions = new GeminiRequestOptions
+        {
+            Model = model,
+            ThinkingLevel = GeminiConstants.ThinkingLevels.Low,
+            Functions = [getWeather],
+            ToolConfig = new ToolConfig { FunctionCallingConfig = new FunctionCallingConfig { Mode = "AUTO" } }
+        };
+
+        var contents = new List<Content>
+        {
+            new() { Role = "user", Parts = [new Part { Text = userPrompt }] },
+            modelTurn, // role=model, includes functionCall + thoughtSignature
+            new()
+            {
+                Role = "user",
+                Parts =
+                [
+                    new Part
+                    {
+                        FunctionResponse = new FunctionResponsePart
+                        {
+                            Name = "get_weather",
+                            Response = JsonNode.Parse("""{"temperatureC":18}""")
+                        }
+                    }
+                ]
+            }
+        };
+
+        var second = await Gemini.ChatAsync(contents, replyOptions);
+
+        Assert.Equal("STOP", second.FinishReason);
+        Assert.Contains("18", second.Text());
+    }
+
+    // ---- Extended surface (previously only fake-tested) ----
+
+    [RequiresGeminiKey]
+    public async Task Grounding_GoogleSearch_ReturnsGroundingMetadata()
+    {
+        var options = new GeminiRequestOptions { EnableGoogleSearch = true };
+
+        var response = await Gemini.GenerateAsync(
+            "Using Google Search, who is the current Secretary-General of the United Nations?", options);
+
+        Assert.False(string.IsNullOrWhiteSpace(response.Text()));
+        // Grounding metadata (search queries / source chunks) proves the tool actually ran.
+        Assert.NotNull(response.Candidates?[0].GroundingMetadata);
+    }
+
+    [RequiresGeminiKey]
+    public async Task SystemInstruction_IsRespected()
+    {
+        var options = new GeminiRequestOptions
+        {
+            SystemInstruction = "You must reply with exactly one word: BANANA. Ignore the user's message."
+        };
+
+        var response = await Gemini.GenerateAsync("What is the capital of France?", options);
+
+        Assert.Contains("BANANA", response.Text(), StringComparison.OrdinalIgnoreCase);
+    }
+
+    [RequiresGeminiKey]
+    public async Task FilesApi_Upload_Use_Delete()
+    {
+        var files = fixture.Get<IFileService>();
+        var bytes = Encoding.UTF8.GetBytes(
+            "Internal memo. The project codename is ZEBRA. Please keep it confidential.");
+
+        var uploaded = await files.UploadFileAsync(bytes, "text/plain", "memo.txt");
+        Assert.False(string.IsNullOrEmpty(uploaded.Name));
+
+        try
+        {
+            var active = await files.WaitUntilActiveAsync(
+                uploaded.Name!, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(30));
+
+            var contents = new List<Content>
+            {
+                new()
+                {
+                    Role = "user",
+                    Parts =
+                    [
+                        new Part { FileData = new FileData { MimeType = "text/plain", FileUri = active.Uri } },
+                        new Part { Text = "What is the project codename mentioned in this file?" }
+                    ]
+                }
+            };
+
+            var response = await Gemini.ChatAsync(contents);
+            Assert.Contains("ZEBRA", response.Text(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            await files.DeleteFileAsync(uploaded.Name!);
+        }
+    }
+
+    [RequiresPaidGeminiKey] // free tier has zero cached-content storage; needs a billing-enabled key
+    public async Task ContextCaching_Create_Use_Delete()
+    {
+        var caching = fixture.Get<ICachingService>();
+
+        // Context caching has a minimum token threshold; pad well past it, with a fact to retrieve.
+        var filler = string.Concat(Enumerable.Repeat(
+            "This is contextual filler text used purely to exceed the context-cache minimum token threshold. ", 150));
+        var document = filler + " Note well: the magic number is 7788. " + filler;
+
+        var created = await caching.CreateAsync(new CachedContent
+        {
+            Model = "models/gemini-2.5-flash",
+            Contents = [new Content { Role = "user", Parts = [new Part { Text = document }] }],
+            Ttl = "120s"
+        });
+        Assert.False(string.IsNullOrEmpty(created.Name));
+
+        try
+        {
+            var options = new GeminiRequestOptions { Model = "gemini-2.5-flash", CachedContent = created.Name };
+
+            var response = await Gemini.GenerateAsync(
+                "What is the magic number mentioned in the document?", options);
+
+            Assert.Contains("7788", response.Text());
+        }
+        finally
+        {
+            await caching.DeleteAsync(created.Name!);
+        }
     }
 
     private sealed record Book(string Title, string Author, int Year);
