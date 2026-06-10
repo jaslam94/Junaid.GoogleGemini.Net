@@ -2,6 +2,7 @@ using System.Runtime.CompilerServices;
 using Junaid.GoogleGemini.Net.Extensions;
 using Junaid.GoogleGemini.Net.Extensions.AI;
 using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.AI;
 using OpenTelemetry.Metrics;
@@ -14,7 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
 
 // 2) Also expose Gemini through the Microsoft.Extensions.AI IChatClient abstraction.
-builder.Services.AddGeminiChatClient("gemini-2.5-flash");
+builder.Services.AddGeminiChatClient(GeminiConstants.Models.Gemini35Flash);
 
 // 3) Wire the library's OpenTelemetry traces + metrics to the console exporter so you can see
 //    per-call spans (model, token counts, finish reason) and the duration/token histograms.
