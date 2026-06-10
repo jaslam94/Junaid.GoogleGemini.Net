@@ -25,7 +25,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// Default timeout for API requests in seconds
         /// </summary>
         [Range(1, 300)]
-        public int TimeoutSeconds { get; set; } = 30;
+        public int TimeoutSeconds { get; set; } = GeminiConstants.Defaults.TimeoutSeconds;
 
         /// <summary>
         /// Maximum number of retries for transient failures (HTTP 429, 5xx, network errors).

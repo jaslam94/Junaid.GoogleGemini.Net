@@ -3,6 +3,7 @@ using Junaid.GoogleGemini.Net.Extensions;
 using Junaid.GoogleGemini.Net.Extensions.AI;
 using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
+using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.AI;
 using OpenTelemetry.Metrics;
@@ -27,11 +28,11 @@ var app = builder.Build();
 
 // Plain text generation:  GET /generate?prompt=Write%20a%20haiku
 app.MapGet("/generate", async (IGeminiService gemini, string prompt) =>
-    Results.Ok((await gemini.GenerateAsync(prompt)).Text()));
+    Results.Ok((await gemini.GenerateAsync(prompt, Fast())).Text()));
 
 // Typed structured output: GET /recipe?dish=pancakes  -> JSON shaped like Recipe
 app.MapGet("/recipe", async (IGeminiService gemini, string dish) =>
-    Results.Ok(await gemini.GenerateAsync<Recipe>($"A simple recipe for {dish}.")));
+    Results.Ok(await gemini.GenerateAsync<Recipe>($"A simple recipe for {dish}.", Fast())));
 
 // Streaming: GET /stream?prompt=...  -> chunks streamed as they arrive
 app.MapGet("/stream", (IGeminiService gemini, string prompt, CancellationToken ct)
@@ -43,10 +44,15 @@ app.MapPost("/chat", async (IChatClient chat, ChatRequest request) =>
 
 app.Run();
 
+// gemini-3.5-flash defaults to a "high" thinking level, which can add tens of seconds (even >2 min)
+// of latency per call. For these simple demo endpoints we opt down to "low" so responses are snappy.
+// Drop this (or raise it) when you actually want deeper reasoning.
+static GeminiRequestOptions Fast() => new() { ThinkingLevel = GeminiConstants.ThinkingLevels.Low };
+
 static async IAsyncEnumerable<string> StreamText(
     IGeminiService gemini, string prompt, [EnumeratorCancellation] CancellationToken ct)
 {
-    await foreach (var chunk in gemini.StreamAsync(prompt, cancellationToken: ct))
+    await foreach (var chunk in gemini.StreamAsync(prompt, Fast(), ct))
     {
         var text = chunk.Text();
         if (!string.IsNullOrEmpty(text))

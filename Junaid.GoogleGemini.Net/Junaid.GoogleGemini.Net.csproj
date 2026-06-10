@@ -19,8 +19,12 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-beta.2</Version>
+		<Version>6.0.0-beta.3</Version>
 		<PackageReleaseNotes>
+			6.0 beta.3: default request timeout raised from 30s to 100s. Gemini 3 "thinking" models
+			default to high reasoning depth and a single call can take well over a minute; the old
+			30s default caused spurious GeminiTimeoutExceptions. (Lower TimeoutSeconds, or set a lower
+			ThinkingLevel, for latency-sensitive workloads.)
 			6.0 beta.2: Gemini 3 support and correctness.
 			- Models are no longer validated against a hardcoded allow-list, so Gemini 3.x (and any future
 			  model) work without a library update; added Gemini 3 model constants and made a current GA

@@ -123,6 +123,13 @@ public class Gemini3SupportTests
         Assert.Contains("get_weather", body);
     }
 
+    [Fact]
+    public void DefaultTimeout_IsGenerousForThinkingModels()
+    {
+        // Gemini 3 thinking models can take >1 min; the old 30s default caused spurious timeouts.
+        Assert.Equal(100, new GeminiOptions().TimeoutSeconds);
+    }
+
     private static GeminiService CreateService(FakeHttpMessageHandler handler)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/v1beta/") };

@@ -262,9 +262,11 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         public static class Defaults
         {
             /// <summary>
-            /// Default timeout in seconds
+            /// Default timeout in seconds. Generous by default because current models (Gemini 3
+            /// "thinking" models default to high reasoning depth) can take well over a minute on a
+            /// single call; a short timeout produces spurious GeminiTimeoutExceptions.
             /// </summary>
-            public const int TimeoutSeconds = 30;
+            public const int TimeoutSeconds = 100;
 
             /// <summary>
             /// Default maximum retries
