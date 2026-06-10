@@ -42,7 +42,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// <summary>
         /// Default model to use for requests
         /// </summary>
-        public string DefaultModel { get; set; } = GeminiConstants.Models.Gemini25Pro;
+        public string DefaultModel { get; set; } = GeminiConstants.Defaults.Model;
 
         /// <summary>
         /// Rate limiting settings

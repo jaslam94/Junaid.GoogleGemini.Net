@@ -19,8 +19,16 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0-beta.1</Version>
+		<Version>6.0.0-beta.2</Version>
 		<PackageReleaseNotes>
+			6.0 beta.2: Gemini 3 support and correctness.
+			- Models are no longer validated against a hardcoded allow-list, so Gemini 3.x (and any future
+			  model) work without a library update; added Gemini 3 model constants and made a current GA
+			  model the default.
+			- thinkingLevel (Gemini 3) alongside thinkingBudget (mutually exclusive, guarded); mediaResolution;
+			  thoughtSignature captured on response parts and echoable via a new Content-based ChatAsync/
+			  StreamChatAsync overload (required for Gemini 3 multi-turn function calling).
+			- No longer forces a default temperature, per Gemini 3 guidance to keep it at the model default.
 			6.0 beta.1: the core surface is now validated end-to-end against the live Gemini API
 			(text, structured output, streaming, embeddings, token counting, model listing, IChatClient,
 			and error mapping). Feature-complete and validated; still a prerelease while extended

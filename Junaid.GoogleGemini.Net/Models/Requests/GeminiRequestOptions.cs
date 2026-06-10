@@ -59,10 +59,19 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public JsonNode? ResponseSchema { get; set; }
 
         /// <summary>
-        /// Thinking/reasoning token budget (Gemini 2.5+). <c>0</c> disables thinking where allowed;
-        /// <c>-1</c> lets the model decide.
+        /// Thinking/reasoning token budget (Gemini 2.5). <c>0</c> disables thinking where allowed;
+        /// <c>-1</c> lets the model decide. Mutually exclusive with <see cref="ThinkingLevel"/>.
         /// </summary>
         public int? ThinkingBudget { get; set; }
+
+        /// <summary>
+        /// Reasoning depth for Gemini 3+ (see <c>GeminiConstants.ThinkingLevels</c>): "minimal", "low",
+        /// "medium", or "high". Mutually exclusive with <see cref="ThinkingBudget"/>.
+        /// </summary>
+        public string? ThinkingLevel { get; set; }
+
+        /// <summary>Media resolution for image/video/PDF parts (see <c>GeminiConstants.MediaResolutions</c>).</summary>
+        public string? MediaResolution { get; set; }
 
         /// <summary>When true, includes thought-summary parts in the response.</summary>
         public bool? IncludeThoughts { get; set; }
@@ -144,7 +153,8 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// </summary>
         public static GeminiRequestOptions Default(string? model = null) => new()
         {
-            Temperature = GeminiConstants.Defaults.Temperature,
+            // No explicit temperature: let the model use its native default (1.0 on Gemini 3, which
+            // recommends against lowering it).
             Model = model ?? GeminiConstants.Models.Recommended
         };
 
@@ -153,7 +163,6 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// </summary>
         public static GeminiRequestOptions Fast() => new()
         {
-            Temperature = GeminiConstants.Defaults.Temperature,
             Model = GeminiConstants.Models.Fastest
         };
 
@@ -162,7 +171,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// </summary>
         /// <param name="model">The specific model to use</param>
         /// <param name="temperature">Optional temperature setting</param>
-        public static GeminiRequestOptions WithModel(string model, float? temperature = 0.7f) => new()
+        public static GeminiRequestOptions WithModel(string model, float? temperature = null) => new()
         {
             Model = model,
             Temperature = temperature
@@ -193,6 +202,8 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             ResponseMimeType = ResponseMimeType,
             ResponseSchema = ResponseSchema,
             ThinkingBudget = ThinkingBudget,
+            ThinkingLevel = ThinkingLevel,
+            MediaResolution = MediaResolution,
             IncludeThoughts = IncludeThoughts,
             Seed = Seed,
             CandidateCount = CandidateCount,

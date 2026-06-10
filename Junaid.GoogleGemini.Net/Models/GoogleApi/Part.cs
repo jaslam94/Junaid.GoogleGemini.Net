@@ -31,6 +31,14 @@ public class Part
     /// <summary>True when this part is a thought summary (only present when thoughts are included).</summary>
     [JsonPropertyName("thought")]
     public bool? Thought { get; set; }
+
+    /// <summary>
+    /// Encrypted "thought signature" (Gemini 3+). The API returns it on response parts and requires
+    /// it to be echoed back in follow-up turns — for function calling, a missing signature causes a
+    /// 400. Preserve the response parts (and this value) when building multi-turn history.
+    /// </summary>
+    [JsonPropertyName("thoughtSignature")]
+    public string? ThoughtSignature { get; set; }
 }
 
 /// <summary>References a file uploaded via the Files API.</summary>

@@ -61,17 +61,31 @@ public class GenerationConfig
     /// <summary>Configures model "thinking"/reasoning (Gemini 2.5+).</summary>
     [JsonPropertyName("thinkingConfig")]
     public ThinkingConfig? ThinkingConfig { get; set; }
+
+    /// <summary>
+    /// Default media resolution for image/video/PDF parts (Gemini 3+). One of the
+    /// <c>GeminiConstants.MediaResolutions</c> values; can also be set per-part.
+    /// </summary>
+    [JsonPropertyName("mediaResolution")]
+    public string? MediaResolution { get; set; }
 }
 
 /// <summary>Configures the model's internal reasoning budget (Gemini 2.5+ "thinking").</summary>
 public class ThinkingConfig
 {
     /// <summary>
-    /// Reasoning token budget. <c>0</c> disables thinking (where allowed); <c>-1</c> lets the model
-    /// decide dynamically.
+    /// Reasoning token budget (Gemini 2.5). <c>0</c> disables thinking (where allowed); <c>-1</c> lets
+    /// the model decide. Mutually exclusive with <see cref="ThinkingLevel"/>.
     /// </summary>
     [JsonPropertyName("thinkingBudget")]
     public int? ThinkingBudget { get; set; }
+
+    /// <summary>
+    /// Reasoning depth (Gemini 3+): one of the <c>GeminiConstants.ThinkingLevels</c> values
+    /// ("minimal"/"low"/"medium"/"high"). Mutually exclusive with <see cref="ThinkingBudget"/>.
+    /// </summary>
+    [JsonPropertyName("thinkingLevel")]
+    public string? ThinkingLevel { get; set; }
 
     /// <summary>When true, thought-summary parts are included in the response.</summary>
     [JsonPropertyName("includeThoughts")]

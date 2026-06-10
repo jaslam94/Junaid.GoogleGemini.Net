@@ -113,6 +113,48 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public async Task<GenerateContentResponse> ChatAsync(
+            IList<Content> contents,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (contents is null || contents.Count == 0)
+            {
+                throw new ArgumentException("At least one content item is required.", nameof(contents));
+            }
+
+            var request = RequestFactory.CreateRequest(contents, options);
+            var endpoint = GetGenerateEndpoint(options?.Model);
+
+            return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
+                "chat generation",
+                endpoint,
+                request,
+                new { MessageCount = contents.Count },
+                cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public async IAsyncEnumerable<GenerateContentResponse> StreamChatAsync(
+            IList<Content> contents,
+            GeminiRequestOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (contents is null || contents.Count == 0)
+            {
+                throw new ArgumentException("At least one content item is required.", nameof(contents));
+            }
+
+            var request = RequestFactory.CreateRequest(contents, options);
+            var endpoint = GetStreamEndpoint(options?.Model);
+
+            await foreach (var chunk in StreamRequestAsync(endpoint, request, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <inheritdoc/>
         public async IAsyncEnumerable<GenerateContentResponse> StreamAsync(
             string prompt,
             GeminiRequestOptions? options = null,

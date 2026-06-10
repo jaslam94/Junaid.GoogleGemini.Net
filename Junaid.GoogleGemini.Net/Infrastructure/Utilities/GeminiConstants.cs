@@ -32,49 +32,60 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// </summary>
         public static class Models
         {
+            // Gemini 3 family (current). These names are informational; model names are not validated
+            // against any allow-list, so newer models work without a library update.
+            /// <summary>GA, most intelligent flash model for sustained frontier performance.</summary>
+            public const string Gemini35Flash = "gemini-3.5-flash";
+            public const string Gemini31Pro = "gemini-3.1-pro-preview";
+            public const string Gemini3Flash = "gemini-3-flash-preview";
+            /// <summary>GA, cost-efficient for high volume.</summary>
+            public const string Gemini31FlashLite = "gemini-3.1-flash-lite";
+            /// <summary>Highest-quality native image generation (Nano Banana).</summary>
+            public const string Gemini3ProImage = "gemini-3-pro-image-preview";
+            /// <summary>High-efficiency native image generation (Nano Banana).</summary>
+            public const string Gemini31FlashImage = "gemini-3.1-flash-image-preview";
+
+            // Gemini 2.x (still available).
             public const string Gemini25Pro = "gemini-2.5-pro";
             public const string Gemini25Flash = "gemini-2.5-flash";
-            public const string Gemini20Flash = "gemini-2.0-flash-001";
             public const string Gemini15Pro = "gemini-1.5-pro";
             public const string Gemini15Flash = "gemini-1.5-flash";
-
             public const string GeminiPro = "gemini-pro";
             public const string Gemini10Pro = "gemini-1.0-pro";
+
+            // Embeddings.
             public const string Embedding001 = "embedding-001";
             public const string TextEmbedding004 = "text-embedding-004";
-
-            /// <summary>The current general-purpose embedding model.</summary>
+            /// <summary>General-purpose text embedding model.</summary>
             public const string GeminiEmbedding001 = "gemini-embedding-001";
+            /// <summary>Multimodal embedding model (text, image, video, audio, PDF).</summary>
+            public const string GeminiEmbedding2 = "gemini-embedding-2";
 
+            /// <summary>A non-exhaustive list of common content-generation models (informational).</summary>
             public static readonly string[] ContentGenerationModels =
             {
+                Gemini35Flash,
+                Gemini31Pro,
+                Gemini3Flash,
+                Gemini31FlashLite,
                 Gemini25Pro,
-                Gemini25Flash,
-                Gemini20Flash,
-                Gemini15Pro,
-                Gemini15Flash,
-                GeminiPro,
-                Gemini10Pro
+                Gemini25Flash
             };
 
+            /// <summary>A non-exhaustive list of common embedding models (informational).</summary>
             public static readonly string[] EmbeddingModels =
             {
+                GeminiEmbedding2,
                 GeminiEmbedding001,
                 TextEmbedding004,
                 Embedding001
             };
 
-            public static readonly string[] MultimodalModels =
-            {
-                Gemini25Pro,
-                Gemini25Flash,
-                Gemini20Flash,
-                Gemini15Pro,
-                Gemini15Flash
-            };
+            /// <summary>The recommended general-purpose model (GA).</summary>
+            public static string Recommended => Gemini35Flash;
 
-            public static string Recommended => Gemini25Pro;
-            public static string Fastest => Gemini25Flash;
+            /// <summary>The fastest / most cost-efficient model (GA).</summary>
+            public static string Fastest => Gemini31FlashLite;
         }
 
         #endregion Model Information
@@ -266,11 +277,37 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const float Temperature = 0.7f;
 
             /// <summary>
-            /// Default model for new requests
+            /// Default model for new requests (a current GA model).
             /// </summary>
-            public const string Model = Models.Gemini25Pro;
+            public const string Model = Models.Gemini35Flash;
         }
 
         #endregion Default Values
+
+        #region Reasoning & Media
+
+        /// <summary>
+        /// Thinking levels for Gemini 3+ (<c>thinkingConfig.thinkingLevel</c>). Controls reasoning depth.
+        /// </summary>
+        public static class ThinkingLevels
+        {
+            public const string Minimal = "minimal";
+            public const string Low = "low";
+            public const string Medium = "medium";
+            public const string High = "high";
+        }
+
+        /// <summary>
+        /// Media resolution settings for image/video/PDF parts (Gemini 3+).
+        /// </summary>
+        public static class MediaResolutions
+        {
+            public const string Low = "media_resolution_low";
+            public const string Medium = "media_resolution_medium";
+            public const string High = "media_resolution_high";
+            public const string UltraHigh = "media_resolution_ultra_high";
+        }
+
+        #endregion Reasoning & Media
     }
 }
