@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Runtime smoke test for the netstandard2.0 build on .NET Framework. The library multi-targets
+    net8.0;net9.0;netstandard2.0; this app forces the ns2.0 asset onto the classic .NET Framework
+    CLR to prove the polyfills (HttpPolyfills, PolySharp shims, the ns2.0 GeminiRetryHandler) and
+    System.Text.Json actually RUN there — not just compile.
+
+    Deliberately NOT added to Junaid.GoogleGemini.Net.sln: it can't build/run on the Linux CI
+    runners. Run on Windows:  set GeminiApiKey, then `dotnet run` from this folder.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <!-- .NET Framework needs binding redirects to load the unified assembly versions that a
+         netstandard2.0 library (and its System.* deps) bind against. SDK-style net4x apps don't
+         emit these unless asked. Consumers on .NET Framework must do the same. -->
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <!-- Keep the smoke green regardless of code-style analyzers inherited from Directory.Build.props. -->
+    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Lets the project build even where the .NET Framework targeting pack isn't installed. -->
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <!-- Note: System.ComponentModel.Annotations is NOT referenced here on purpose — it flows in
+         transitively from the library's netstandard2.0 dependencies, proving consumers get it
+         automatically. -->
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- References the multi-target library; on net48 NuGet resolves the netstandard2.0 asset. -->
+    <ProjectReference Include="..\..\Junaid.GoogleGemini.Net\Junaid.GoogleGemini.Net.csproj" />
+  </ItemGroup>
+
+</Project>
