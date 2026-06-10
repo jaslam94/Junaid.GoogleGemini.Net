@@ -98,13 +98,34 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
         }
 
         /// <summary>
+        /// Builds a request directly from a list of <see cref="Content"/> items. Use this for full
+        /// multi-turn control — echoing back response parts (function calls, function responses, and
+        /// Gemini 3 thought signatures) that the simpler text-based chat helpers can't represent.
+        /// </summary>
+        public static GenerateContentRequest CreateRequest(IEnumerable<Content> contents, GeminiRequestOptions? options = null)
+        {
+            return new GenerateContentRequest
+            {
+                Contents = contents.ToList(),
+                GenerationConfig = CreateGenerationConfig(options),
+                SystemInstruction = BuildSystemInstruction(options),
+                Tools = BuildTools(options),
+                ToolConfig = options?.ToolConfig,
+                CachedContent = options?.CachedContent,
+                SafetySettings = options?.SafetySettings ?? GetDefaultSafetySettings()
+            };
+        }
+
+        /// <summary>
         /// Creates generation config from options
         /// </summary>
         private static GenerationConfig CreateGenerationConfig(GeminiRequestOptions? options)
         {
+            // No options: send an empty config so the model uses its native defaults (notably
+            // temperature 1.0 on Gemini 3, which advises against forcing a lower value).
             if (options == null)
             {
-                return new GenerationConfig { Temperature = GeminiConstants.Defaults.Temperature };
+                return new GenerationConfig();
             }
 
             return new GenerationConfig
@@ -118,6 +139,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 Seed = options.Seed,
                 ResponseMimeType = options.ResponseMimeType,
                 ResponseSchema = options.ResponseSchema,
+                MediaResolution = options.MediaResolution,
                 ThinkingConfig = BuildThinkingConfig(options)
             };
         }
@@ -177,14 +199,23 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
         /// <summary>Builds a thinking config from options, or null when neither thinking option is set.</summary>
         private static ThinkingConfig? BuildThinkingConfig(GeminiRequestOptions options)
         {
-            if (options.ThinkingBudget is null && options.IncludeThoughts is null)
+            if (options.ThinkingBudget is null && options.ThinkingLevel is null && options.IncludeThoughts is null)
             {
                 return null;
+            }
+
+            // The API rejects requests that set both; fail fast with a clear message.
+            if (options.ThinkingBudget is not null && options.ThinkingLevel is not null)
+            {
+                throw new ArgumentException(
+                    "Set only one of ThinkingBudget (Gemini 2.5) or ThinkingLevel (Gemini 3+), not both.",
+                    nameof(options));
             }
 
             return new ThinkingConfig
             {
                 ThinkingBudget = options.ThinkingBudget,
+                ThinkingLevel = options.ThinkingLevel,
                 IncludeThoughts = options.IncludeThoughts
             };
         }

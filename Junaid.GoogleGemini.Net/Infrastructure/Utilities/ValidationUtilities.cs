@@ -13,10 +13,6 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <summary>
         /// Cached array of all valid models (content generation + embedding models) to avoid repeated allocations
         /// </summary>
-        private static readonly string[] _allValidModels = GeminiConstants.Models.ContentGenerationModels
-            .Concat(GeminiConstants.Models.EmbeddingModels)
-            .ToArray();
-
         /// <summary>
         /// Cached array of valid message roles to avoid repeated allocations
         /// </summary>
@@ -220,16 +216,12 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <exception cref="ArgumentException">Thrown for invalid model names</exception>
         public static void ValidateModelName(string? modelName, string paramName = "model")
         {
+            // We deliberately do NOT validate against a hardcoded allow-list: Google ships new models
+            // frequently (e.g. the Gemini 3 family), and an allow-list would reject them client-side.
+            // We only check the name is present; the API authoritatively rejects unknown models.
             if (string.IsNullOrWhiteSpace(modelName))
             {
                 throw new ArgumentException("Model name cannot be null or empty", paramName);
-            }
-
-            if (!_allValidModels.Contains(modelName))
-            {
-                throw new ArgumentException(
-                    $"Invalid model '{modelName}'. Valid models are: {string.Join(", ", _allValidModels)}",
-                    paramName);
             }
         }
 
@@ -241,16 +233,11 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <exception cref="ArgumentException">Thrown for invalid model names</exception>
         public static void ValidateEmbeddingModel(string? modelName, string paramName = "model")
         {
+            // No allow-list (see ValidateModelName) — new embedding models (e.g. gemini-embedding-2)
+            // must work without a library update.
             if (string.IsNullOrWhiteSpace(modelName))
             {
                 throw new ArgumentException("Model name cannot be null or empty", paramName);
-            }
-
-            if (!GeminiConstants.Models.EmbeddingModels.Contains(modelName))
-            {
-                throw new ArgumentException(
-                    $"Invalid embedding model '{modelName}'. Valid models are: {string.Join(", ", GeminiConstants.Models.EmbeddingModels)}",
-                    paramName);
             }
         }
 

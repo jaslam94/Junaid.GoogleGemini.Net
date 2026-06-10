@@ -58,6 +58,23 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Generates content from a raw list of <see cref="Content"/> turns. Use this for full
+        /// multi-turn control — including echoing back the model's previous response parts (function
+        /// calls/responses and Gemini 3 <c>thoughtSignature</c> values), which the simple text-based
+        /// <see cref="ChatAsync(MessageObject[], GeminiRequestOptions?, CancellationToken)"/> can't carry.
+        /// </summary>
+        Task<GenerateContentResponse> ChatAsync(
+            IList<Content> contents,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>Streaming counterpart of <see cref="ChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>.</summary>
+        IAsyncEnumerable<GenerateContentResponse> StreamChatAsync(
+            IList<Content> contents,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Streams content generation for a text prompt, yielding each response chunk as it arrives.
         /// Iterate with <c>await foreach</c>; use <c>chunk.Text()</c> for the text of each chunk.
         /// </summary>

@@ -18,8 +18,6 @@ namespace Junaid.GoogleGemini.Net.Services
         private const int MAX_TEXT_LENGTH = 20000;
         private const int MAX_BATCH_SIZE = 100;
 
-        private static readonly string[] ValidModels = GeminiConstants.Models.EmbeddingModels;
-
         /// <summary>
         /// Initializes a new instance of the EmbeddingService
         /// </summary>
@@ -149,16 +147,11 @@ namespace Junaid.GoogleGemini.Net.Services
 
         private static void ValidateModel(string model)
         {
+            // No allow-list: new embedding models (e.g. gemini-embedding-2) must work without a
+            // library update. The API rejects genuinely invalid names.
             if (string.IsNullOrWhiteSpace(model))
             {
                 throw new ArgumentException("Model name cannot be null or empty", nameof(model));
-            }
-
-            if (!ValidModels.Contains(model))
-            {
-                throw new ArgumentException(
-                    $"Invalid model '{model}'. Supported models: {string.Join(", ", ValidModels)}",
-                    nameof(model));
             }
         }
 
