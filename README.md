@@ -37,8 +37,8 @@ Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey), 
 {
   "Gemini": {
     "ApiKey": "your-api-key-here",
-    "DefaultModel": "gemini-2.5-flash",
-    "TimeoutSeconds": 30,
+    "DefaultModel": "gemini-3.5-flash",
+    "TimeoutSeconds": 100,
     "MaxRetries": 3,
     "RateLimit": { "Enabled": true, "RequestsPerMinute": 60 }
   }
@@ -120,11 +120,10 @@ var usage  = response.Usage;                    // PromptTokenCount, CandidatesT
 ```csharp
 var options = new GeminiRequestOptions
 {
-    Model = GeminiConstants.Models.Gemini25Pro,
-    Temperature = 0.7f,
+    Model = GeminiConstants.Models.Gemini35Flash,        // Gemini 3 (the default is gemini-3.5-flash)
     SystemInstruction = "You are a terse senior engineer.",
-    ThinkingBudget = 1024,        // Gemini 2.5+ reasoning budget
-    EnableGoogleSearch = true,    // ground answers with Google Search
+    ThinkingLevel = GeminiConstants.ThinkingLevels.Low,  // Gemini 3 reasoning depth (use ThinkingBudget on 2.5)
+    EnableGoogleSearch = true,                           // ground answers with Google Search
 };
 var grounded = await gemini.GenerateAsync("What shipped in .NET 9?", options);
 foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ?? [])
@@ -132,6 +131,12 @@ foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ??
 ```
 
 Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`, `.Fast()`.
+
+> **Gemini 3 ready.** Model names aren't allow-listed, so any current/future model works without a
+> library update. `ThinkingLevel` and `MediaResolution` are supported, and the model's encrypted
+> `thoughtSignature` is captured and can be replayed for multi-turn function calling via the
+> `Content`-based `ChatAsync`/`StreamChatAsync` overloads. Tip: Gemini 3 thinking models default to
+> deep reasoning — set a lower `ThinkingLevel` for latency-sensitive calls.
 
 ### Embeddings
 

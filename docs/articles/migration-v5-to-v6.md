@@ -51,6 +51,19 @@ catch (GeminiApiException ex) { var code = ex.StatusCode; var status = ex.Status
 - The client now targets the **v1beta** API by default (unlocks structured output, thinking,
   grounding, caching, the Files API).
 - Deprecated model fallbacks (e.g. `gemini-1.5-pro`) were removed; vision uses your default model.
+- The **default model is now `gemini-3.5-flash`** (a current GA model). Set `DefaultModel` /
+  `options.Model` to pin a specific model.
+- **Model names are no longer validated against an allow-list** — any current or future model
+  (e.g. the Gemini 3 family) works without a library update; the API rejects genuinely invalid names.
+- The **default request timeout is now 100s** (was 30s). Gemini 3 "thinking" models can take well
+  over a minute; lower `TimeoutSeconds` or set a lower `ThinkingLevel` for latency-sensitive work.
+- **No default temperature is forced** anymore. If you don't set `Temperature`, the model uses its
+  own default (1.0 on Gemini 3, which advises against lowering it).
+
+### .NET Framework
+The `netstandard2.0` build runs on .NET Framework 4.6.1+. Enable
+`<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>` in your app; the required
+`System.ComponentModel.Annotations` now flows in transitively.
 
 ## New in v6
 
@@ -61,3 +74,11 @@ catch (GeminiApiException ex) { var code = ex.StatusCode; var status = ex.Status
 - OpenTelemetry traces & metrics
 - `Microsoft.Extensions.AI` adapters (`IChatClient`, `IEmbeddingGenerator`)
 - `netstandard2.0` target
+
+### Gemini 3
+- `ThinkingLevel` (`minimal`/`low`/`medium`/`high`) — Gemini 3's reasoning control; mutually
+  exclusive with the 2.5-era `ThinkingBudget`.
+- `MediaResolution` for image/video/PDF parts.
+- The model's encrypted `thoughtSignature` is captured on response parts and can be **echoed back
+  for multi-turn function calling** via the new `Content`-based `ChatAsync`/`StreamChatAsync`
+  overloads (Gemini 3 returns HTTP 400 if a function-call signature isn't replayed).
