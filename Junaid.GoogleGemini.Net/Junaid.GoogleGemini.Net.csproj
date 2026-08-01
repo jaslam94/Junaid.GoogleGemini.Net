@@ -19,9 +19,9 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.1.0-beta.1</Version>
+		<Version>6.0.1</Version>
 		<PackageReleaseNotes>
-			6.1.0-beta.1: refreshed for Google's July 2026 model release. Added gemini-3.6-flash and
+			6.0.1: refreshed for Google's July 2026 model release. Added gemini-3.6-flash and
 			gemini-3.5-flash-lite constants; Models.Recommended/Defaults.Model now point to
 			gemini-3.6-flash and Models.Fastest to gemini-3.5-flash-lite. Note: Google deprecated
 			temperature/topP/topK on these two new models (ignored now, will 400 in a future
