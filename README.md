@@ -244,8 +244,9 @@ What that means for you:
 
 - **Shipped behind guardrails.** Changes go through an automated test suite and CI on every commit;
   the public API surface is documented and versioned with [semantic versioning](https://semver.org/).
-- **6.0 is a preview (`-alpha`).** Treat it as such: try it, report issues, and pin a version you've
-  validated for your use case before relying on it in production.
+- **6.0 is stable**, validated live against the Gemini API, and used as the default install for
+  existing users upgrading from 5.x. Still pin a version you've tested for your own use case, as
+  with any dependency.
 - **Transparency over polish.** We'd rather tell you how the code is produced than hide it. If you
   spot something off, please [open an issue](https://github.com/jaslam94/Junaid.GoogleGemini.Net/issues).
 

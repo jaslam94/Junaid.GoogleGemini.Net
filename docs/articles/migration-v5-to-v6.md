@@ -51,7 +51,7 @@ catch (GeminiApiException ex) { var code = ex.StatusCode; var status = ex.Status
 - The client now targets the **v1beta** API by default (unlocks structured output, thinking,
   grounding, caching, the Files API).
 - Deprecated model fallbacks (e.g. `gemini-1.5-pro`) were removed; vision uses your default model.
-- The **default model is now `gemini-3.5-flash`** (a current GA model). Set `DefaultModel` /
+- The **default model is now `gemini-3.6-flash`** (a current GA model). Set `DefaultModel` /
   `options.Model` to pin a specific model.
 - **Model names are no longer validated against an allow-list** — any current or future model
   (e.g. the Gemini 3 family) works without a library update; the API rejects genuinely invalid names.
