@@ -65,7 +65,6 @@ jobs:
         run: |
           dotnet pack Junaid.GoogleGemini.Net/Junaid.GoogleGemini.Net.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
           dotnet pack Junaid.GoogleGemini.Net.Extensions.AI/Junaid.GoogleGemini.Net.Extensions.AI.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
-          dotnet pack Junaid.GoogleGemini.Net.Testing/Junaid.GoogleGemini.Net.Testing.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
 
       - name: Push to NuGet
         # NUGET_API_KEY must be added under Settings → Secrets and variables → Actions.

@@ -50,25 +50,6 @@ namespace Junaid.GoogleGemini.Net.Extensions
         /// <param name="configureOptions">Action to configure options</param>
         /// <returns>The service collection for chaining</returns>
         public static IServiceCollection AddGemini(this IServiceCollection services, Action<GeminiOptions> configureOptions)
-            => services.AddGemini(configureOptions, configurePipeline: null);
-
-        /// <summary>
-        /// Adds Gemini services, letting the caller prepend handlers to the HTTP pipeline.
-        /// </summary>
-        /// <param name="services">The service collection</param>
-        /// <param name="configureOptions">Action to configure options</param>
-        /// <param name="configurePipeline">
-        /// Invoked before any built-in handler is registered, so handlers added here become the
-        /// <b>outermost</b> ones — they see the request before authentication is applied and can
-        /// short-circuit the call without touching auth, resilience or the network. This is the seam
-        /// used by <c>Junaid.GoogleGemini.Net.Testing</c> to record and replay HTTP cassettes, and it
-        /// is why a recorded cassette can never contain the API key.
-        /// </param>
-        /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddGemini(
-            this IServiceCollection services,
-            Action<GeminiOptions> configureOptions,
-            Action<IHttpClientBuilder>? configurePipeline)
         {
             // Configure and validate options
             services.AddOptions<GeminiOptions>()
@@ -112,16 +93,11 @@ namespace Junaid.GoogleGemini.Net.Extensions
                 }
 
                 return handler;
-            });
-
-            // Caller-supplied handlers go on FIRST, making them the outermost layer — they can
-            // short-circuit before auth ever attaches the API key. See the overload's docs.
-            configurePipeline?.Invoke(clientBuilder);
-
-            // Auth is registered next => outermost of the built-in handlers, so it runs once and
+            })
+            // Auth handler is registered first => it is the OUTERMOST handler, so it runs once and
             // adds the API key a single time. The retry handler is INNER, so it re-sends the network
             // request without re-running auth (the buffered request is safe to resend).
-            clientBuilder.AddHttpMessageHandler<GeminiAuthHandler>();
+            .AddHttpMessageHandler<GeminiAuthHandler>();
 
 #if NET8_0_OR_GREATER
             // net8+: the battle-tested standard resilience handler (retry + backoff + jitter).

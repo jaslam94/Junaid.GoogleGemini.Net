@@ -14,7 +14,7 @@
 		<Version>6.1.0-beta.1</Version>
 		<PackageReleaseNotes>
 			6.1.0-beta.1: version bump to track the core package (no functional changes here) — core's
-			HTTP pipeline extension seam and Gemini model refresh don't affect this adapter's surface.
+			Gemini model refresh doesn't affect this adapter's surface.
 			6.0.0: initial release. IChatClient/IEmbeddingGenerator adapters over Junaid.GoogleGemini.Net.
 		</PackageReleaseNotes>
 

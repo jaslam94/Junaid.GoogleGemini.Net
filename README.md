@@ -27,8 +27,6 @@ It covers the modern Gemini surface (structured output, system instructions, thi
 dotnet add package Junaid.GoogleGemini.Net
 # optional: Microsoft.Extensions.AI adapters (IChatClient, IEmbeddingGenerator)
 dotnet add package Junaid.GoogleGemini.Net.Extensions.AI
-# optional: HTTP cassette record/replay for deterministic, offline tests
-dotnet add package Junaid.GoogleGemini.Net.Testing
 ```
 
 ## Authentication
