@@ -27,6 +27,8 @@ It covers the modern Gemini surface (structured output, system instructions, thi
 dotnet add package Junaid.GoogleGemini.Net
 # optional: Microsoft.Extensions.AI adapters (IChatClient, IEmbeddingGenerator)
 dotnet add package Junaid.GoogleGemini.Net.Extensions.AI
+# optional: HTTP cassette record/replay for deterministic, offline tests
+dotnet add package Junaid.GoogleGemini.Net.Testing
 ```
 
 ## Authentication
@@ -37,7 +39,7 @@ Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey), 
 {
   "Gemini": {
     "ApiKey": "your-api-key-here",
-    "DefaultModel": "gemini-3.5-flash",
+    "DefaultModel": "gemini-3.6-flash",
     "TimeoutSeconds": 100,
     "MaxRetries": 3,
     "RateLimit": { "Enabled": true, "RequestsPerMinute": 60 }
@@ -120,7 +122,7 @@ var usage  = response.Usage;                    // PromptTokenCount, CandidatesT
 ```csharp
 var options = new GeminiRequestOptions
 {
-    Model = GeminiConstants.Models.Gemini35Flash,        // Gemini 3 (the default is gemini-3.5-flash)
+    Model = GeminiConstants.Models.Gemini36Flash,        // Gemini 3 (the default is gemini-3.6-flash)
     SystemInstruction = "You are a terse senior engineer.",
     ThinkingLevel = GeminiConstants.ThinkingLevels.Low,  // Gemini 3 reasoning depth (use ThinkingBudget on 2.5)
     EnableGoogleSearch = true,                           // ground answers with Google Search
@@ -131,6 +133,10 @@ foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ??
 ```
 
 Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`, `.Fast()`.
+
+> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.6-flash` and `gemini-3.5-flash-lite`
+> (July 2026) — those models ignore the sampling params entirely, so `.Factual()`/`.Code()` won't have
+> the effect you'd expect on the default model. Use `SystemInstruction` with explicit rules instead.
 
 > **Gemini 3 ready.** Model names aren't allow-listed, so any current/future model works without a
 > library update. `ThinkingLevel` and `MediaResolution` are supported, and the model's encrypted

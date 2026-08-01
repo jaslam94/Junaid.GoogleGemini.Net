@@ -84,7 +84,9 @@ public class ContentRequestBuilder
     }
 
     /// <summary>
-    /// Sets the temperature for response generation (0.0 to 1.0)
+    /// Sets the temperature for response generation (0.0 to 1.0). See
+    /// <see cref="GenerationConfig.Temperature"/> for the July 2026 deprecation note (ignored on
+    /// <c>gemini-3.6-flash</c>/<c>gemini-3.5-flash-lite</c> and later).
     /// </summary>
     public ContentRequestBuilder WithTemperature(float temperature)
     {

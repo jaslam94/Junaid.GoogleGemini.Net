@@ -1,0 +1,49 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<!-- Test-time companion package: records real Gemini HTTP exchanges to a JSON cassette file
+	     and replays them on later runs, so tests are deterministic, offline, and need no API key
+	     after the first recording. Kept separate from the core package so production consumers
+	     never pull in test-only code. -->
+
+	<PropertyGroup>
+		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
+
+		<Title>Junaid.GoogleGemini.Net.Testing</Title>
+		<Description>Record/replay HTTP cassettes for Junaid.GoogleGemini.Net — write deterministic, offline tests against the Gemini API without needing a live API key on every run. Built with AI: implemented end-to-end by Claude (Anthropic) — see the README.</Description>
+		<PackageTags>GoogleGemini;Gemini;Testing;VCR;Cassette;xunit;AI;LLM;dotnet</PackageTags>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<Version>6.1.0-beta.1</Version>
+		<PackageReleaseNotes>
+			6.1.0-beta.1: initial release. CassetteMode.RecordOnce/Record/Replay/Off; requests are
+			matched by HTTP method + endpoint + JSON-semantic body equality (so pretty-printed vs.
+			compact JSON in the cassette file never causes a false mismatch); status code,
+			content-type and body are all recorded, so a recorded API error replays too. Registers
+			as the outermost handler on the Gemini HttpClient, before authentication, so a cassette
+			can never contain the API key and replay never needs one.
+		</PackageReleaseNotes>
+
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+		<NoWarn>$(NoWarn);CS1591</NoWarn>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<EmbedUntrackedSources>true</EmbedUntrackedSources>
+		<GeneratePackageOnBuild Condition="'$(Configuration)' == 'Release'">true</GeneratePackageOnBuild>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<None Include="README.md">
+			<Pack>True</Pack>
+			<PackagePath>\</PackagePath>
+		</None>
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Junaid.GoogleGemini.Net\Junaid.GoogleGemini.Net.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+	</ItemGroup>
+
+</Project>

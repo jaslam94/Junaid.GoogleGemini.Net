@@ -19,8 +19,18 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.0</Version>
+		<Version>6.1.0-beta.1</Version>
 		<PackageReleaseNotes>
+			6.1.0-beta.1: adds an AddGemini(configureOptions, configurePipeline) overload that lets a
+			caller prepend handlers to the HTTP pipeline, ahead of authentication. This is the seam
+			the new Junaid.GoogleGemini.Net.Testing package uses for record/replay HTTP cassettes.
+			No breaking changes; the existing AddGemini(configureOptions) overload is unchanged.
+				Also refreshed for Google's July 2026 model release: added gemini-3.6-flash and
+				gemini-3.5-flash-lite constants; Models.Recommended/Defaults.Model now point to
+				gemini-3.6-flash and Models.Fastest to gemini-3.5-flash-lite. Note: Google deprecated
+				temperature/topP/topK on these two new models (ignored now, will 400 in a future
+				generation) — see the XML docs on GenerationConfig and GeminiRequestOptions for guidance
+				(use SystemInstruction for determinism instead).
 			6.0.0: a ground-up modernization of the v5 client — resilient (correct retry/backoff +
 			client-side rate limiting), observable (OpenTelemetry traces &amp; metrics), DI-native, with
 			generic structured output (GenerateAsync&lt;T&gt;), the full modern Gemini surface including
