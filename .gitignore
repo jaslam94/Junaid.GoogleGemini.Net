@@ -362,3 +362,8 @@ MigrationBackup/
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
 /.editorconfig
+
+# HTTP cassette record/replay work-in-progress — parked locally, not part of this release.
+# Re-add these paths (and the AddGemini configurePipeline overload) when it's ready to ship.
+/Junaid.GoogleGemini.Net.Testing/
+/tests/Junaid.GoogleGemini.Net.Testing.Tests/

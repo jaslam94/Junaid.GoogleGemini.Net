@@ -10,7 +10,9 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
     public class GeminiRequestOptions
     {
         /// <summary>
-        /// Controls randomness in generation (0.0 to 1.0)
+        /// Controls randomness in generation (0.0 to 1.0). <b>Ignored on <c>gemini-3.6-flash</c>,
+        /// <c>gemini-3.5-flash-lite</c> and later</b> — Google deprecated all sampling params on those
+        /// models (July 2026) in favor of steering determinism via <see cref="SystemInstruction"/>.
         /// </summary>
         public float? Temperature { get; set; }
 
@@ -20,12 +22,12 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public int? MaxTokens { get; set; }
 
         /// <summary>
-        /// Top-p sampling parameter
+        /// Top-p sampling parameter. See the deprecation note on <see cref="Temperature"/>.
         /// </summary>
         public float? TopP { get; set; }
 
         /// <summary>
-        /// Top-k sampling parameter
+        /// Top-k sampling parameter. See the deprecation note on <see cref="Temperature"/>.
         /// </summary>
         public int? TopK { get; set; }
 
@@ -127,7 +129,10 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         };
 
         /// <summary>
-        /// Creates options optimized for factual/precise tasks using the recommended model
+        /// Creates options optimized for factual/precise tasks using the recommended model.
+        /// <b>Note:</b> the recommended model (<c>gemini-3.6-flash</c>) ignores these sampling params
+        /// (see the deprecation note on <see cref="Temperature"/>); set <see cref="SystemInstruction"/>
+        /// with explicit determinism rules for that model instead.
         /// </summary>
         public static GeminiRequestOptions Factual(string? model = null) => new()
         {
@@ -138,7 +143,10 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         };
 
         /// <summary>
-        /// Creates options optimized for code generation using the recommended model
+        /// Creates options optimized for code generation using the recommended model.
+        /// <b>Note:</b> the recommended model (<c>gemini-3.6-flash</c>) ignores these sampling params
+        /// (see the deprecation note on <see cref="Temperature"/>); set <see cref="SystemInstruction"/>
+        /// with explicit determinism rules for that model instead.
         /// </summary>
         public static GeminiRequestOptions Code(string? model = null) => new()
         {

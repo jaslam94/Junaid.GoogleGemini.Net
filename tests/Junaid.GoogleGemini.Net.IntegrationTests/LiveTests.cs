@@ -105,7 +105,7 @@ public class LiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task FunctionCalling_Gemini3_RoundTripWithThoughtSignature()
     {
-        const string model = GeminiConstants.Models.Gemini35Flash;
+        const string model = GeminiConstants.Models.Gemini36Flash;
         const string userPrompt = "What's the current temperature in Paris? Use the get_weather tool.";
 
         var getWeather = new FunctionDeclaration

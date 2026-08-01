@@ -34,10 +34,21 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         {
             // Gemini 3 family (current). These names are informational; model names are not validated
             // against any allow-list, so newer models work without a library update.
-            /// <summary>GA, most intelligent flash model for sustained frontier performance.</summary>
+            /// <summary>
+            /// GA (July 2026), current workhorse model: improved coding/agentic planning and ~17%
+            /// fewer tokens per response than <see cref="Gemini35Flash"/>. See the temperature/topP/topK
+            /// deprecation note on <c>GenerationConfig</c> — this model ignores those sampling params.
+            /// </summary>
+            public const string Gemini36Flash = "gemini-3.6-flash";
+            /// <summary>GA, sustained frontier flash performance. Superseded as the default by <see cref="Gemini36Flash"/> (July 2026) but still fully supported.</summary>
             public const string Gemini35Flash = "gemini-3.5-flash";
             public const string Gemini31Pro = "gemini-3.1-pro-preview";
             public const string Gemini3Flash = "gemini-3-flash-preview";
+            /// <summary>
+            /// GA (July 2026), the most cost-effective model in the 3.5 class. Also ignores
+            /// temperature/topP/topK (see <see cref="Gemini36Flash"/>).
+            /// </summary>
+            public const string Gemini35FlashLite = "gemini-3.5-flash-lite";
             /// <summary>GA, cost-efficient for high volume.</summary>
             public const string Gemini31FlashLite = "gemini-3.1-flash-lite";
             /// <summary>Highest-quality native image generation (Nano Banana).</summary>
@@ -64,9 +75,11 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>A non-exhaustive list of common content-generation models (informational).</summary>
             public static readonly string[] ContentGenerationModels =
             {
+                Gemini36Flash,
                 Gemini35Flash,
                 Gemini31Pro,
                 Gemini3Flash,
+                Gemini35FlashLite,
                 Gemini31FlashLite,
                 Gemini25Pro,
                 Gemini25Flash
@@ -82,10 +95,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             };
 
             /// <summary>The recommended general-purpose model (GA).</summary>
-            public static string Recommended => Gemini35Flash;
+            public static string Recommended => Gemini36Flash;
 
             /// <summary>The fastest / most cost-efficient model (GA).</summary>
-            public static string Fastest => Gemini31FlashLite;
+            public static string Fastest => Gemini35FlashLite;
         }
 
         #endregion Model Information
@@ -281,7 +294,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// Default model for new requests (a current GA model).
             /// </summary>
-            public const string Model = Models.Gemini35Flash;
+            public const string Model = Models.Gemini36Flash;
         }
 
         #endregion Default Values

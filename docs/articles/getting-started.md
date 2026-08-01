@@ -19,7 +19,7 @@ Get a key from [Google AI Studio](https://aistudio.google.com/app/apikey). Provi
 {
   "Gemini": {
     "ApiKey": "your-api-key",
-    "DefaultModel": "gemini-3.5-flash",
+    "DefaultModel": "gemini-3.6-flash",
     "TimeoutSeconds": 100,
     "MaxRetries": 3,
     "RateLimit": { "Enabled": true, "RequestsPerMinute": 60 }

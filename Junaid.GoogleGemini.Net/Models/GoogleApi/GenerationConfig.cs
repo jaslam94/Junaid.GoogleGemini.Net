@@ -8,15 +8,20 @@ namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
 /// </summary>
 public class GenerationConfig
 {
-    /// <summary>Sampling temperature. Higher = more random.</summary>
+    /// <summary>
+    /// Sampling temperature. Higher = more random.
+    /// <b>Deprecated by Google (July 2026):</b> ignored on <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c>
+    /// and later model generations, which will reject it with HTTP 400 in a future release. Google's guidance
+    /// for those models is to steer determinism via <c>SystemInstruction</c> instead of sampling params.
+    /// </summary>
     [JsonPropertyName("temperature")]
     public float? Temperature { get; set; }
 
-    /// <summary>Top-k sampling.</summary>
+    /// <summary>Top-k sampling. See the deprecation note on <see cref="Temperature"/>.</summary>
     [JsonPropertyName("topK")]
     public int? TopK { get; set; }
 
-    /// <summary>Nucleus (top-p) sampling.</summary>
+    /// <summary>Nucleus (top-p) sampling. See the deprecation note on <see cref="Temperature"/>.</summary>
     [JsonPropertyName("topP")]
     public float? TopP { get; set; }
 
