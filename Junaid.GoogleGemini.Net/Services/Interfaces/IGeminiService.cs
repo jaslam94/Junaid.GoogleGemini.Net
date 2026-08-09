@@ -47,6 +47,25 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Generates one or more images from a text prompt (Gemini "Nano Banana" image models). Get the
+        /// result via <see cref="GenerateContentResponse.Images"/>/<see cref="GenerateContentResponse.TryGetImages"/>/
+        /// <see cref="GenerateContentResponse.GetImagesOrThrow"/> on the response.
+        /// </summary>
+        /// <param name="prompt">The image prompt</param>
+        /// <param name="options">
+        /// Optional generation options. If <see cref="GeminiRequestOptions.Model"/> is unset, defaults
+        /// to <c>GeminiConstants.Models.RecommendedImage</c>; if <see cref="GeminiRequestOptions.ResponseModalities"/>
+        /// is unset, defaults to <c>[TEXT, IMAGE]</c> (works on both older and current image models).
+        /// Set <see cref="GeminiRequestOptions.ImageAspectRatio"/>/<see cref="GeminiRequestOptions.ImageSize"/>
+        /// for Gemini 3+ image models.
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<GenerateContentResponse> GenerateImageAsync(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Generates content based on chat history
         /// </summary>
         /// <param name="messages">Array of chat messages</param>

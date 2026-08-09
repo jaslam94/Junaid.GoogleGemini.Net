@@ -12,5 +12,7 @@
   href: extensions-ai.md
 - name: Files & caching
   href: files-and-caching.md
+- name: Image generation
+  href: image-generation.md
 - name: Migrating v5 → v6
   href: migration-v5-to-v6.md

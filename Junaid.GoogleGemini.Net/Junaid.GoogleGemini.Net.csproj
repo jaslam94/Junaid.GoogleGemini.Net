@@ -19,8 +19,25 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.0.1</Version>
+		<Version>6.1.0</Version>
 		<PackageReleaseNotes>
+			6.1.0: fixes a client-side bug that rejects valid API keys. IsValidApiKeyFormat was
+			locked to the legacy "AIza"/"BIza"/"CIza" prefixes; Google has since introduced a new "AQ."
+			key format (rolling out through Sep 2026, after which "AIza" keys stop working entirely) that
+			the old check rejected before the request ever reached the network. The check no longer
+			gatekeeps on prefix -- it only catches empty/too-short/whitespace-corrupted values. This bug
+			affects the previous 6.0.1 release too; consider it the reason to upgrade even if you don't
+			need the feature below.
+			Also adds image generation. New GenerateImageAsync(prompt, options?, ct) on
+			IGeminiService — defaults to Models.RecommendedImage and TEXT+IMAGE response modalities,
+			overridable via GeminiRequestOptions.Model/ResponseModalities. New response accessors
+			Images()/TryGetImages()/GetImagesOrThrow() on GenerateContentResponse, mirroring the
+			existing Text() trio, returning already-decoded GeneratedImage (MimeType + byte[] Data).
+			New GeminiRequestOptions.ImageAspectRatio/ImageSize (Gemini 3+ image models) plus the
+			backing GeminiConstants.ResponseModalities/ImageAspectRatios/ImageSizes constants. Live-
+			verified against the real API: default generation, explicit aspect ratio/resolution
+			(confirmed by decoding the returned image's actual pixel dimensions), and image-only output.
+			No breaking changes; no streaming image generation yet.
 			6.0.1: refreshed for Google's July 2026 model release. Added gemini-3.6-flash and
 			gemini-3.5-flash-lite constants; Models.Recommended/Defaults.Model now point to
 			gemini-3.6-flash and Models.Fastest to gemini-3.5-flash-lite. Note: Google deprecated

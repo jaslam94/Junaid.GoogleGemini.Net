@@ -24,10 +24,21 @@ namespace Junaid.GoogleGemini.Net.Services
         ISafetyService safetyService) : Service(geminiClient, logger, options, safetyService), IGeminiService
     {
         /// <inheritdoc/>
-        public async Task<GenerateContentResponse> GenerateAsync(
+        public Task<GenerateContentResponse> GenerateAsync(
             string prompt,
             GeminiRequestOptions? options = null,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken = default) =>
+            GenerateInternalAsync(prompt, options, "text generation", cancellationToken);
+
+        // Shared by GenerateAsync and GenerateImageAsync: identical request-building, only the
+        // operation label differs (it shows up in error logs and in the "No content was generated
+        // for {operation}" exception — mislabeling it as "text generation" for an image call would
+        // be confusing when debugging a fully-blocked image prompt).
+        private async Task<GenerateContentResponse> GenerateInternalAsync(
+            string prompt,
+            GeminiRequestOptions? options,
+            string operation,
+            CancellationToken cancellationToken)
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
 
@@ -35,7 +46,7 @@ namespace Junaid.GoogleGemini.Net.Services
             var endpoint = GetGenerateEndpoint(options?.Model);
 
             return await ExecuteRequestAsync<GenerateContentRequest, GenerateContentResponse>(
-                "text generation",
+                operation,
                 endpoint,
                 request,
                 new { PromptLength = prompt.Length, Model = options?.Model ?? Options?.DefaultModel },
@@ -91,6 +102,26 @@ namespace Junaid.GoogleGemini.Net.Services
                 request,
                 new { PromptLength = prompt.Length, ImageSize = image.FileContent.Length },
                 cancellationToken);
+        }
+
+        /// <inheritdoc/>
+        public Task<GenerateContentResponse> GenerateImageAsync(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            // A thin wrapper: fill in image-generation defaults the caller didn't set, then reuse the
+            // same request-building/validation/retry path as GenerateAsync (via GenerateInternalAsync)
+            // — no logic duplicated, just a distinct operation label for accurate logs/errors.
+            var imageOptions = options?.Clone() ?? new GeminiRequestOptions();
+            imageOptions.Model ??= GeminiConstants.Models.RecommendedImage;
+            imageOptions.ResponseModalities ??=
+            [
+                GeminiConstants.ResponseModalities.Text,
+                GeminiConstants.ResponseModalities.Image
+            ];
+
+            return GenerateInternalAsync(prompt, imageOptions, "image generation", cancellationToken);
         }
 
         /// <inheritdoc/>

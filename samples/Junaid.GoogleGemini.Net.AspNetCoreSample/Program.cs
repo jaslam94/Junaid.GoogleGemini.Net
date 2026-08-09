@@ -38,6 +38,15 @@ app.MapGet("/recipe", async (IGeminiService gemini, string dish) =>
 app.MapGet("/stream", (IGeminiService gemini, string prompt, CancellationToken ct)
     => StreamText(gemini, prompt, ct));
 
+// Image generation: GET /image?prompt=a%20red%20fox  -> the generated image bytes
+app.MapGet("/image", async (IGeminiService gemini, string prompt) =>
+{
+    var response = await gemini.GenerateImageAsync(prompt);
+    return response.TryGetImages(out var images)
+        ? Results.File(images[0].Data, images[0].MimeType)
+        : Results.Problem("The model returned no image.", statusCode: 502);
+});
+
 // Chat via Microsoft.Extensions.AI: POST /chat  { "message": "Hello" }
 app.MapPost("/chat", async (IChatClient chat, ChatRequest request) =>
     Results.Ok((await chat.GetResponseAsync([new ChatMessage(ChatRole.User, request.Message)])).Text));
