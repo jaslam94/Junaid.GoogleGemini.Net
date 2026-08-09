@@ -35,20 +35,23 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         }
 
         /// <summary>
-        /// Validates API key format
+        /// Sanity-checks an API key's shape (not its validity — only the real API call can confirm
+        /// that). Deliberately <b>not</b> locked to a specific prefix like <c>"AIza"</c>: Google has
+        /// already changed the Gemini API key format once (legacy "AIza..." keys → the newer "AQ...."
+        /// format, staged rollout through September 2026, after which "AIza" keys stop working
+        /// entirely) and may again. A prefix allow-list here would silently reject valid keys the
+        /// moment the format changes — exactly what happened to early testers of the new format
+        /// against earlier versions of this check. This only catches the obvious paste-error class of
+        /// mistakes (empty, truncated, or containing whitespace from a bad copy/paste).
         /// </summary>
         /// <param name="apiKey">API key to validate</param>
-        /// <returns>True if valid format</returns>
+        /// <returns>True if the key's shape looks plausible</returns>
         public static bool IsValidApiKeyFormat(string apiKey)
         {
             if (string.IsNullOrWhiteSpace(apiKey))
                 return false;
 
-            // Basic validation - Google API keys typically start with specific prefixes
-            return apiKey.Length >= 20 &&
-                   (apiKey.StartsWith("AIza", StringComparison.Ordinal) ||
-                    apiKey.StartsWith("BIza", StringComparison.Ordinal) ||
-                    apiKey.StartsWith("CIza", StringComparison.Ordinal));
+            return apiKey.Length >= 10 && !apiKey.Any(char.IsWhiteSpace);
         }
 
         #endregion Environment Variable Helpers

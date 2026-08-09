@@ -73,6 +73,33 @@ public class GenerationConfig
     /// </summary>
     [JsonPropertyName("mediaResolution")]
     public string? MediaResolution { get; set; }
+
+    /// <summary>
+    /// Output modalities to request (e.g. <c>["TEXT","IMAGE"]</c> for image generation). One or more
+    /// of the <c>GeminiConstants.ResponseModalities</c> values. Null lets the model use its default
+    /// (text only).
+    /// </summary>
+    [JsonPropertyName("responseModalities")]
+    public List<string>? ResponseModalities { get; set; }
+
+    /// <summary>
+    /// Image generation settings (Gemini 3+ image models). Only meaningful alongside
+    /// <see cref="ResponseModalities"/> including <c>IMAGE</c>.
+    /// </summary>
+    [JsonPropertyName("imageConfig")]
+    public ImageConfig? ImageConfig { get; set; }
+}
+
+/// <summary>Image generation settings for Gemini 3+ image models (<c>generationConfig.imageConfig</c>).</summary>
+public class ImageConfig
+{
+    /// <summary>One of the <c>GeminiConstants.ImageAspectRatios</c> values (e.g. <c>"16:9"</c>).</summary>
+    [JsonPropertyName("aspectRatio")]
+    public string? AspectRatio { get; set; }
+
+    /// <summary>One of the <c>GeminiConstants.ImageSizes</c> values (e.g. <c>"2K"</c>).</summary>
+    [JsonPropertyName("imageSize")]
+    public string? ImageSize { get; set; }
 }
 
 /// <summary>Configures the model's internal reasoning budget (Gemini 2.5+ "thinking").</summary>

@@ -142,6 +142,19 @@ Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`,
 > `Content`-based `ChatAsync`/`StreamChatAsync` overloads. Tip: Gemini 3 thinking models default to
 > deep reasoning — set a lower `ThinkingLevel` for latency-sensitive calls.
 
+### Image generation
+
+```csharp
+var response = await gemini.GenerateImageAsync("A watercolor painting of a lighthouse at sunset.");
+
+foreach (var image in response.Images())
+    await File.WriteAllBytesAsync($"lighthouse.{image.MimeType.Split('/')[1]}", image.Data);
+```
+
+Defaults to the efficient flash image model; pass `Model = GeminiConstants.Models.Gemini3ProImage` for
+higher quality, or `ImageAspectRatio`/`ImageSize` (Gemini 3+ image models) for finer control. See
+[docs/articles/image-generation.md](docs/articles/image-generation.md).
+
 ### Embeddings
 
 ```csharp

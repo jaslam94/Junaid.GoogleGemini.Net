@@ -274,5 +274,91 @@ public class LiveTests(GeminiFixture fixture)
         }
     }
 
+    [RequiresPaidGeminiKey] // confirmed 2026-08-09: free tier has limit=0 for generate_content on image models
+    public async Task GenerateImageAsync_ReturnsDecodableImage()
+    {
+        var response = await Gemini.GenerateImageAsync("A small red circle on a plain white background.");
+
+        var images = response.GetImagesOrThrow();
+        Assert.NotEmpty(images);
+        AssertLooksLikeAnImage(images[0]);
+    }
+
+    [RequiresPaidGeminiKey]
+    public async Task GenerateImageAsync_WithAspectRatioAndSize_HonorsRequestedAspectRatio()
+    {
+        // The riskiest unverified surface: ImageAspectRatio/ImageSize -> generationConfig.imageConfig.
+        // A silently-ignored/misspelled field wouldn't error — the API would just fall back to a
+        // default image — so this doesn't just check "an image came back", it decodes the actual
+        // pixel dimensions and confirms the requested 16:9 ratio was honored.
+        var options = new GeminiRequestOptions
+        {
+            Model = GeminiConstants.Models.Gemini3ProImage,
+            ImageAspectRatio = GeminiConstants.ImageAspectRatios.Widescreen16x9,
+            ImageSize = GeminiConstants.ImageSizes.TwoK,
+        };
+
+        var response = await Gemini.GenerateImageAsync(
+            "A small red circle on a plain white background.", options);
+
+        var images = response.GetImagesOrThrow();
+        Assert.NotEmpty(images);
+        var image = images[0];
+        AssertLooksLikeAnImage(image);
+
+        if (image.MimeType == "image/png" && TryReadPngDimensions(image.Data, out var width, out var height))
+        {
+            var ratio = (double)width / height;
+            const double expected = 16.0 / 9.0;
+            Assert.True(Math.Abs(ratio - expected) < 0.05,
+                $"Expected ~16:9 ({expected:F3}), got {width}x{height} ({ratio:F3}) — imageConfig may have been ignored.");
+        }
+        // A non-PNG response isn't itself a failure (format choice isn't what this test targets);
+        // it just means the ratio can't be cheaply verified from the bytes here.
+    }
+
+    [RequiresPaidGeminiKey]
+    public async Task GenerateImageAsync_ImageOnlyModality_Succeeds()
+    {
+        // The other unverified surface: ResponseModalities set to [IMAGE] only (no TEXT), which the
+        // default path never exercises since GenerateImageAsync defaults to [TEXT, IMAGE].
+        var options = new GeminiRequestOptions
+        {
+            Model = GeminiConstants.Models.Gemini31FlashImage,
+            ResponseModalities = [GeminiConstants.ResponseModalities.Image],
+        };
+
+        var response = await Gemini.GenerateImageAsync(
+            "A small blue square on a plain white background.", options);
+
+        var images = response.GetImagesOrThrow();
+        Assert.NotEmpty(images);
+        AssertLooksLikeAnImage(images[0]);
+    }
+
+    /// <summary>Confirms the decoded bytes are actually image data — PNG/JPEG both have a well-known magic number.</summary>
+    private static void AssertLooksLikeAnImage(GeneratedImage image)
+    {
+        Assert.StartsWith("image/", image.MimeType);
+        Assert.NotEmpty(image.Data);
+
+        var bytes = image.Data;
+        var isPng = bytes.Length >= 4 && bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+        var isJpeg = bytes.Length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+        Assert.True(isPng || isJpeg, $"Expected PNG or JPEG magic bytes, got: {Convert.ToHexString(bytes.AsSpan(0, Math.Min(4, bytes.Length)))}");
+    }
+
+    /// <summary>Reads width/height straight out of the PNG IHDR chunk (fixed offsets per the PNG spec).</summary>
+    private static bool TryReadPngDimensions(byte[] data, out int width, out int height)
+    {
+        width = height = 0;
+        // 8-byte signature + 4-byte chunk length + 4-byte "IHDR" type = 16 bytes before width/height.
+        if (data.Length < 24) return false;
+
+        width = (data[16] << 24) | (data[17] << 16) | (data[18] << 8) | data[19];
+        height = (data[20] << 24) | (data[21] << 16) | (data[22] << 8) | data[23];
+        return width > 0 && height > 0;
+    }
+
     private sealed record Book(string Title, string Author, int Year);
 }

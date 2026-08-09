@@ -140,7 +140,24 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 ResponseMimeType = options.ResponseMimeType,
                 ResponseSchema = options.ResponseSchema,
                 MediaResolution = options.MediaResolution,
-                ThinkingConfig = BuildThinkingConfig(options)
+                ThinkingConfig = BuildThinkingConfig(options),
+                ResponseModalities = options.ResponseModalities,
+                ImageConfig = BuildImageConfig(options)
+            };
+        }
+
+        /// <summary>Builds an image config from options, or null when neither field is set.</summary>
+        private static ImageConfig? BuildImageConfig(GeminiRequestOptions options)
+        {
+            if (options.ImageAspectRatio is null && options.ImageSize is null)
+            {
+                return null;
+            }
+
+            return new ImageConfig
+            {
+                AspectRatio = options.ImageAspectRatio,
+                ImageSize = options.ImageSize
             };
         }
 

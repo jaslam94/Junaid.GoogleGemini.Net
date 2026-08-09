@@ -111,6 +111,18 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public string? CachedContent { get; set; }
 
         /// <summary>
+        /// Output modalities to request (see <c>GeminiConstants.ResponseModalities</c>). Set by
+        /// <c>GenerateImageAsync</c> automatically when unset; set it yourself for full control.
+        /// </summary>
+        public List<string>? ResponseModalities { get; set; }
+
+        /// <summary>Image aspect ratio (see <c>GeminiConstants.ImageAspectRatios</c>), Gemini 3+ image models.</summary>
+        public string? ImageAspectRatio { get; set; }
+
+        /// <summary>Image resolution (see <c>GeminiConstants.ImageSizes</c>), Gemini 3+ image models.</summary>
+        public string? ImageSize { get; set; }
+
+        /// <summary>
         /// Creates options optimized for creative tasks using the recommended model
         /// </summary>
         public static GeminiRequestOptions Creative(string? model = null) => new()
@@ -221,7 +233,10 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             EnableGoogleSearch = EnableGoogleSearch,
             EnableUrlContext = EnableUrlContext,
             EnableCodeExecution = EnableCodeExecution,
-            CachedContent = CachedContent
+            CachedContent = CachedContent,
+            ResponseModalities = ResponseModalities,
+            ImageAspectRatio = ImageAspectRatio,
+            ImageSize = ImageSize
         };
     }
 }

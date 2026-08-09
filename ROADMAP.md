@@ -131,7 +131,12 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 
 ## Phase 4 — Stretch / unique (optional)
 
-- [ ] Image generation (`responseModalities`, Nano Banana models).
+- [x] **Image generation** (`6.1.0`) — `GenerateImageAsync` (`responseModalities`, Nano Banana
+      models `gemini-3.1-flash-image-preview`/`gemini-3-pro-image-preview`), `Images()`/
+      `TryGetImages()`/`GetImagesOrThrow()` response accessors, `ImageAspectRatio`/`ImageSize`
+      (`imageConfig`) for Gemini 3+ image models. Live-verified end-to-end including aspect ratio
+      (decoded actual pixel dimensions to confirm it isn't silently ignored) and image-only output.
+      No streaming image generation yet.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
 - [ ] Batch API.
 

@@ -99,6 +99,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
             /// <summary>The fastest / most cost-efficient model (GA).</summary>
             public static string Fastest => Gemini35FlashLite;
+
+            /// <summary>
+            /// The recommended model for image generation — the efficient flash variant, not the
+            /// higher-cost "pro" one. Like <see cref="Gemini3ProImage"/>, still a preview model (see
+            /// the "-preview" suffix). Pass <see cref="Gemini3ProImage"/> explicitly for higher quality.
+            /// </summary>
+            public static string RecommendedImage => Gemini31FlashImage;
         }
 
         #endregion Model Information
@@ -324,5 +331,47 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         }
 
         #endregion Reasoning & Media
+
+        #region Image Generation
+
+        /// <summary>
+        /// Output modalities for <c>generationConfig.responseModalities</c>. Set <c>[Text, Image]</c>
+        /// (or just <c>[Image]</c> on models that allow image-only output) to get generated images back
+        /// as <c>inlineData</c> parts — see <c>GenerateContentResponse.Images()</c>.
+        /// </summary>
+        public static class ResponseModalities
+        {
+            public const string Text = "TEXT";
+            public const string Image = "IMAGE";
+        }
+
+        /// <summary>
+        /// Aspect ratios for <c>generationConfig.imageConfig.aspectRatio</c> (Gemini 3+ image models).
+        /// </summary>
+        public static class ImageAspectRatios
+        {
+            public const string Square = "1:1";
+            public const string Landscape3x2 = "3:2";
+            public const string Portrait2x3 = "2:3";
+            public const string Portrait3x4 = "3:4";
+            public const string Landscape4x3 = "4:3";
+            public const string Portrait4x5 = "4:5";
+            public const string Landscape5x4 = "5:4";
+            public const string Portrait9x16 = "9:16";
+            public const string Widescreen16x9 = "16:9";
+            public const string Ultrawide21x9 = "21:9";
+        }
+
+        /// <summary>
+        /// Resolutions for <c>generationConfig.imageConfig.imageSize</c> (Gemini 3+ image models).
+        /// </summary>
+        public static class ImageSizes
+        {
+            public const string OneK = "1K";
+            public const string TwoK = "2K";
+            public const string FourK = "4K";
+        }
+
+        #endregion Image Generation
     }
 }

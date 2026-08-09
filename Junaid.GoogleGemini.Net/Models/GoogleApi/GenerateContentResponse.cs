@@ -71,7 +71,59 @@ public class GenerateContentResponse
         var joined = string.Concat(parts.Where(p => p.Text is not null).Select(p => p.Text));
         return string.IsNullOrEmpty(joined) ? null : joined;
     }
+
+    /// <summary>
+    /// The generated images in the first candidate (from image-generation requests — see
+    /// <c>IGeminiService.GenerateImageAsync</c>), or an empty list when there are none. Unlike
+    /// <see cref="Text"/>, an empty list already unambiguously means "no images" — no separate
+    /// try/throw distinction is needed for "empty" vs "absent" the way a string requires.
+    /// </summary>
+    public IReadOnlyList<GeneratedImage> Images() => GetImagesInternal();
+
+    /// <summary>
+    /// Gets the generated images, returning <c>false</c> (and a null <paramref name="images"/>) when
+    /// the response has none.
+    /// </summary>
+    public bool TryGetImages([NotNullWhen(true)] out IReadOnlyList<GeneratedImage>? images)
+    {
+        var found = GetImagesInternal();
+        images = found.Count > 0 ? found : null;
+        return images is not null;
+    }
+
+    /// <summary>
+    /// Gets the generated images, or throws <see cref="GeminiContentException"/> (with the
+    /// finish/block reason) when there are none. Use this when a missing image should be treated as
+    /// an error.
+    /// </summary>
+    public IReadOnlyList<GeneratedImage> GetImagesOrThrow()
+    {
+        var found = GetImagesInternal();
+        return found.Count > 0
+            ? found
+            : throw new GeminiContentException(
+                "The response contained no generated images.", FinishReason, BlockReason);
+    }
+
+    private IReadOnlyList<GeneratedImage> GetImagesInternal()
+    {
+        if (Candidates is not { Length: > 0 }) return [];
+        if (Candidates[0].Content?.Parts is not { Count: > 0 } parts) return [];
+
+        // Deliberately filters to image/* — inlineData could in principle carry other binary kinds
+        // in a future multimodal response (e.g. generated audio), which Images() should not surface.
+        return parts
+            .Select(p => p.InlineData)
+            .Where(data => data is not null && data.MimeType.StartsWith("image/", StringComparison.OrdinalIgnoreCase))
+            .Select(data => new GeneratedImage(data!.MimeType, Convert.FromBase64String(data.Data)))
+            .ToList();
+    }
 }
+
+/// <summary>A single generated image, decoded from a response <c>inlineData</c> part.</summary>
+/// <param name="MimeType">The image's MIME type (e.g. <c>"image/png"</c>).</param>
+/// <param name="Data">The raw, already-decoded image bytes.</param>
+public sealed record GeneratedImage(string MimeType, byte[] Data);
 
 /// <summary>Feedback about the prompt that was sent to the model.</summary>
 public class PromptFeedback
