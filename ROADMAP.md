@@ -137,6 +137,13 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       (`imageConfig`) for Gemini 3+ image models. Live-verified end-to-end including aspect ratio
       (decoded actual pixel dimensions to confirm it isn't silently ignored) and image-only output.
       No streaming image generation yet.
+- [x] **Cost governance** (`6.2.0`) — `GeminiOptions.Budget` (`BudgetOptions`): a cumulative daily
+      USD ceiling (`MaxCostPerDayUsd`, exact, built from real `UsageMetadata`) plus an opt-in
+      best-effort per-request estimate ceiling (`MaxCostPerRequestUsd`), both covering non-streaming
+      and streaming calls. Every priced call's cost is also recorded as the `gemini.client.cost.usd`
+      OpenTelemetry metric, whether or not enforcement is enabled. Surveyed nine other .NET Gemini
+      client libraries (including Google's own official SDK) and found none offer this — see
+      `docs/articles/cost-governance.md`.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
 - [ ] Batch API.
 

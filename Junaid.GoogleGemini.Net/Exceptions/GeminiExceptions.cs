@@ -65,4 +65,56 @@ namespace Junaid.GoogleGemini.Net.Exceptions
             BlockReason = blockReason;
         }
     }
+
+    /// <summary>
+    /// Thrown by <see cref="Infrastructure.ICostGovernor.CheckBudget"/> before a request is sent, when
+    /// today's (UTC) cumulative spend has already reached the configured
+    /// <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerDayUsd"/> ceiling. The rejected call
+    /// itself never reaches the network, so it costs nothing.
+    /// </summary>
+    public class GeminiBudgetExceededException : GeminiException
+    {
+        /// <summary>Today's (UTC) cumulative spend at the moment this call was rejected, in USD.</summary>
+        public decimal CurrentSpendUsd { get; }
+
+        /// <summary>The configured daily ceiling that was reached, in USD.</summary>
+        public decimal BudgetLimitUsd { get; }
+
+        /// <summary>Creates a new <see cref="GeminiBudgetExceededException"/>.</summary>
+        public GeminiBudgetExceededException(string message, decimal currentSpendUsd, decimal budgetLimitUsd)
+            : base(message)
+        {
+            CurrentSpendUsd = currentSpendUsd;
+            BudgetLimitUsd = budgetLimitUsd;
+        }
+    }
+
+    /// <summary>
+    /// Thrown by <see cref="Infrastructure.ICostGovernor.CheckEstimatedRequestCost"/> before a request
+    /// is sent, when its best-effort <b>estimated</b> cost exceeds the configured
+    /// <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/> ceiling.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="GeminiBudgetExceededException"/> (built from real, already-billed usage), this
+    /// is an <b>estimate</b>: input cost is exact (from <c>CountTokensAsync</c>), but output cost is
+    /// only bounded when the request set <c>GeminiRequestOptions.MaxTokens</c> — see the XML docs on
+    /// <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/> for exactly what this
+    /// can and cannot guarantee.
+    /// </remarks>
+    public class GeminiRequestCostExceededException : GeminiException
+    {
+        /// <summary>The estimated cost of the request that was rejected, in USD.</summary>
+        public decimal EstimatedCostUsd { get; }
+
+        /// <summary>The configured per-request ceiling that was exceeded, in USD.</summary>
+        public decimal MaxCostPerRequestUsd { get; }
+
+        /// <summary>Creates a new <see cref="GeminiRequestCostExceededException"/>.</summary>
+        public GeminiRequestCostExceededException(string message, decimal estimatedCostUsd, decimal maxCostPerRequestUsd)
+            : base(message)
+        {
+            EstimatedCostUsd = estimatedCostUsd;
+            MaxCostPerRequestUsd = maxCostPerRequestUsd;
+        }
+    }
 }

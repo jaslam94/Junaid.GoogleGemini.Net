@@ -28,20 +28,24 @@ public class GeminiClient : IGeminiClient
     private readonly HttpClient _httpClient;
     private readonly ILogger<GeminiClient> _logger;
     private readonly IRateLimiter _rateLimiter;
+    private readonly ICostGovernor _costGovernor;
     private readonly JsonSerializerOptions _jsonOptions = GeminiJson.Default;
 
     /// <summary>Initializes a new instance of the <see cref="GeminiClient"/>.</summary>
     /// <param name="httpClient">The configured HttpClient (resilience + auth handlers attached by DI).</param>
     /// <param name="logger">Logger for diagnostics.</param>
     /// <param name="rateLimiter">Client-side rate limiter.</param>
+    /// <param name="costGovernor">Cost governance: pre-flight budget check + post-call spend recording.</param>
     public GeminiClient(
         HttpClient httpClient,
         ILogger<GeminiClient> logger,
-        IRateLimiter rateLimiter)
+        IRateLimiter rateLimiter,
+        ICostGovernor costGovernor)
     {
         _httpClient = httpClient ?? throw new ArgumentNullException(nameof(httpClient));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _rateLimiter = rateLimiter ?? throw new ArgumentNullException(nameof(rateLimiter));
+        _costGovernor = costGovernor ?? throw new ArgumentNullException(nameof(costGovernor));
     }
 
     /// <summary>Sends a GET request and deserializes the response.</summary>
@@ -97,6 +101,8 @@ public class GeminiClient : IGeminiClient
                 throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
             }
 
+            _costGovernor.CheckBudget();
+
             var json = JsonSerializer.Serialize(data, typeof(TRequest), _jsonOptions);
 
             // The content is buffered (ByteArrayContent), so the resilience handler can re-send it on retry.
@@ -113,6 +119,11 @@ public class GeminiClient : IGeminiClient
             if (result is GenerateContentResponse contentResponse)
             {
                 GeminiTelemetry.RecordUsage(operation, model, contentResponse.Usage, contentResponse.FinishReason, activity);
+            }
+
+            if (result is GenerateContentResponse { Usage: not null } usageResponse)
+            {
+                _costGovernor.RecordSpend(model, usageResponse.Usage!);
             }
 
             return result;
@@ -270,12 +281,18 @@ public class GeminiClient : IGeminiClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
+        // Only needed to attribute cost-governance spend to a model (see below) — StreamAsync
+        // otherwise carries no telemetry today (a pre-existing, separately tracked gap; not
+        // addressed here beyond what cost governance needs).
+        var (_, model) = GeminiTelemetry.Parse(endpoint);
 
         using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
         if (!lease.IsAcquired)
         {
             throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
         }
+
+        _costGovernor.CheckBudget();
 
         var json = JsonSerializer.Serialize(data, typeof(TRequest), _jsonOptions);
 
@@ -305,6 +322,9 @@ public class GeminiClient : IGeminiClient
         using var reader = new StreamReader(responseStream);
         var chunkCount = 0;
         var dataBuffer = new StringBuilder();
+        // Gemini's SSE stream carries usageMetadata on the FINAL chunk only (intermediate chunks
+        // typically omit it or carry partial data), so track the most recent non-null sighting.
+        UsageMetadata? finalUsage = null;
 
         try
         {
@@ -322,6 +342,7 @@ public class GeminiClient : IGeminiClient
                     {
                         chunkCount++;
                         yield return chunk;
+                        finalUsage = chunk.UsageMetadata ?? finalUsage;
                     }
                     continue;
                 }
@@ -339,6 +360,19 @@ public class GeminiClient : IGeminiClient
             {
                 chunkCount++;
                 yield return lastChunk;
+                finalUsage = lastChunk.UsageMetadata ?? finalUsage;
+            }
+
+            // The stream completed successfully (no cancellation/exception broke out of the try above).
+            // Record spend from the final usage snapshot only — if the stream was cancelled or failed
+            // partway through, we deliberately do NOT record a guessed partial cost: Gemini bills for
+            // what the server actually generated regardless of whether the client kept reading, but
+            // this library has no way to know the true billed amount without the final usageMetadata,
+            // so a partial figure would be worse than recording nothing. (Known limitation: a cancelled
+            // stream's actual cost won't be reflected in the tracked total.)
+            if (finalUsage is not null)
+            {
+                _costGovernor.RecordSpend(model, finalUsage);
             }
         }
         finally

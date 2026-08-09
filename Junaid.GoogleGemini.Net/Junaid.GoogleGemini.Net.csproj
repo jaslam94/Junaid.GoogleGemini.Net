@@ -19,8 +19,35 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.1.0</Version>
+		<Version>6.2.0</Version>
 		<PackageReleaseNotes>
+			6.2.0: adds cost governance -- as far as we've found, no other .NET Gemini client library
+			offers this (checked nine, including Google's own official SDK; see
+			docs/articles/cost-governance.md). New GeminiOptions.Budget (BudgetOptions) configures:
+			(1) a cumulative daily USD ceiling (MaxCostPerDayUsd): once today's (UTC) real recorded
+			spend reaches it, the next call throws the new GeminiBudgetExceededException before being
+			sent -- no network round-trip, no cost from the rejected call itself; and (2) an opt-in
+			best-effort per-request estimate ceiling (MaxCostPerRequestUsd): spends one exact
+			CountTokensAsync round-trip (skipped entirely, zero overhead, when this is unset) to bound
+			input cost precisely, bounds output cost only when the request sets MaxTokens (widened by a
+			positive ThinkingBudget), and throws the new GeminiRequestCostExceededException if the
+			estimate exceeds the ceiling -- covers GenerateAsync/GenerateWithImageAsync/ChatAsync(
+			MessageObject[]) and their streaming counterparts; not ChatAsync(IList&lt;Content&gt;), since
+			there's no token-counting endpoint for a raw Content list. Every call's real UsageMetadata is
+			priced (built-in rates for the current model lineup, overridable per-model via
+			BudgetOptions.ModelPricingOverrides) and recorded as the new gemini.client.cost.usd
+			OpenTelemetry counter, matching the existing token/duration metric pattern, regardless of
+			whether enforcement is enabled. Covers both PostAsync and StreamAsync (a runaway streaming
+			loop is now budget-checked too, closing a gap where cost governance would otherwise be
+			silently bypassable via StreamAsync/StreamChatAsync). Cost accounting correctly bills
+			"thinking" tokens as output and discounts cached-content tokens at the cached rate without
+			double-charging them. Tracking is in-memory and per-process only -- see the new
+			docs/articles/cost-governance.md for the multi-instance caveat and every other limitation
+			(they're documented precisely, not glossed over). Also fixes a bug found while building
+			this: IGeminiService.CountTokensAsync(prompt, ct) had no way to specify a model and always
+			resolved against DefaultModel even when a caller intended a different one; new 3-arg
+			overloads (CountTokensAsync/CountTokensWithImageAsync/CountTokensChatAsync, all taking
+			GeminiRequestOptions?) resolve against options.Model instead. No breaking changes.
 			6.1.0: fixes a client-side bug that rejects valid API keys. IsValidApiKeyFormat was
 			locked to the legacy "AIza"/"BIza"/"CIza" prefixes; Google has since introduced a new "AQ."
 			key format (rolling out through Sep 2026, after which "AIza" keys stop working entirely) that

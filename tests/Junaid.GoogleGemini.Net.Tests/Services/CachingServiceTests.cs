@@ -23,7 +23,8 @@ public class CachingServiceTests
         var client = new GeminiClient(
             new HttpClient(handler) { BaseAddress = new Uri("https://example.test/v1beta/") },
             NullLogger<GeminiClient>.Instance,
-            GeminiRateLimiter.CreateDisabled());
+            GeminiRateLimiter.CreateDisabled(),
+            GeminiCostGovernor.CreateDisabled());
         var caching = new CachingService(client, NullLogger<CachingService>.Instance);
 
         var created = await caching.CreateAsync(new CachedContent
