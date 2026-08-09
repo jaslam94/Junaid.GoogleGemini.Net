@@ -21,7 +21,7 @@ public static class GeminiTelemetry
     public const string SourceName = "Junaid.GoogleGemini.Net";
 
     internal const string SystemName = "gemini";
-    private const string Version = "6.1.0";
+    private const string Version = "6.2.0";
 
     internal static readonly ActivitySource ActivitySource = new(SourceName, Version);
     internal static readonly Meter Meter = new(SourceName, Version);
@@ -31,6 +31,13 @@ public static class GeminiTelemetry
 
     internal static readonly Histogram<long> TokenUsage = Meter.CreateHistogram<long>(
         "gen_ai.client.token.usage", unit: "{token}", description: "Number of tokens used.");
+
+    // Not "gen_ai.client.cost.*": as of this writing there is no official OTel GenAI semconv cost
+    // metric, so reusing that prefix would falsely imply standards compliance. This uses the
+    // library's own "gemini" namespace instead (see GeminiTelemetry.SystemName). Revisit if/when an
+    // official semconv cost attribute is standardized.
+    internal static readonly Counter<double> CostUsd = Meter.CreateCounter<double>(
+        "gemini.client.cost.usd", unit: "USD", description: "Cumulative USD cost of Gemini client operations.");
 
     /// <summary>Starts a client span for an operation, tagged per the GenAI conventions.</summary>
     internal static Activity? StartOperation(string operation, string? model)
@@ -80,6 +87,19 @@ public static class GeminiTelemetry
                 activity.SetTag("gen_ai.response.finish_reasons", new[] { finishReason });
             }
         }
+    }
+
+    /// <summary>Records the <c>gemini.client.cost.usd</c> cost metric for one call's real usage.</summary>
+    internal static void RecordCost(string? model, decimal costUsd)
+    {
+        var tags = new TagList { { "gen_ai.system", SystemName } };
+        if (model is not null)
+        {
+            tags.Add("gen_ai.request.model", model);
+        }
+        // Counter<T>.Add, not .Record: a Counter is additive (cumulative spend), unlike the
+        // Histogram<T>s above which record a distribution of individual values.
+        CostUsd.Add((double)costUsd, tags);
     }
 
     /// <summary>Records the operation-duration metric (seconds).</summary>

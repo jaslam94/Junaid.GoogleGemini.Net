@@ -1,4 +1,5 @@
 using Junaid.GoogleGemini.Net.Exceptions;
+using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Factories;
 using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
@@ -21,7 +22,8 @@ namespace Junaid.GoogleGemini.Net.Services
         IGeminiClient geminiClient,
         ILogger<GeminiService> logger,
         IOptions<GeminiOptions> options,
-        ISafetyService safetyService) : Service(geminiClient, logger, options, safetyService), IGeminiService
+        ISafetyService safetyService,
+        ICostGovernor costGovernor) : Service(geminiClient, logger, options, safetyService), IGeminiService
     {
         /// <inheritdoc/>
         public Task<GenerateContentResponse> GenerateAsync(
@@ -41,6 +43,7 @@ namespace Junaid.GoogleGemini.Net.Services
             CancellationToken cancellationToken)
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+            await CheckPerRequestBudgetForTextAsync(prompt, options, cancellationToken);
 
             var request = CreateTextRequest(prompt, options);
             var endpoint = GetGenerateEndpoint(options?.Model);
@@ -91,6 +94,7 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
             ValidationUtilities.ValidateFileObject(image, nameof(image));
+            await CheckPerRequestBudgetForImageAsync(prompt, image, options, cancellationToken);
 
             var request = CreateVisionRequest(prompt, image, options);
             // All current Gemini models are multimodal, so vision uses the default model unless overridden.
@@ -131,6 +135,7 @@ namespace Junaid.GoogleGemini.Net.Services
             CancellationToken cancellationToken = default)
         {
             ValidationUtilities.ValidateMessages(messages, nameof(messages));
+            await CheckPerRequestBudgetForChatAsync(messages, options, cancellationToken);
 
             var request = CreateChatRequest(messages, options);
             var endpoint = GetGenerateEndpoint(options?.Model);
@@ -154,6 +159,10 @@ namespace Junaid.GoogleGemini.Net.Services
                 throw new ArgumentException("At least one content item is required.", nameof(contents));
             }
 
+            // NOT covered by BudgetOptions.MaxCostPerRequestUsd: there is no CountTokensAsync overload
+            // that accepts a raw IList<Content>, so there's nothing to base a pre-flight estimate on.
+            // The cumulative daily budget (MaxCostPerDayUsd) still applies via GeminiClient.PostAsync
+            // regardless — only the best-effort per-request estimate is skipped for this overload.
             var request = RequestFactory.CreateRequest(contents, options);
             var endpoint = GetGenerateEndpoint(options?.Model);
 
@@ -176,6 +185,8 @@ namespace Junaid.GoogleGemini.Net.Services
                 throw new ArgumentException("At least one content item is required.", nameof(contents));
             }
 
+            // NOT covered by BudgetOptions.MaxCostPerRequestUsd — see the non-streaming
+            // ChatAsync(IList<Content>) overload above for why.
             var request = RequestFactory.CreateRequest(contents, options);
             var endpoint = GetStreamEndpoint(options?.Model);
 
@@ -192,6 +203,7 @@ namespace Junaid.GoogleGemini.Net.Services
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+            await CheckPerRequestBudgetForTextAsync(prompt, options, cancellationToken);
 
             var request = CreateTextRequest(prompt, options);
             var endpoint = GetStreamEndpoint(options?.Model);
@@ -211,6 +223,7 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
             ValidationUtilities.ValidateFileObject(image, nameof(image));
+            await CheckPerRequestBudgetForImageAsync(prompt, image, options, cancellationToken);
 
             var request = CreateVisionRequest(prompt, image, options);
             var endpoint = GetStreamEndpoint(options?.Model);
@@ -228,6 +241,7 @@ namespace Junaid.GoogleGemini.Net.Services
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
             ValidationUtilities.ValidateMessages(messages, nameof(messages));
+            await CheckPerRequestBudgetForChatAsync(messages, options, cancellationToken);
 
             var request = CreateChatRequest(messages, options);
             var endpoint = GetStreamEndpoint(options?.Model);
@@ -285,14 +299,21 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public Task<CountTokensResponse> CountTokensAsync(
+            string prompt,
+            CancellationToken cancellationToken = default) =>
+            CountTokensAsync(prompt, options: null, cancellationToken);
+
+        /// <inheritdoc/>
         public async Task<CountTokensResponse> CountTokensAsync(
             string prompt,
+            GeminiRequestOptions? options,
             CancellationToken cancellationToken = default)
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
 
             var request = RequestFactory.CreateTokenCountingTextRequest(prompt);
-            var endpoint = GetCountTokensEndpoint(null);
+            var endpoint = GetCountTokensEndpoint(options?.Model);
 
             return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "token counting",
@@ -303,16 +324,24 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public Task<CountTokensResponse> CountTokensWithImageAsync(
+            string prompt,
+            FileObject image,
+            CancellationToken cancellationToken = default) =>
+            CountTokensWithImageAsync(prompt, image, options: null, cancellationToken);
+
+        /// <inheritdoc/>
         public async Task<CountTokensResponse> CountTokensWithImageAsync(
             string prompt,
             FileObject image,
+            GeminiRequestOptions? options,
             CancellationToken cancellationToken = default)
         {
             ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
             ValidationUtilities.ValidateFileObject(image, nameof(image));
 
             var request = RequestFactory.CreateTokenCountingVisionRequest(prompt, image);
-            var endpoint = GetCountTokensEndpoint(null);
+            var endpoint = GetCountTokensEndpoint(options?.Model);
 
             return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "vision token counting",
@@ -323,14 +352,21 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public Task<CountTokensResponse> CountTokensChatAsync(
+            MessageObject[] messages,
+            CancellationToken cancellationToken = default) =>
+            CountTokensChatAsync(messages, options: null, cancellationToken);
+
+        /// <inheritdoc/>
         public async Task<CountTokensResponse> CountTokensChatAsync(
             MessageObject[] messages,
+            GeminiRequestOptions? options,
             CancellationToken cancellationToken = default)
         {
             ValidationUtilities.ValidateMessages(messages, nameof(messages));
 
             var request = RequestFactory.CreateTokenCountingChatRequest(messages);
-            var endpoint = GetCountTokensEndpoint(null);
+            var endpoint = GetCountTokensEndpoint(options?.Model);
 
             return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
                 "chat token counting",
@@ -371,5 +407,64 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         #endregion Private Helper Methods
+
+        #region Per-Request Budget Estimate (BudgetOptions.MaxCostPerRequestUsd)
+
+        // All three overloads below share the same shape: bail out with zero overhead when no ceiling
+        // is configured (ICostGovernor.HasRequestCeiling is a cheap in-memory check), otherwise spend
+        // one real CountTokensAsync round-trip to get an exact input-token count, then hand it to the
+        // governor together with a best-effort output-token bound. See the XML docs on
+        // BudgetOptions.MaxCostPerRequestUsd for exactly what this can and cannot guarantee.
+
+        private async Task CheckPerRequestBudgetForTextAsync(string prompt, GeminiRequestOptions? options, CancellationToken cancellationToken)
+        {
+            if (!costGovernor.HasRequestCeiling)
+            {
+                return;
+            }
+
+            var counted = await CountTokensAsync(prompt, options, cancellationToken);
+            costGovernor.CheckEstimatedRequestCost(options?.Model ?? Options?.DefaultModel, counted.TotalTokens, ResolveMaxOutputTokens(options));
+        }
+
+        private async Task CheckPerRequestBudgetForImageAsync(string prompt, FileObject image, GeminiRequestOptions? options, CancellationToken cancellationToken)
+        {
+            if (!costGovernor.HasRequestCeiling)
+            {
+                return;
+            }
+
+            var counted = await CountTokensWithImageAsync(prompt, image, options, cancellationToken);
+            costGovernor.CheckEstimatedRequestCost(options?.Model ?? Options?.DefaultModel, counted.TotalTokens, ResolveMaxOutputTokens(options));
+        }
+
+        private async Task CheckPerRequestBudgetForChatAsync(MessageObject[] messages, GeminiRequestOptions? options, CancellationToken cancellationToken)
+        {
+            if (!costGovernor.HasRequestCeiling)
+            {
+                return;
+            }
+
+            var counted = await CountTokensChatAsync(messages, options, cancellationToken);
+            costGovernor.CheckEstimatedRequestCost(options?.Model ?? Options?.DefaultModel, counted.TotalTokens, ResolveMaxOutputTokens(options));
+        }
+
+        // MaxTokens bounds candidate/output tokens; a positive ThinkingBudget bounds "thinking" tokens
+        // separately -- but those bill as OUTPUT too (see GeminiCostGovernor.ComputeCost), so a request
+        // that sets both needs the two added together to avoid understating the output-side bound.
+        // ThinkingBudget of 0 (disabled) or -1 (model decides, unbounded) contributes nothing extra:
+        // 0 adds no tokens, and -1 can't be turned into a token count at all, so it's excluded rather
+        // than silently misread as "unlimited plus MaxTokens" or "minus one token".
+        private static int? ResolveMaxOutputTokens(GeminiRequestOptions? options)
+        {
+            var maxTokens = options?.MaxTokens;
+            if (maxTokens is not null && options?.ThinkingBudget is > 0)
+            {
+                maxTokens += options.ThinkingBudget;
+            }
+            return maxTokens;
+        }
+
+        #endregion Per-Request Budget Estimate (BudgetOptions.MaxCostPerRequestUsd)
     }
 }

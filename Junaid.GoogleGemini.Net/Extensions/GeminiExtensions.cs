@@ -1,10 +1,12 @@
 ﻿using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Services;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.Net;
 #if NET8_0_OR_GREATER
@@ -49,7 +51,28 @@ namespace Junaid.GoogleGemini.Net.Extensions
         /// <param name="services">The service collection</param>
         /// <param name="configureOptions">Action to configure options</param>
         /// <returns>The service collection for chaining</returns>
-        public static IServiceCollection AddGemini(this IServiceCollection services, Action<GeminiOptions> configureOptions)
+        public static IServiceCollection AddGemini(this IServiceCollection services, Action<GeminiOptions> configureOptions) =>
+            services.AddGemini(configureOptions, configurePipeline: null);
+
+        /// <summary>
+        /// Adds Gemini services to the service collection with options configuration, plus a hook to
+        /// customize the <see cref="GeminiClient"/> <see cref="HttpClient"/> pipeline directly — e.g. to
+        /// insert a test/replay handler (see <c>Junaid.GoogleGemini.Net.Testing</c>'s
+        /// <c>AddCassette</c>/<c>AddGeminiWithCassette</c>).
+        /// </summary>
+        /// <param name="services">The service collection</param>
+        /// <param name="configureOptions">Action to configure options</param>
+        /// <param name="configurePipeline">
+        /// Invoked with the <see cref="GeminiClient"/>'s <see cref="IHttpClientBuilder"/> after the
+        /// primary handler is configured but BEFORE <see cref="GeminiAuthHandler"/> is added — so any
+        /// handler added here becomes the OUTERMOST handler on the pipeline, running before
+        /// authentication. Pass <c>null</c> to skip (equivalent to the single-parameter overload).
+        /// </param>
+        /// <returns>The service collection for chaining</returns>
+        public static IServiceCollection AddGemini(
+            this IServiceCollection services,
+            Action<GeminiOptions> configureOptions,
+            Action<IHttpClientBuilder>? configurePipeline)
         {
             // Configure and validate options
             services.AddOptions<GeminiOptions>()
@@ -63,6 +86,16 @@ namespace Junaid.GoogleGemini.Net.Extensions
             {
                 var options = serviceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
                 return new GeminiRateLimiter(options.RateLimit);
+            });
+
+            // Register cost governor (cumulative daily budget enforcement + cost observability).
+            // options.Budget == null (the default) is handled inside GeminiCostGovernor as a
+            // zero-overhead no-op — see its constructor docs.
+            services.AddSingleton<ICostGovernor>(serviceProvider =>
+            {
+                var options = serviceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                var logger = serviceProvider.GetRequiredService<ILogger<GeminiCostGovernor>>();
+                return new GeminiCostGovernor(options.Budget, GeminiTelemetry.RecordCost, logger);
             });
 
             // Configure HTTP client with authentication
@@ -93,11 +126,18 @@ namespace Junaid.GoogleGemini.Net.Extensions
                 }
 
                 return handler;
-            })
-            // Auth handler is registered first => it is the OUTERMOST handler, so it runs once and
-            // adds the API key a single time. The retry handler is INNER, so it re-sends the network
-            // request without re-running auth (the buffered request is safe to resend).
-            .AddHttpMessageHandler<GeminiAuthHandler>();
+            });
+
+            // Let the caller insert handlers that must run BEFORE authentication (e.g. a cassette
+            // record/replay handler, which must never see or need the API key). Anything added here
+            // becomes the OUTERMOST handler, ahead of GeminiAuthHandler below.
+            configurePipeline?.Invoke(clientBuilder);
+
+            // Auth handler is added next => (absent a configurePipeline hook) it is the OUTERMOST
+            // handler, so it runs once and adds the API key a single time. The retry handler is INNER,
+            // so it re-sends the network request without re-running auth (the buffered request is safe
+            // to resend).
+            clientBuilder.AddHttpMessageHandler<GeminiAuthHandler>();
 
 #if NET8_0_OR_GREATER
             // net8+: the battle-tested standard resilience handler (retry + backoff + jitter).

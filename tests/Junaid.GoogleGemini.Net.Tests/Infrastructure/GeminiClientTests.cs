@@ -12,13 +12,14 @@ namespace Junaid.GoogleGemini.Net.Tests.Infrastructure;
 
 public class GeminiClientTests
 {
-    private static GeminiClient CreateClient(FakeHttpMessageHandler handler)
+    private static GeminiClient CreateClient(FakeHttpMessageHandler handler, ICostGovernor? costGovernor = null)
     {
         var httpClient = new HttpClient(handler) { BaseAddress = new Uri("https://example.test/v1beta/") };
         return new GeminiClient(
             httpClient,
             NullLogger<GeminiClient>.Instance,
-            GeminiRateLimiter.CreateDisabled());
+            GeminiRateLimiter.CreateDisabled(),
+            costGovernor ?? GeminiCostGovernor.CreateDisabled());
     }
 
     [Fact]
@@ -148,5 +149,116 @@ public class GeminiClientTests
         Assert.Equal("gemini", activity.GetTagItem("gen_ai.system"));
         Assert.Equal("gemini-activity-probe", activity.GetTagItem("gen_ai.request.model"));
         Assert.Equal(5, activity.GetTagItem("gen_ai.usage.input_tokens"));
+    }
+
+    [Fact]
+    public async Task PostAsync_WhenBudgetExceeded_ThrowsUnwrapped_AndNeverSendsTheRequest()
+    {
+        const string json = """{"candidates":[{"content":{"role":"model","parts":[{"text":"hi"}]}}]}""";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
+        var governor = new FakeCostGovernor { ThrowOnCheckBudget = true };
+        var client = CreateClient(handler, governor);
+
+        await Assert.ThrowsAsync<GeminiBudgetExceededException>(() =>
+            client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+                "models/x:generateContent", new GenerateContentRequest()));
+
+        // The rejected call never reaches the network.
+        Assert.Empty(handler.Requests);
+    }
+
+    [Fact]
+    public async Task PostAsync_OnSuccess_RecordsSpendWithTheResponsesRealUsage()
+    {
+        const string json =
+            """{"candidates":[{"content":{"role":"model","parts":[{"text":"hi"}]}}],"usageMetadata":{"promptTokenCount":10,"candidatesTokenCount":4,"totalTokenCount":14}}""";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
+        var governor = new FakeCostGovernor();
+        var client = CreateClient(handler, governor);
+
+        await client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+            "models/gemini-2.5-flash:generateContent", new GenerateContentRequest());
+
+        var (model, usage) = Assert.Single(governor.RecordSpendCalls);
+        Assert.Equal("gemini-2.5-flash", model);
+        Assert.Equal(10, usage.PromptTokenCount);
+        Assert.Equal(4, usage.CandidatesTokenCount);
+    }
+
+    [Fact]
+    public async Task StreamAsync_RecordsSpendOnce_UsingTheFinalChunksUsage()
+    {
+        const string sse =
+            "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"Hello \"}]}}]}\n" +
+            "\n" +
+            "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"world\"}]}}],\"usageMetadata\":{\"promptTokenCount\":3,\"candidatesTokenCount\":2,\"totalTokenCount\":5}}\n" +
+            "\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var governor = new FakeCostGovernor();
+        var client = CreateClient(handler, governor);
+
+        await foreach (var _ in client.StreamAsync(
+            "models/gemini-2.5-flash:streamGenerateContent?alt=sse", new GenerateContentRequest()))
+        {
+            // drain
+        }
+
+        var (model, usage) = Assert.Single(governor.RecordSpendCalls);
+        Assert.Equal("gemini-2.5-flash", model);
+        Assert.Equal(3, usage.PromptTokenCount);
+        Assert.Equal(2, usage.CandidatesTokenCount);
+    }
+
+    [Fact]
+    public async Task StreamAsync_WhenCancelledBeforeFinalChunk_DoesNotRecordSpend()
+    {
+        const string sse =
+            "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"Hello \"}]}}]}\n" +
+            "\n" +
+            "data: {\"candidates\":[{\"content\":{\"role\":\"model\",\"parts\":[{\"text\":\"world\"}]}}],\"usageMetadata\":{\"promptTokenCount\":3,\"candidatesTokenCount\":2,\"totalTokenCount\":5}}\n" +
+            "\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var governor = new FakeCostGovernor();
+        var client = CreateClient(handler, governor);
+        using var cts = new CancellationTokenSource();
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () =>
+        {
+            await foreach (var chunk in client.StreamAsync(
+                "models/gemini-2.5-flash:streamGenerateContent?alt=sse", new GenerateContentRequest(), cts.Token))
+            {
+                // Cancel as soon as the first (non-final) chunk arrives, before the final
+                // usage-carrying chunk is ever read.
+                cts.Cancel();
+            }
+        });
+
+        Assert.Empty(governor.RecordSpendCalls);
+    }
+
+    private sealed class FakeCostGovernor : ICostGovernor
+    {
+        public bool ThrowOnCheckBudget { get; set; }
+        public List<(string? Model, UsageMetadata Usage)> RecordSpendCalls { get; } = [];
+
+        public void CheckBudget()
+        {
+            if (ThrowOnCheckBudget)
+            {
+                throw new GeminiBudgetExceededException("budget exceeded", currentSpendUsd: 1m, budgetLimitUsd: 1m);
+            }
+        }
+
+        public decimal RecordSpend(string? model, UsageMetadata usage)
+        {
+            RecordSpendCalls.Add((model, usage));
+            return 0m;
+        }
+
+        public decimal GetTodaySpend() => 0m;
+
+        public bool HasRequestCeiling => false;
+
+        public decimal CheckEstimatedRequestCost(string? model, int inputTokens, int? maxOutputTokens) => 0m;
     }
 }

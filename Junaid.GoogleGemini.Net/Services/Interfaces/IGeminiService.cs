@@ -82,12 +82,20 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// calls/responses and Gemini 3 <c>thoughtSignature</c> values), which the simple text-based
         /// <see cref="ChatAsync(MessageObject[], GeminiRequestOptions?, CancellationToken)"/> can't carry.
         /// </summary>
+        /// <remarks>
+        /// <b>Not covered by <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/>:</b>
+        /// there is no token-counting endpoint for a raw <see cref="Content"/> list, so this overload
+        /// has nothing to base a pre-flight estimate on and skips that check. The cumulative daily
+        /// budget (<see cref="Infrastructure.Options.BudgetOptions.MaxCostPerDayUsd"/>) still applies as
+        /// normal — only the best-effort per-request estimate is unavailable here.
+        /// </remarks>
         Task<GenerateContentResponse> ChatAsync(
             IList<Content> contents,
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default);
 
         /// <summary>Streaming counterpart of <see cref="ChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>.</summary>
+        /// <remarks>Same <c>MaxCostPerRequestUsd</c> coverage gap as the non-streaming overload above.</remarks>
         IAsyncEnumerable<GenerateContentResponse> StreamChatAsync(
             IList<Content> contents,
             GeminiRequestOptions? options = null,
@@ -149,7 +157,8 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Counts tokens for text input
+        /// Counts tokens for text input, against the default model
+        /// (<see cref="Infrastructure.Options.GeminiOptions.DefaultModel"/>).
         /// </summary>
         /// <param name="prompt">The text prompt</param>
         /// <param name="cancellationToken">Cancellation token</param>
@@ -158,7 +167,23 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Counts tokens for text and image input
+        /// Counts tokens for text input against a specific model.
+        /// </summary>
+        /// <param name="prompt">The text prompt</param>
+        /// <param name="options">
+        /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
+        /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
+        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<CountTokensResponse> CountTokensAsync(
+            string prompt,
+            GeminiRequestOptions? options,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Counts tokens for text and image input, against the default model
+        /// (<see cref="Infrastructure.Options.GeminiOptions.DefaultModel"/>).
         /// </summary>
         /// <param name="prompt">The text prompt</param>
         /// <param name="image">The image data</param>
@@ -169,12 +194,45 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Counts tokens for chat messages
+        /// Counts tokens for text and image input against a specific model.
+        /// </summary>
+        /// <param name="prompt">The text prompt</param>
+        /// <param name="image">The image data</param>
+        /// <param name="options">
+        /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
+        /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
+        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<CountTokensResponse> CountTokensWithImageAsync(
+            string prompt,
+            FileObject image,
+            GeminiRequestOptions? options,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Counts tokens for chat messages, against the default model
+        /// (<see cref="Infrastructure.Options.GeminiOptions.DefaultModel"/>).
         /// </summary>
         /// <param name="messages">Array of chat messages</param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<CountTokensResponse> CountTokensChatAsync(
             MessageObject[] messages,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Counts tokens for chat messages against a specific model.
+        /// </summary>
+        /// <param name="messages">Array of chat messages</param>
+        /// <param name="options">
+        /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
+        /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
+        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<CountTokensResponse> CountTokensChatAsync(
+            MessageObject[] messages,
+            GeminiRequestOptions? options,
             CancellationToken cancellationToken = default);
     }
 }
