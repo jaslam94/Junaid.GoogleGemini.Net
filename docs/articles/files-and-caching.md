@@ -44,6 +44,6 @@ await caching.DeleteAsync(cache.Name!);
 
 The response's `Usage.CachedContentTokenCount` shows how many tokens were served from the cache.
 
-> **Note:** context caching requires a **billing-enabled** API key — the free tier allows zero
+> **Note:** context caching requires a **billing-enabled** API key. The free tier allows zero
 > cached-content storage, so `CreateAsync` fails there with a `TotalCachedContentStorageTokensPerModelFreeTier`
-> error. Cached content also has a per-model **minimum token count** (e.g. ~1,024 for Gemini 2.5 Flash).
+> error. Cached content also has a per-model **minimum token count** (for example, roughly 1,024 for Gemini 2.5 Flash).

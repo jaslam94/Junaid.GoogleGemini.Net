@@ -1,11 +1,11 @@
-# Junaid.GoogleGemini.Net — Modernization Roadmap (v6)
+# Junaid.GoogleGemini.Net: Modernization Roadmap (v6)
 
-> **Positioning:** The Gemini client for .NET that is **production-ready out of the box** —
+> **Positioning:** The Gemini client for .NET that is **production-ready out of the box**:
 > resilient, observable, DI-native, and ecosystem-friendly. We cover the modern Gemini API
-> as table stakes; we *win* on developer experience, resilience, and observability — the one
+> as table stakes, and we *win* on developer experience, resilience, and observability, the one
 > thing the official SDK and the big community wrappers all lack.
 
-This document is the living plan. Each phase is independently shippable. We do **plan → review →
+This document is the living plan. Each phase is independently shippable. We do **plan, review,
 execute** one phase at a time. Every architectural decision below includes the *why*, so this
 doubles as a "how to build a good .NET library" reference.
 
@@ -13,7 +13,7 @@ doubles as a "how to build a good .NET library" reference.
 
 ## Guiding principles (the "why" behind everything)
 
-1. **Layer the design: transport → resources → ergonomics.**
+1. **Layer the design: transport, then resources, then ergonomics.**
    - *Transport* (`GeminiHttpClient`): auth, retry/backoff, rate limiting, telemetry, serialization. One place, done right.
    - *Resource clients* (`Models`, `Files`, `Caching`, `Embeddings`, `Content`): faithful 1:1 mappings to API endpoints, for power users.
    - *Ergonomic facade* (`IGeminiService`) + adapters (`IChatClient`): the easy 90% path.
@@ -25,7 +25,7 @@ doubles as a "how to build a good .NET library" reference.
 
 3. **Don't reinvent platform primitives.**
    - Resilience via `Microsoft.Extensions.Http.Resilience` (the modern, Polly-v8-based standard handler), not a hand-cached `AsyncRetryPolicy`. Drop the **deprecated** `Polly.Extensions.Http`.
-   - **Why:** the hand-rolled retry currently reuses `HttpContent` across attempts → throws on every retry. The standard handler builds each attempt correctly and is battle-tested.
+   - **Why:** the hand-rolled retry currently reuses `HttpContent` across attempts, so it throws on every retry. The standard handler builds each attempt correctly and is battle-tested.
 
 4. **Resilience belongs on the pipeline; requests are built per-attempt.**
    - **Why:** `HttpClient` disposes content after send. Anything inside a retry must be freshly constructed. This is the root cause of the current broken retry.
@@ -35,11 +35,11 @@ doubles as a "how to build a good .NET library" reference.
    - **Why:** the current line-sniffing parser drops function calls/thoughts/usage and breaks on whitespace changes.
 
 6. **Errors are typed, never magic strings.**
-   - `GeminiException` (base) → `GeminiApiException` (status/code/details), `GeminiRateLimitException`, `GeminiTimeoutException`.
+   - `GeminiException` (base), with `GeminiApiException` (status/code/details), `GeminiRateLimitException`, and `GeminiTimeoutException` beneath it.
    - **Why:** `Text()` returning `"[Content was blocked...]"` is unrecoverable, untranslatable, and indistinguishable from real output.
 
 7. **Observability is first-class and dependency-free.**
-   - `ActivitySource` + `Meter` from `System.Diagnostics` following the OpenTelemetry **GenAI semantic conventions**. No hard OTel dependency — consumers opt in.
+   - `ActivitySource` + `Meter` from `System.Diagnostics` following the OpenTelemetry **GenAI semantic conventions**. No hard OTel dependency; consumers opt in.
    - **Why:** this is our headline differentiator. None of the giants ship traces/metrics for token usage, latency, retries.
 
 8. **A test suite is not optional.**
@@ -50,23 +50,23 @@ doubles as a "how to build a good .NET library" reference.
 
 ## Packaging strategy
 
-- Keep the existing **package ID** `Junaid.GoogleGemini.Net` — renaming would orphan ~5k installs and lose search history. Improve Title/Description/Tags/icon/README instead.
+- Keep the existing **package ID** `Junaid.GoogleGemini.Net`. Renaming would orphan ~5k installs and lose search history. Improve Title/Description/Tags/icon/README instead.
 - Split into:
-  - `Junaid.GoogleGemini.Net` — core client, minimal deps.
-  - `Junaid.GoogleGemini.Net.Extensions.AI` — `IChatClient`/`IEmbeddingGenerator` adapters (depends on `Microsoft.Extensions.AI.Abstractions`).
+  - `Junaid.GoogleGemini.Net`: core client, minimal deps.
+  - `Junaid.GoogleGemini.Net.Extensions.AI`: `IChatClient`/`IEmbeddingGenerator` adapters (depends on `Microsoft.Extensions.AI.Abstractions`).
   - **Why:** keep optional/heavy deps out of the core; mirrors the ecosystem convention every competitor follows.
 - Multi-target `net8.0;net9.0;netstandard2.0`.
-  - **Why:** `netstandard2.0` reaches .NET Framework / Unity / older runtimes — a reach the official SDK has and we currently don't.
+  - **Why:** `netstandard2.0` reaches .NET Framework, Unity, and older runtimes, a reach the official SDK has and we currently don't.
 
 ---
 
-## Phase 0 — Foundation & safety net ✅ DONE *(no user-visible behavior change)*
+## Phase 0: Foundation & safety net (DONE) *(no user-visible behavior change)*
 
 Goal: make the repo a professional, testable, CI-gated project before touching logic.
 
 - [ ] `Directory.Build.props`: shared props, `LangVersion`, `Nullable`, deterministic build, SourceLink, `EmbedUntrackedSources`, symbol packages (`.snupkg`), `ContinuousIntegrationBuild`.
 - [ ] Multi-target `net8.0;net9.0;netstandard2.0`.
-- [ ] Add **test project** (`tests/…Tests`, xUnit) + `FakeHttpMessageHandler` + JSON fixtures.
+- [ ] Add **test project** (`tests/<Project>.Tests`, xUnit) + `FakeHttpMessageHandler` + JSON fixtures.
 - [ ] Add **CI** (`.github/workflows/ci.yml`): restore/build/test on PR; pack + push on tag.
 - [ ] Package metadata: icon, `PackageReadmeFile`, richer description/tags, `GeneratePackageOnBuild` for Release.
 - [ ] Turn on analyzers; baseline the 32 nullable warnings (fix in Phase 1).
@@ -75,26 +75,26 @@ Goal: make the repo a professional, testable, CI-gated project before touching l
 
 ---
 
-## Phase 1 — Fix the broken core ✅ DONE *(version bumped to 6.0.0-alpha.1)*
+## Phase 1: Fix the broken core (DONE) *(version bumped to 6.0.0-alpha.1)*
 
 Goal: everything advertised today actually works. Completed in 6 commits; 14 tests on net8.0+net9.0.
 Note: these changes are breaking, so the line was moved from "5.2.0" to the **6.0** major.
 
 - [ ] Rewrite transport: per-attempt request + content construction; adopt `AddStandardResilienceHandler`.
-- [ ] Proper SSE streaming → `IAsyncEnumerable<GeminiResponseChunk>` (+ callback overload).
+- [ ] Proper SSE streaming, exposed as `IAsyncEnumerable<GeminiResponseChunk>` (+ callback overload).
 - [ ] Propagate `CancellationToken` to every network + rate-limiter call.
 - [ ] Token-aware rate limiting **or** remove the false `TokensPerMinute` claim and document the real behavior.
 - [ ] Single source-generated `JsonSerializerContext`; one casing policy; **fix all 32 nullable warnings**.
 - [ ] Typed exception hierarchy; remove magic-string `Text()`, add safe accessors (`TryGetText`, `FinishReason`, `Usage`).
-- [ ] Default base URL → `v1beta/` (configurable); drop deprecated model defaults (`gemini-1.5-pro`); refresh `Models` constants and add `Models.ListAsync()` for runtime discovery.
+- [ ] Default base URL set to `v1beta/` (configurable); drop deprecated model defaults (`gemini-1.5-pro`); refresh `Models` constants and add `Models.ListAsync()` for runtime discovery.
 - [ ] Delete the empty `Models/ImageGeneration/` phantom folder.
 - [ ] Tests for: retry-on-429/503, streaming parse, cancellation, error mapping, serialization round-trips.
 
-**Ships as:** `5.2.0` — "it works now."
+**Ships as:** `5.2.0`, "it works now."
 
 ---
 
-## Phase 2 — Modern API parity (table stakes) ✅ DONE *(6.0.0-alpha.2)*
+## Phase 2: Modern API parity (table stakes) (DONE) *(6.0.0-alpha.2)*
 
 Delivered: system instructions; expanded generation config (JSON mode, thinking, seed, penalties);
 **flagship `GenerateAsync<T>` structured output**; tools (function declarations, Google Search
@@ -116,40 +116,40 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 
 ---
 
-## Phase 3 — The differentiators (the wedge) *(6.0.0-alpha.3)*
+## Phase 3: The differentiators (the wedge) *(6.0.0-alpha.3)*
 
 - [x] `Junaid.GoogleGemini.Net.Extensions.AI`: `IChatClient` + `IEmbeddingGenerator` adapters (ecosystem interop: Semantic Kernel, agent frameworks).
 - [x] OpenTelemetry-native tracing + metrics (GenAI semconv): spans per request, token-usage/latency histograms (no OTel dependency).
 - [x] Documented resilience + rate-limiting story; sensible production defaults.
 - [x] Refreshed README with the "why choose this" matrix and accurate 6.0 examples.
 - [ ] First-class ASP.NET Core minimal-API sample; DocFX/docs site. *(still open)*
-- [x] `netstandard2.0` target with polyfills (alpha.4) — PolySharp + Microsoft.Bcl.AsyncInterfaces + System.Text.Json package + a hand-written GeminiRetryHandler where Microsoft.Extensions.Http.Resilience (net8+ only) isn't available.
+- [x] `netstandard2.0` target with polyfills (alpha.4): PolySharp + Microsoft.Bcl.AsyncInterfaces + System.Text.Json package + a hand-written GeminiRetryHandler where Microsoft.Extensions.Http.Resilience (net8+ only) isn't available.
 
-**Ships as:** `6.0.0` — the production-grade DX release.
+**Ships as:** `6.0.0`, the production-grade DX release.
 
 ---
 
-## Phase 4 — Stretch / unique (optional)
+## Phase 4: Stretch / unique (optional)
 
-- [x] **Image generation** (`6.1.0`) — `GenerateImageAsync` (`responseModalities`, Nano Banana
+- [x] **Image generation** (`6.1.0`): `GenerateImageAsync` (`responseModalities`, Nano Banana
       models `gemini-3.1-flash-image-preview`/`gemini-3-pro-image-preview`), `Images()`/
       `TryGetImages()`/`GetImagesOrThrow()` response accessors, `ImageAspectRatio`/`ImageSize`
       (`imageConfig`) for Gemini 3+ image models. Live-verified end-to-end including aspect ratio
       (decoded actual pixel dimensions to confirm it isn't silently ignored) and image-only output.
       No streaming image generation yet.
-- [x] **Cost governance** (`6.2.0`) — `GeminiOptions.Budget` (`BudgetOptions`): a cumulative daily
+- [x] **Cost governance** (`6.2.0`): `GeminiOptions.Budget` (`BudgetOptions`), a cumulative daily
       USD ceiling (`MaxCostPerDayUsd`, exact, built from real `UsageMetadata`) plus an opt-in
       best-effort per-request estimate ceiling (`MaxCostPerRequestUsd`), both covering non-streaming
       and streaming calls. Every priced call's cost is also recorded as the `gemini.client.cost.usd`
       OpenTelemetry metric, whether or not enforcement is enabled. Surveyed nine other .NET Gemini
-      client libraries (including Google's own official SDK) and found none offer this — see
+      client libraries (including Google's own official SDK) and found none offer this. See
       `docs/articles/cost-governance.md`.
-- [x] **Live-verification & completeness pass** (`6.3.0`) — every major feature re-tested against the
-      real Gemini API rather than mocks, surfacing two response-parsing gaps: `code_execution`'s
+- [x] **Live-verification and completeness pass** (`6.3.0`): every major feature re-tested against the
+      real Gemini API rather than mocks, surfacing two response-parsing gaps. `code_execution`'s
       `executableCode`/`codeExecutionResult` parts and `url_context`'s `urlContextMetadata` field were
-      silently dropped on deserialization (no corresponding model properties existed); both are now
+      silently dropped on deserialization, since no corresponding model properties existed; both are now
       typed and live-verified. Also closed the last telemetry gap: `StreamAsync` previously had zero
-      OpenTelemetry instrumentation (only `PostAsync` had a span) — it now emits one, matching
+      OpenTelemetry instrumentation (only `PostAsync` had a span), and now emits one, matching
       `PostAsync`'s start/error-status/duration/token-usage-tag pattern.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
 - [ ] Batch API.
@@ -162,4 +162,4 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 - Retry/streaming/cancellation provably correct (tested).
 - `IChatClient` adapter published.
 - README leads with the differentiation matrix.
-- Download trajectory: 5k → 50k+ over time (resilience + DX + OTel as the hook).
+- Download trajectory: 5k to 50k+ over time (resilience + DX + OTel as the hook).

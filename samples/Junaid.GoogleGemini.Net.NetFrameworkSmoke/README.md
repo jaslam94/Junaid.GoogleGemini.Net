@@ -1,7 +1,7 @@
 # .NET Framework runtime smoke test
 
 A tiny `net48` console that proves the library's **netstandard2.0** build actually *runs* on the
-classic .NET Framework CLR — not just that it compiles. It exercises the full path: DI registration,
+classic .NET Framework CLR, not just that it compiles. It exercises the full path: DI registration,
 options validation, `HttpClient` + the polyfilled `GeminiRetryHandler`, and System.Text.Json
 source-generated (de)serialization.
 
@@ -25,11 +25,11 @@ GAC ships an older version, so `AddGemini` threw `FileNotFoundException` on firs
 
 Fix: the library now declares `System.ComponentModel.Annotations` as a **netstandard2.0 dependency**,
 so it's deployed to .NET Framework consumers automatically (this project relies on that transitive
-flow — note it has no explicit reference to it).
+flow, and it has no explicit reference to it).
 
 ## .NET Framework consumer checklist
 
 - Enable binding redirects (standard for net4x SDK-style apps):
   `<AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>`
-- That's it — the required `System.ComponentModel.Annotations` now comes in transitively with the
+- That's it. The required `System.ComponentModel.Annotations` now comes in transitively with the
   package.

@@ -2,18 +2,18 @@
 
 Three mechanisms, all opt-in via `GeminiOptions.Budget`:
 
-1. **Cost observability** — every response's real token usage is converted to a USD cost and
+1. **Cost observability**: every response's real token usage is converted to a USD cost and
    recorded as an OpenTelemetry metric, following the same pattern as the existing token/duration
    metrics.
-2. **Daily budget enforcement** (`MaxCostPerDayUsd`) — a configurable daily USD ceiling. Once
+2. **Daily budget enforcement** (`MaxCostPerDayUsd`): a configurable daily USD ceiling. Once
    today's (UTC) cumulative *actual* spend reaches the ceiling, the **next** call is rejected before
    it's sent. This is the primary, exact mechanism.
-3. **Per-request estimate enforcement** (`MaxCostPerRequestUsd`) — a secondary, best-effort ceiling
-   for a single call, checked before it's sent. Necessarily an estimate, not exact — see below for
+3. **Per-request estimate enforcement** (`MaxCostPerRequestUsd`): a secondary, best-effort ceiling
+   for a single call, checked before it's sent. It's necessarily an estimate, not exact. See below for
    exactly what it can and can't guarantee.
 
-As far as we've been able to find, no other .NET Gemini client library offers this (checked nine —
-including Google's own official SDK — as of August 2026; see the footnote on the README's
+As far as we've been able to find, no other .NET Gemini client library offers this (checked nine,
+including Google's own official SDK, as of August 2026; see the footnote on the README's
 feature-comparison table for the full list).
 
 ```csharp
@@ -27,7 +27,7 @@ builder.Services.AddGemini(options =>
 });
 ```
 
-Leave `options.Budget` unset (the default) to disable the feature entirely — zero overhead, nothing
+Leave `options.Budget` unset (the default) to disable the feature entirely: zero overhead, nothing
 tracked, nothing enforced.
 
 ## Why cumulative-first
@@ -36,44 +36,45 @@ The daily budget, not a per-request estimate, is the mechanism this feature is a
 around. A design that only estimated per-request cost before sending ("call `countTokens`, price it,
 compare to budget, then send") would be structurally incomplete on its own:
 
-- `countTokens` only returns the *input* token count — it cannot know the *output* token count in
+- `countTokens` only returns the *input* token count. It cannot know the *output* token count in
   advance, so a pre-flight check can only ever bound the input side precisely. The output side is
   unknown until generation completes (bounded only loosely by `MaxTokens`, if the caller set one).
-- Spending an extra HTTP round-trip *before every single call, forever* — even when nothing is
-  anywhere near budget — is a bad trade for a feature about controlling cost, if it's the *only*
+- Spending an extra HTTP round-trip *before every single call, forever*, even when nothing is
+  anywhere near budget, is a bad trade for a feature about controlling cost, if it's the *only*
   mechanism.
 
 So the **primary, always-correct mechanism is cumulative**: after every real response, this library
 computes its *actual* cost from the real `UsageMetadata`, adds it to a running daily total, and
 records it via OpenTelemetry. Before the **next** call, it checks whether the running total has
-already reached the ceiling — a cheap, in-memory, zero-extra-HTTP-call check. This is exact (built
+already reached the ceiling, a cheap, in-memory, zero-extra-HTTP-call check. This is exact (built
 from real billed tokens) and catches a runaway loop on the very next iteration, which is the actual
 failure mode this feature exists to prevent.
 
 `MaxCostPerRequestUsd` is a **secondary, opt-in** layer on top of that, for the different problem of
-"reject this one outsized call before it happens" (e.g. a user-supplied prompt that's unexpectedly
-huge). Because it's opt-in, the extra round-trip cost is only paid by callers who choose it — leave
-`MaxCostPerRequestUsd` unset and no extra `CountTokensAsync` call is ever made; `ICostGovernor.HasRequestCeiling`
-is checked first and is a cheap in-memory read, not a network call.
+"reject this one outsized call before it happens" (for example, a user-supplied prompt that's
+unexpectedly huge). Because it's opt-in, the extra round-trip cost is only paid by callers who choose
+it. Leave `MaxCostPerRequestUsd` unset and no extra `CountTokensAsync` call is ever made;
+`ICostGovernor.HasRequestCeiling` is checked first and is a cheap in-memory read, not a network call.
 
 ### What the per-request estimate can and can't guarantee
 
-Read this before relying on `MaxCostPerRequestUsd` — it is a genuine estimate, not an exact figure:
+Read this before relying on `MaxCostPerRequestUsd`: it is a genuine estimate, not an exact figure.
 
 - **Input cost is exact** for the prompt/messages/image tokens themselves (a real
   `CountTokensAsync(prompt, options, ct)` call happens first), but it does **not** include
-  `SystemInstruction`, `Tools`, or `CachedContent` tokens — the token-counting endpoint's request
-  shape omits them — so it can undercount input for calls that use those.
+  `SystemInstruction`, `Tools`, or `CachedContent` tokens, since the token-counting endpoint's request
+  shape omits them, so it can undercount input for calls that use those.
 - It always prices the full input at the **standard (non-cached) rate**, since it can't know ahead of
   time how much Gemini will actually serve from cache. This makes it conservative (an over-estimate,
   never an under-estimate) on that specific axis.
 - **Output cost is only bounded when the request sets `GeminiRequestOptions.MaxTokens`** (widened by a
   positive `ThinkingBudget`, since thinking tokens bill as output too). Leave `MaxTokens` unset and
-  only the input side is bounded — the real call's output cost is unknown until it completes.
+  only the input side is bounded; the real call's output cost is unknown until it completes.
 - **Not checked at all for `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)`** (the raw
-  multi-turn overloads used for function-calling replay) — there is no token-counting endpoint for a
-  raw `Content` list, so there's nothing to estimate against. The daily budget (`MaxCostPerDayUsd`)
-  still applies to these calls as normal; only the per-request estimate is unavailable.
+  multi-turn overloads used for function-calling replay), because there is no token-counting endpoint
+  for a raw `Content` list, so there's nothing to estimate against. The daily budget
+  (`MaxCostPerDayUsd`) still applies to these calls as normal; only the per-request estimate is
+  unavailable.
 - **Enabling it doubles rate-limiter consumption per logical call**: the pre-flight
   `CountTokensAsync` call also goes through the client's rate limiter, so it consumes its own permit.
   Factor that into `RateLimitOptions.RequestsPerMinute` if you enable it.
@@ -84,7 +85,7 @@ before the real (billed) request is ever sent.
 ## Streaming is covered too
 
 `StreamAsync`/`StreamWithImageAsync`/`StreamChatAsync` are checked and tracked exactly like their
-non-streaming counterparts (`GenerateAsync`/`GenerateWithImageAsync`/`ChatAsync`) — both the daily
+non-streaming counterparts (`GenerateAsync`/`GenerateWithImageAsync`/`ChatAsync`): both the daily
 budget gate and, when configured, the per-request estimate. Otherwise a runaway streaming loop would
 blow through the budget completely unchecked. Gemini's SSE stream carries `usageMetadata` on the
 *final* chunk, so spend is recorded once the stream completes.
@@ -111,7 +112,7 @@ options.Budget.ModelPricingOverrides = new Dictionary<string, ModelPricing>
 };
 ```
 
-A model with no pricing entry (built-in or overridden) has its cost calculation skipped entirely —
+A model with no pricing entry (built-in or overridden) has its cost calculation skipped entirely:
 token usage is still recorded as normal, but nothing is added to the running daily total and no
 `gemini.client.cost.usd` metric is emitted for that call. The per-request estimate is likewise
 skipped (never blocked) for an unpriced model. This library never silently assumes $0 for an unpriced
@@ -124,11 +125,11 @@ The cost formula accounts for two easy-to-miss details in `UsageMetadata`:
   silently undercount every thinking-enabled call.
 - **Cached tokens are priced once, at the cached rate.** `CachedContentTokenCount` is subtracted from
   `PromptTokenCount` before applying the standard input rate, then priced separately at the (usually
-  much lower) cached rate — never both.
+  much lower) cached rate, never both.
 
-Two models (`gemini-2.5-pro`, `gemini-3.1-pro-preview`) have a higher rate above 200k input tokens;
-the tier is selected from the response's *actual* `PromptTokenCount` (or, for the pre-flight
-estimate, the exact counted input tokens) — never an estimate of that count.
+Two models (`gemini-2.5-pro`, `gemini-3.1-pro-preview`) have a higher rate above 200k input tokens.
+The tier is selected from the response's *actual* `PromptTokenCount` (or, for the pre-flight
+estimate, the exact counted input tokens), never an estimate of that count.
 
 ## Rejected calls
 
@@ -152,28 +153,28 @@ catch (GeminiRequestCostExceededException ex)
 }
 ```
 
-Both are thrown before any (further) HTTP work happens for the call being rejected — the rejected
+Both are thrown before any (further) HTTP work happens for the call being rejected. The rejected
 call itself never reaches the network, so it costs nothing.
 
 ## Important limitation: single-process only
 
-This budget is tracked **in-memory, per process**. If your app runs as multiple instances (e.g.
-horizontally scaled), each instance tracks its own spend independently — the effective ceiling is
-`MaxCostPerDayUsd × instance count`, not a shared global cap. For a true cross-instance cap, you'd
-need to feed the `gemini.client.cost.usd` metric into an external system (e.g. a shared counter, your
-APM) and enforce there. This library does not attempt that.
+This budget is tracked **in-memory, per process**. If your app runs as multiple instances (for
+example horizontally scaled), each instance tracks its own spend independently, so the effective
+ceiling is `MaxCostPerDayUsd × instance count`, not a shared global cap. For a true cross-instance
+cap, you'd need to feed the `gemini.client.cost.usd` metric into an external system (a shared
+counter, or your APM) and enforce there. This library does not attempt that.
 
 ## Scope
 
-Covers every call that returns `GenerateContentResponse` with `UsageMetadata` — text generation,
+Covers every call that returns `GenerateContentResponse` with `UsageMetadata`: text generation,
 vision, chat, image generation, and their streaming counterparts. Not covered in this release:
 
 - Embeddings (`EmbedContentResponse` carries no usage/token field today).
-- The Files API and context-caching *management* calls (creating/deleting cached content) — only the
+- The Files API and context-caching *management* calls (creating/deleting cached content). Only the
   *generation* calls that reference a `CachedContent` are covered, since they still return
   `GenerateContentResponse`.
-- Per-minute/per-hour budgets — daily (UTC calendar day) only.
+- Per-minute/per-hour budgets. Daily (UTC calendar day) only, for now.
 - Image-generation model pricing (`gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, and
-  similar) — image pricing is often per-image, not per-token, so it needs separate design.
+  similar). Image pricing is often per-image, not per-token, so it needs separate design.
 - The per-request estimate (`MaxCostPerRequestUsd`) specifically does not cover
-  `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)` — see above.
+  `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)`. See above.

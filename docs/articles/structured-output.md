@@ -28,6 +28,6 @@ var person = await gemini.GenerateAsync<Person>(
 ## Tips
 
 - Prefer simple classes/records with `string`, numbers, `bool`, enums, arrays/lists, and nested objects.
-- Mark optional members nullable (`string?`) — non-nullable members are marked **required** in the schema.
+- Mark optional members nullable (`string?`). Non-nullable members are marked **required** in the schema.
 - Dictionaries aren't modeled (treated as plain objects); use explicit properties.
 - If deserialization fails, a `GeminiSerializationException` is thrown.
