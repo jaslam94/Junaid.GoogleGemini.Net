@@ -131,7 +131,17 @@ public class GeminiClientTests
         {
             ShouldListenTo = source => source.Name == GeminiTelemetry.SourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllData,
-            ActivityStopped = activities.Add,
+            // Filter here, not just in the final assertion: ActivitySource/ActivityListener are
+            // process-global, so with xUnit's default test parallelism this listener also observes
+            // activities from other test classes racing on the same source concurrently (including
+            // StreamAsync's, now that it's instrumented too). Filtering at collection time keeps
+            // `activities` scoped to this test's own call; filtering only in Assert.Single left a gap
+            // where a same-run cross-talk activity could be the sole item collected, failing the
+            // predicate with a confusing "found one, but it's not mine" message.
+            ActivityStopped = a =>
+            {
+                if (a.DisplayName == "generateContent gemini-activity-probe") activities.Add(a);
+            },
         };
         ActivitySource.AddActivityListener(listener);
 
@@ -145,7 +155,7 @@ public class GeminiClientTests
         await client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
             "models/gemini-activity-probe:generateContent", new GenerateContentRequest());
 
-        var activity = Assert.Single(activities, a => a.DisplayName == "generateContent gemini-activity-probe");
+        var activity = Assert.Single(activities);
         Assert.Equal("gemini", activity.GetTagItem("gen_ai.system"));
         Assert.Equal("gemini-activity-probe", activity.GetTagItem("gen_ai.request.model"));
         Assert.Equal(5, activity.GetTagItem("gen_ai.usage.input_tokens"));
