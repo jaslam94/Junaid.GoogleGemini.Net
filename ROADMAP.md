@@ -144,6 +144,13 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       OpenTelemetry metric, whether or not enforcement is enabled. Surveyed nine other .NET Gemini
       client libraries (including Google's own official SDK) and found none offer this — see
       `docs/articles/cost-governance.md`.
+- [x] **Live-verification & completeness pass** (`6.3.0`) — every major feature re-tested against the
+      real Gemini API rather than mocks, surfacing two response-parsing gaps: `code_execution`'s
+      `executableCode`/`codeExecutionResult` parts and `url_context`'s `urlContextMetadata` field were
+      silently dropped on deserialization (no corresponding model properties existed); both are now
+      typed and live-verified. Also closed the last telemetry gap: `StreamAsync` previously had zero
+      OpenTelemetry instrumentation (only `PostAsync` had a span) — it now emits one, matching
+      `PostAsync`'s start/error-status/duration/token-usage-tag pattern.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
 - [ ] Batch API.
 

@@ -159,6 +159,34 @@ public class Candidate
     /// <summary>Grounding information (sources, queries) when a grounding tool was used.</summary>
     [JsonPropertyName("groundingMetadata")]
     public GroundingMetadata? GroundingMetadata { get; set; }
+
+    /// <summary>
+    /// Per-URL retrieval status when the <c>url_context</c> tool was used (e.g.
+    /// <see cref="Requests.GeminiRequestOptions.EnableUrlContext"/>). The retrieved page content
+    /// itself isn't echoed back here -- only whether each URL was fetched successfully.
+    /// </summary>
+    [JsonPropertyName("urlContextMetadata")]
+    public UrlContextMetadata? UrlContextMetadata { get; set; }
+}
+
+/// <summary>Retrieval status for the URLs the <c>url_context</c> tool fetched.</summary>
+public class UrlContextMetadata
+{
+    /// <summary>One entry per URL the model attempted to retrieve.</summary>
+    [JsonPropertyName("urlMetadata")]
+    public UrlMetadata[]? UrlMetadata { get; set; }
+}
+
+/// <summary>Retrieval status for a single URL fetched by the <c>url_context</c> tool.</summary>
+public class UrlMetadata
+{
+    /// <summary>The URL that was retrieved.</summary>
+    [JsonPropertyName("retrievedUrl")]
+    public string? RetrievedUrl { get; set; }
+
+    /// <summary>The outcome of the fetch (e.g. <c>"URL_RETRIEVAL_STATUS_SUCCESS"</c>).</summary>
+    [JsonPropertyName("urlRetrievalStatus")]
+    public string? UrlRetrievalStatus { get; set; }
 }
 
 /// <summary>A safety rating for a single harm category.</summary>

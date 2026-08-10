@@ -28,6 +28,21 @@ public class Part
     [JsonPropertyName("functionResponse")]
     public FunctionResponsePart? FunctionResponse { get; set; }
 
+    /// <summary>
+    /// Code the model generated and ran (only present when the <c>code_execution</c> tool is enabled,
+    /// e.g. via <see cref="Requests.GeminiRequestOptions.EnableCodeExecution"/>). Paired with a
+    /// following <see cref="CodeExecutionResult"/> part carrying its output.
+    /// </summary>
+    [JsonPropertyName("executableCode")]
+    public ExecutableCode? ExecutableCode { get; set; }
+
+    /// <summary>
+    /// The output of a preceding <see cref="ExecutableCode"/> part (only present when the
+    /// <c>code_execution</c> tool is enabled).
+    /// </summary>
+    [JsonPropertyName("codeExecutionResult")]
+    public CodeExecutionResult? CodeExecutionResult { get; set; }
+
     /// <summary>True when this part is a thought summary (only present when thoughts are included).</summary>
     [JsonPropertyName("thought")]
     public bool? Thought { get; set; }
@@ -75,4 +90,28 @@ public class FunctionResponsePart
     /// <summary>The function result, as a JSON object.</summary>
     [JsonPropertyName("response")]
     public JsonNode? Response { get; set; }
+}
+
+/// <summary>Code the model wrote and ran via the <c>code_execution</c> tool.</summary>
+public class ExecutableCode
+{
+    /// <summary>The programming language of <see cref="Code"/> (e.g. <c>"PYTHON"</c>).</summary>
+    [JsonPropertyName("language")]
+    public string? Language { get; set; }
+
+    /// <summary>The source code that was run.</summary>
+    [JsonPropertyName("code")]
+    public string? Code { get; set; }
+}
+
+/// <summary>The result of running a preceding <see cref="ExecutableCode"/> part.</summary>
+public class CodeExecutionResult
+{
+    /// <summary>Whether execution succeeded (e.g. <c>"OUTCOME_OK"</c>, <c>"OUTCOME_FAILED"</c>).</summary>
+    [JsonPropertyName("outcome")]
+    public string? Outcome { get; set; }
+
+    /// <summary>Stdout/stderr captured from running the code.</summary>
+    [JsonPropertyName("output")]
+    public string? Output { get; set; }
 }
