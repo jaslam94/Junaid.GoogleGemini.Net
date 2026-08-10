@@ -21,7 +21,7 @@ public static class GeminiTelemetry
     public const string SourceName = "Junaid.GoogleGemini.Net";
 
     internal const string SystemName = "gemini";
-    private const string Version = "6.2.0";
+    private const string Version = "6.3.0";
 
     internal static readonly ActivitySource ActivitySource = new(SourceName, Version);
     internal static readonly Meter Meter = new(SourceName, Version);

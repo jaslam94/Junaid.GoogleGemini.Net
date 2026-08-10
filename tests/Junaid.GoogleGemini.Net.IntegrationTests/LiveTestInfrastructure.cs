@@ -59,9 +59,13 @@ public sealed class GeminiFixture
         {
             // A valid-format placeholder so the container builds even when tests will be skipped.
             options.ApiKey = string.IsNullOrWhiteSpace(key) ? "AIzaSyPLACEHOLDER0123456789ABCDEFGHIJK" : key;
-            options.DefaultModel = "gemini-2.5-flash";
+            // gemini-2.5-flash was the original cheap default here but is no longer available to
+            // new-user keys (confirmed live 2026-08-10: "This model ... is no longer available to new
+            // users"). gemini-3.5-flash-lite is the library's current cheapest/fastest model
+            // (GeminiConstants.Models.Fastest) and keeps the same "low cost/latency" intent.
+            options.DefaultModel = "gemini-3.5-flash-lite";
         });
-        services.AddGeminiChatClient("gemini-2.5-flash");
+        services.AddGeminiChatClient("gemini-3.5-flash-lite");
         services.AddGeminiEmbeddingGenerator("gemini-embedding-001");
 
         Services = services.BuildServiceProvider();

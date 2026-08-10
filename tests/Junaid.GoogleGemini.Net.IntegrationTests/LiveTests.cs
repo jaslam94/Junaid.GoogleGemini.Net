@@ -13,7 +13,7 @@ namespace Junaid.GoogleGemini.Net.IntegrationTests;
 /// <summary>
 /// Live tests against the real Gemini API. Assertions check structure/contract (non-empty output,
 /// token counts, types, status codes) rather than exact text, since model output is non-deterministic.
-/// All tests skip unless GeminiApiKey is set. Uses gemini-2.5-flash to keep cost/latency low.
+/// All tests skip unless GeminiApiKey is set. Uses gemini-3.5-flash-lite to keep cost/latency low.
 /// </summary>
 [Collection("Live")]
 public class LiveTests(GeminiFixture fixture)
@@ -253,7 +253,7 @@ public class LiveTests(GeminiFixture fixture)
 
         var created = await caching.CreateAsync(new CachedContent
         {
-            Model = "models/gemini-2.5-flash",
+            Model = "models/gemini-3.5-flash-lite",
             Contents = [new Content { Role = "user", Parts = [new Part { Text = document }] }],
             Ttl = "120s"
         });
@@ -261,7 +261,7 @@ public class LiveTests(GeminiFixture fixture)
 
         try
         {
-            var options = new GeminiRequestOptions { Model = "gemini-2.5-flash", CachedContent = created.Name };
+            var options = new GeminiRequestOptions { Model = "gemini-3.5-flash-lite", CachedContent = created.Name };
 
             var response = await Gemini.GenerateAsync(
                 "What is the magic number mentioned in the document?", options);

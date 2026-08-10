@@ -1,7 +1,7 @@
 # Migrating from v5 to v6
 
 v6 is a modernization release with intentional breaking changes. The fixes below address real
-correctness bugs in v5 (retries that never worked, fragile streaming) — the upgrade is worth it.
+correctness bugs in v5 (retries that never worked, fragile streaming), so the upgrade is worth it.
 
 ## Breaking changes
 
@@ -23,11 +23,11 @@ var c = response.Candidates![0];
 // v5
 await gemini.StreamAsync(prompt, chunk => Console.Write(chunk));
 
-// v6 — primary API
+// v6: primary API
 await foreach (var chunk in gemini.StreamAsync(prompt))
     Console.Write(chunk.Text());
 
-// v6 — the callback overload still exists
+// v6: the callback overload still exists
 await gemini.StreamAsync(prompt, text => Console.Write(text));
 ```
 
@@ -53,8 +53,8 @@ catch (GeminiApiException ex) { var code = ex.StatusCode; var status = ex.Status
 - Deprecated model fallbacks (e.g. `gemini-1.5-pro`) were removed; vision uses your default model.
 - The **default model is now `gemini-3.6-flash`** (a current GA model). Set `DefaultModel` /
   `options.Model` to pin a specific model.
-- **Model names are no longer validated against an allow-list** — any current or future model
-  (e.g. the Gemini 3 family) works without a library update; the API rejects genuinely invalid names.
+- **Model names are no longer validated against an allow-list**, so any current or future model
+  (for example the Gemini 3 family) works without a library update; the API rejects genuinely invalid names.
 - The **default request timeout is now 100s** (was 30s). Gemini 3 "thinking" models can take well
   over a minute; lower `TimeoutSeconds` or set a lower `ThinkingLevel` for latency-sensitive work.
 - **No default temperature is forced** anymore. If you don't set `Temperature`, the model uses its
@@ -76,7 +76,7 @@ The `netstandard2.0` build runs on .NET Framework 4.6.1+. Enable
 - `netstandard2.0` target
 
 ### Gemini 3
-- `ThinkingLevel` (`minimal`/`low`/`medium`/`high`) — Gemini 3's reasoning control; mutually
+- `ThinkingLevel` (`minimal`/`low`/`medium`/`high`), Gemini 3's reasoning control, mutually
   exclusive with the 2.5-era `ThinkingBudget`.
 - `MediaResolution` for image/video/PDF parts.
 - The model's encrypted `thoughtSignature` is captured on response parts and can be **echoed back

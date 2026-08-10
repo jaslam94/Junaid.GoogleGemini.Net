@@ -1,7 +1,7 @@
 # Observability (OpenTelemetry)
 
 The library emits traces and metrics via `System.Diagnostics`, following the OpenTelemetry **GenAI
-semantic conventions**. There is **no OpenTelemetry package dependency** — you opt in by subscribing
+semantic conventions**. There is **no OpenTelemetry package dependency**: you opt in by subscribing
 to the source and meter. If nobody listens, overhead is negligible.
 
 ```csharp
@@ -30,7 +30,7 @@ builder.Services.AddOpenTelemetry()
 
 ## Exporting
 
-Add any OpenTelemetry exporter — console, OTLP, Azure Monitor, etc. For example, the console exporter
+Add any OpenTelemetry exporter, such as console, OTLP, or Azure Monitor. For example, the console exporter
 (used by the ASP.NET Core sample):
 
 ```csharp

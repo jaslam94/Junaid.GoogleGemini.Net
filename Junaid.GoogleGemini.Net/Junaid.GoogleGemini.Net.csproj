@@ -19,8 +19,24 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.2.0</Version>
+		<Version>6.3.0</Version>
 		<PackageReleaseNotes>
+			6.3.0: a live-verification and completeness pass across the whole client -- every major
+			feature was re-tested against the real Gemini API (not mocks) and two real response-parsing
+			gaps were found and fixed along the way.
+			(1) The code_execution tool: the API returns executableCode/codeExecutionResult parts that
+			Part had no fields for, so the model's generated code and its real output were silently
+			dropped on deserialization even though the tool "worked" in the loose sense that the model's
+			own text summary usually restated the answer. New Part.ExecutableCode/CodeExecutionResult
+			surface both.
+			(2) The url_context tool: the API returns a urlContextMetadata field (per-URL fetch status)
+			that Candidate had no field for. New Candidate.UrlContextMetadata/UrlMetadata surface it
+			(the source URL itself was already available via the existing GroundingMetadata).
+			(3) StreamAsync now emits a real OpenTelemetry span (start/error-status/duration/token-usage
+			tags), matching PostAsync -- previously streaming calls were completely untraced.
+			Also live-verified and left unchanged (working as designed): safety-settings blocking,
+			multi-turn chat history, the IEmbeddingGenerator adapter's single/batch code paths, and the
+			client-side rate limiter's real rejection behavior under concurrent load. No breaking changes.
 			6.2.0: adds cost governance -- as far as we've found, no other .NET Gemini client library
 			offers this (checked nine, including Google's own official SDK; see
 			docs/articles/cost-governance.md). New GeminiOptions.Budget (BudgetOptions) configures:

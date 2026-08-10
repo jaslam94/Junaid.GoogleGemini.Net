@@ -1,6 +1,6 @@
 # Junaid.GoogleGemini.Net
 
-A **production-ready** .NET client for the [Google Gemini API](https://ai.google.dev/) — resilient, observable, DI-native, and built to feel right in ASP.NET Core.
+A **production-ready** .NET client for the [Google Gemini API](https://ai.google.dev/): resilient, observable, DI-native, and built to feel right in ASP.NET Core.
 
 It covers the modern Gemini surface (structured output, system instructions, thinking, grounding, the Files API, context caching), but what makes it worth choosing is everything *around* the API call: built-in retries, client-side rate limiting, OpenTelemetry-native traces & metrics, and first-class `Microsoft.Extensions.AI` adapters.
 

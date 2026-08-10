@@ -15,14 +15,14 @@ builder.Services.AddGemini(options =>
 ## Retries
 
 On **net8.0/net9.0** retries run on the `HttpClient` pipeline via
-`Microsoft.Extensions.Http.Resilience` (Polly v8) — exponential backoff with jitter, retrying HTTP
+`Microsoft.Extensions.Http.Resilience` (Polly v8): exponential backoff with jitter, retrying HTTP
 429, 5xx, `HttpRequestException`, and timeouts.
 
 On **netstandard2.0** (where that package isn't available) an equivalent built-in
 `GeminiRetryHandler` is used instead.
 
 Either way, retries happen *inside* a single logical send against buffered content, so a request is
-never corrupted by being half-sent — the bug that plagued earlier hand-rolled retry code.
+never corrupted by being half-sent, which was the bug that plagued earlier hand-rolled retry code.
 
 ## Client-side rate limiting
 

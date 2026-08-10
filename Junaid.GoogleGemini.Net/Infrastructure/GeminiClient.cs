@@ -281,9 +281,71 @@ public class GeminiClient : IGeminiClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var correlationId = Guid.NewGuid().ToString();
-        // Only needed to attribute cost-governance spend to a model (see below) — StreamAsync
-        // otherwise carries no telemetry today (a pre-existing, separately tracked gap; not
-        // addressed here beyond what cost governance needs).
+        var (operation, model) = GeminiTelemetry.Parse(endpoint);
+        using var activity = GeminiTelemetry.StartOperation(operation, model);
+        var stopwatch = Stopwatch.StartNew();
+
+        // `yield return` can't appear inside a try block that has a catch clause, so error handling
+        // (to set the span's error status, same as PostAsync) has to live in an outer wrapper that
+        // manually drives an inner enumerator, rather than directly wrapping the streaming logic below.
+        var core = StreamCoreAsync(endpoint, data, correlationId, cancellationToken);
+        await using var enumerator = core.GetAsyncEnumerator(cancellationToken);
+
+        UsageMetadata? finalUsage = null;
+        string? finalFinishReason = null;
+
+        try
+        {
+            while (true)
+            {
+                GenerateContentResponse chunk;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync())
+                    {
+                        break;
+                    }
+                    chunk = enumerator.Current;
+                }
+                catch (GeminiException)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error);
+                    throw;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, "timeout");
+                    throw new GeminiTimeoutException($"The stream request to '{endpoint}' timed out.");
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    _logger.LogError(ex, "Stream request to {Endpoint} failed [ID: {CorrelationId}]", endpoint, correlationId);
+                    throw new GeminiException("Failed to stream from Gemini API", ex);
+                }
+
+                finalUsage = chunk.Usage ?? finalUsage;
+                finalFinishReason = chunk.FinishReason ?? finalFinishReason;
+                yield return chunk;
+            }
+        }
+        finally
+        {
+            // Same "only the final chunk carries real usage" reasoning as the cost-governance
+            // recording in StreamCoreAsync below — record the span/metric tags once, from the last
+            // snapshot seen, not per-chunk (which would double-count the token histogram).
+            GeminiTelemetry.RecordUsage(operation, model, finalUsage, finalFinishReason, activity);
+            GeminiTelemetry.RecordDuration(operation, model, stopwatch.Elapsed.TotalSeconds);
+        }
+    }
+
+    /// <summary>The actual SSE streaming logic, driven by <see cref="StreamAsync{TRequest}"/> above.</summary>
+    private async IAsyncEnumerable<GenerateContentResponse> StreamCoreAsync<TRequest>(
+        string endpoint,
+        TRequest data,
+        string correlationId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
         var (_, model) = GeminiTelemetry.Parse(endpoint);
 
         using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
