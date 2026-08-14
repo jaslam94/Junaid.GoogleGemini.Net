@@ -150,6 +150,11 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       `CountTokensChatAsync(IList<Content>, options, ct)` overload closed the gap; live-verified that
       Google's `countTokens` endpoint accepts a `Content` list carrying a
       `functionCall`/`functionResponse` pair and an encrypted `thoughtSignature` without erroring.
+      Follow-up: the ASP.NET Core sample shipped cost governance features in 6.2.0 but never
+      demonstrated them. `samples/Junaid.GoogleGemini.Net.AspNetCoreSample` now configures
+      `Gemini:Budget` with tight demo ceilings, and `GET /generate` catches both
+      `GeminiBudgetExceededException` and `GeminiRequestCostExceededException`; a new `GET /spend`
+      endpoint exposes `ICostGovernor.GetTodaySpend()`.
 - [x] **Live-verification and completeness pass** (`6.3.0`): every major feature re-tested against the
       real Gemini API rather than mocks, surfacing two response-parsing gaps. `code_execution`'s
       `executableCode`/`codeExecutionResult` parts and `url_context`'s `urlContextMetadata` field were

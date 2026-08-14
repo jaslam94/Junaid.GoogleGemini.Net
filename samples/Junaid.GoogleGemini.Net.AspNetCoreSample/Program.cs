@@ -1,6 +1,8 @@
 using System.Runtime.CompilerServices;
+using Junaid.GoogleGemini.Net.Exceptions;
 using Junaid.GoogleGemini.Net.Extensions;
 using Junaid.GoogleGemini.Net.Extensions.AI;
+using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.Requests;
@@ -27,8 +29,36 @@ builder.Services.AddOpenTelemetry()
 var app = builder.Build();
 
 // Plain text generation:  GET /generate?prompt=Write%20a%20haiku
+// Also demonstrates cost governance (see appsettings.json's Gemini:Budget section): a daily USD
+// ceiling and a per-request estimate ceiling are both configured, so either can reject this call
+// before it's sent.
 app.MapGet("/generate", async (IGeminiService gemini, string prompt) =>
-    Results.Ok((await gemini.GenerateAsync(prompt, Fast())).Text()));
+{
+    try
+    {
+        return Results.Ok((await gemini.GenerateAsync(prompt, Fast())).Text());
+    }
+    catch (GeminiBudgetExceededException ex)
+    {
+        // Today's (UTC) cumulative real spend already reached Gemini:Budget:MaxCostPerDayUsd.
+        return Results.Problem(
+            $"Daily budget exceeded: ${ex.CurrentSpendUsd:F4} spent of ${ex.BudgetLimitUsd:F2}.",
+            statusCode: StatusCodes.Status402PaymentRequired);
+    }
+    catch (GeminiRequestCostExceededException ex)
+    {
+        // This single call's estimated cost exceeded Gemini:Budget:MaxCostPerRequestUsd,
+        // checked via a pre-flight CountTokensAsync call before the real request was sent.
+        return Results.Problem(
+            $"Estimated cost ${ex.EstimatedCostUsd:F4} exceeds the per-request ceiling of ${ex.MaxCostPerRequestUsd:F2}.",
+            statusCode: StatusCodes.Status402PaymentRequired);
+    }
+});
+
+// Today's cumulative spend so far, as tracked by the cost governor (in-memory, per process).
+// GET /spend
+app.MapGet("/spend", (ICostGovernor costGovernor) =>
+    Results.Ok(new { TodaySpendUsd = costGovernor.GetTodaySpend() }));
 
 // Typed structured output: GET /recipe?dish=pancakes  -> JSON shaped like Recipe
 app.MapGet("/recipe", async (IGeminiService gemini, string dish) =>
