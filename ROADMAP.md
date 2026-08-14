@@ -143,7 +143,13 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       and streaming calls. Every priced call's cost is also recorded as the `gemini.client.cost.usd`
       OpenTelemetry metric, whether or not enforcement is enabled. Surveyed nine other .NET Gemini
       client libraries (including Google's own official SDK) and found none offer this. See
-      `docs/articles/cost-governance.md`.
+      `docs/articles/cost-governance.md`. Follow-up (`6.3.1`): `MaxCostPerRequestUsd` didn't cover
+      `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)` (the raw multi-turn overload used
+      for Gemini 3 function-calling/`thoughtSignature` replay), since there was no token-counting
+      endpoint for a raw `Content` list to estimate against. A new
+      `CountTokensChatAsync(IList<Content>, options, ct)` overload closed the gap; live-verified that
+      Google's `countTokens` endpoint accepts a `Content` list carrying a
+      `functionCall`/`functionResponse` pair and an encrypted `thoughtSignature` without erroring.
 - [x] **Live-verification and completeness pass** (`6.3.0`): every major feature re-tested against the
       real Gemini API rather than mocks, surfacing two response-parsing gaps. `code_execution`'s
       `executableCode`/`codeExecutionResult` parts and `url_context`'s `urlContextMetadata` field were

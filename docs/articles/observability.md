@@ -27,6 +27,12 @@ builder.Services.AddOpenTelemetry()
 
 - `gen_ai.client.operation.duration` (histogram, seconds)
 - `gen_ai.client.token.usage` (histogram, tagged `gen_ai.token.type` = input/output)
+- `gemini.client.cost.usd` (counter), recorded for every priced call whether or not budget
+  enforcement is enabled. Not a `gen_ai.*` name since there's no official OpenTelemetry GenAI
+  semantic convention for cost. See [Cost governance](cost-governance.md).
+
+Streaming calls (`StreamAsync`/`StreamChatAsync`) are instrumented the same way as non-streaming
+ones, including spans and all three metrics above.
 
 ## Exporting
 

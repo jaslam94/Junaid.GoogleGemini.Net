@@ -16,5 +16,5 @@
   href: image-generation.md
 - name: Cost governance
   href: cost-governance.md
-- name: Migrating v5 → v6
+- name: Migrating from v5 to v6
   href: migration-v5-to-v6.md

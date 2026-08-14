@@ -26,6 +26,7 @@ app.MapGet("/", async (IGeminiService gemini) =>
 - [Observability (OpenTelemetry)](articles/observability.md)
 - [Microsoft.Extensions.AI integration](articles/extensions-ai.md)
 - [Files & context caching](articles/files-and-caching.md)
+- [Image generation](articles/image-generation.md)
 - [Cost governance](articles/cost-governance.md)
 - [Migrating from v5 to v6](articles/migration-v5-to-v6.md)
 

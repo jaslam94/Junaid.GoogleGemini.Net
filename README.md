@@ -194,34 +194,6 @@ Console.WriteLine(tokens.TotalTokens);
 var models = await modelInfo.ListModelsAsync();
 ```
 
-### Cost governance
-
-```csharp
-builder.Services.AddGemini(options =>
-{
-    options.Budget = new BudgetOptions
-    {
-        MaxCostPerDayUsd = 50.00m,     // reject the next call once today's real spend hits $50
-        MaxCostPerRequestUsd = 2.00m,  // optional: reject a single call whose estimated cost is too high
-    };
-});
-
-// Once today's (UTC) real recorded spend reaches $50, the next call throws before it's sent:
-try
-{
-    var response = await gemini.GenerateAsync(prompt);
-}
-catch (GeminiBudgetExceededException ex)
-{
-    // ex.CurrentSpendUsd, ex.BudgetLimitUsd
-}
-catch (GeminiRequestCostExceededException ex)
-{
-    // A single request's estimated cost exceeded MaxCostPerRequestUsd.
-    // ex.EstimatedCostUsd, ex.MaxCostPerRequestUsd
-}
-```
-
 ## Microsoft.Extensions.AI integration
 
 Use Gemini anywhere the .NET AI abstractions are consumed (Semantic Kernel, agent frameworks, middleware):
