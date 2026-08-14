@@ -32,6 +32,12 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         Task DeleteFileAsync(string name, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Downloads a file's raw bytes by resource name. Used internally by the Batch API's
+        /// GetResultsAsync for file-mode results, but works for any uploaded file.
+        /// </summary>
+        Task<byte[]> DownloadFileAsync(string name, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Polls until the file reaches <c>ACTIVE</c> state (required before using video/audio in a
         /// request). Throws if the file fails or the timeout elapses.
         /// </summary>

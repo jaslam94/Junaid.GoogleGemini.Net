@@ -163,7 +163,36 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       OpenTelemetry instrumentation (only `PostAsync` had a span), and now emits one, matching
       `PostAsync`'s start/error-status/duration/token-usage-tag pattern.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
-- [ ] Batch API.
+- [x] **Batch API** (`6.4.0`): `IBatchService`, a new resource client (mirroring `IFileService`/
+      `ICachingService`'s pattern) for submitting large volumes of `generateContent` requests
+      asynchronously at Google's 50%-discounted batch rate. Covers create (inline, from an
+      already-uploaded JSONL file, or `CreateFromRequestsFileAsync`, a convenience method that writes
+      and uploads the JSONL for a caller with an in-memory list), get, list, cancel, delete, a
+      `WaitUntilCompleteAsync` polling helper, and `GetResultsAsync` (transparently handles both
+      inline and file-based results, including JSONL parsing). Also added
+      `IFileService.DownloadFileAsync`, needed to fetch file-based batch results but useful for any
+      uploaded file. Deliberately uses its own dedicated `HttpClient`
+      (`GeminiHttpClients.Batches`), not the shared `IGeminiClient`: `GeminiClient` unconditionally
+      routes every call through the interactive rate limiter and `ICostGovernor.CheckBudget`, neither
+      of which apply to batch's separate quota pool and discounted pricing. See
+      `docs/articles/batch-api.md` for the full picture, including what's explicitly out of scope
+      (cost governance and rate limiting integration, batch embeddings, client-side limit
+      enforcement).
+
+      Two facts couldn't be pinned down from Google's documentation alone (their own docs disagree
+      with themselves): the exact `state` string prefix (`JOB_STATE_*` vs `BATCH_STATE_*`) and the
+      field name for file-based results (`fileName` vs `responsesFile`). `BatchJob.State` is modeled
+      as a plain string (not a C# enum), and `BatchService.IsTerminalState` matches by suffix rather
+      than exact literal, so this works regardless of which prefix is real; the destination file field
+      is modeled as `fileName` (the guide's and the Python SDK's own examples agree on that, against
+      the REST reference page alone). **Both are still genuinely unverified against a real API
+      response** as of this entry: unlike every other live-docs-uncertainty this project has resolved
+      (e.g. the `thoughtSignature` gap in `6.3.1`), this one hasn't yet had a real key run against it.
+      The two fast, non-blocking live tests that exist specifically to resolve this
+      (`BatchLiveTests.CreateAsync_ThenGetAsync_ResolvesActualStateStringAndAcceptsRequestShape` and
+      `..._ThenCancelAsync_...`) are written and correctly skip without a key, but have not actually
+      been run live yet. Treat this feature as implemented and unit-tested, not yet fully
+      live-verified, until that happens.
 
 ---
 

@@ -19,8 +19,22 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.3.1</Version>
+		<Version>6.4.0</Version>
 		<PackageReleaseNotes>
+			6.4.0: adds the Batch API. New IBatchService submits large volumes of generateContent
+			requests asynchronously at Google's 50%-discounted batch rate: create (inline, from an
+			already-uploaded JSONL file, or CreateFromRequestsFileAsync, which writes and uploads the
+			JSONL for you), get, list, cancel, delete, a WaitUntilCompleteAsync polling helper, and
+			GetResultsAsync (handles both inline and file-based results transparently). Also adds
+			IFileService.DownloadFileAsync. Deliberately does not route through the shared
+			IGeminiClient/GeminiClient: that path unconditionally applies the interactive rate limiter
+			and cost governor, neither of which apply to batch's separate quota pool and pricing -- a new
+			dedicated HttpClient (GeminiHttpClients.Batches) is used instead. Not covered: cost
+			governance integration, rate limiting, batch embeddings, or client-side enforcement of
+			Google's size/concurrency limits -- see docs/articles/batch-api.md for the full scope and
+			known limitations, including two facts (the exact state-string prefix and the file-based
+			results field name) that Google's own docs disagree with themselves on and that are not yet
+			confirmed against a live response. No breaking changes.
 			6.3.1: closes the ChatAsync(IList&lt;Content&gt;)/StreamChatAsync(IList&lt;Content&gt;) cost-
 			governance gap noted in 6.2.0. New IGeminiService.CountTokensChatAsync(IList&lt;Content&gt;,
 			options, ct) overload (and RequestFactory.CreateTokenCountingRequest) provide a token-counting

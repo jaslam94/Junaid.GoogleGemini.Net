@@ -258,9 +258,24 @@ Every response's real token usage (including cached-content and "thinking" token
 
 `MaxCostPerRequestUsd` is a secondary, best-effort *estimate* ceiling checked before a single call: it spends one extra `CountTokensAsync` round-trip to get an exact input-token count (skipped entirely when `MaxCostPerRequestUsd` is unset, so it costs nothing when you don't use it), bounds the output side only when you set `MaxTokens`, and throws `GeminiRequestCostExceededException` if the estimate exceeds the ceiling. It can't be exact the way the daily budget is. See [Cost governance](docs/articles/cost-governance.md) for exactly what it can and can't guarantee, the multi-instance caveat, pricing overrides, and full details.
 
+## Batch API
+
+Submit large volumes of `generateContent` requests for asynchronous processing at Google's discounted batch rate (50% of the standard cost). Two ways in: inline for small jobs, or `CreateFromRequestsFileAsync` for larger ones, which writes and uploads the JSONL file for you so you never hand-roll the format yourself.
+
+```csharp
+var job = await batchService.CreateFromRequestsFileAsync(
+    "gemini-3.6-flash",
+    new List<BatchRequestLine> { new() { Key = "row-1", Request = new GenerateContentRequest { /* ... */ } } });
+
+var finished = await batchService.WaitUntilCompleteAsync(job.Name!, timeout: TimeSpan.FromHours(2));
+var results = await batchService.GetResultsAsync(finished);
+```
+
+Requires a paid-tier Gemini project; Google's target turnaround is 24 hours (no hard SLA). Not covered by cost governance or rate limiting (batch has its own separate quota pool and pricing on Google's side). See [Batch API](docs/articles/batch-api.md) for the full picture.
+
 ## Documentation & samples
 
-- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, cost governance, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
+- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, cost governance, batch API, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
 - **Runnable sample**: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample), a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
 
 ## Requirements

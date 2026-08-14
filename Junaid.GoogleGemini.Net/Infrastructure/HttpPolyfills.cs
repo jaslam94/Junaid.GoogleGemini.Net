@@ -23,6 +23,13 @@ internal static class HttpPolyfills
         => content.ReadAsStreamAsync();
 #endif
 
+    public static Task<byte[]> ReadBytesAsync(this HttpContent content, CancellationToken cancellationToken)
+#if NET8_0_OR_GREATER
+        => content.ReadAsByteArrayAsync(cancellationToken);
+#else
+        => content.ReadAsByteArrayAsync();
+#endif
+
     public static Task<string?> ReadLineCancelableAsync(this StreamReader reader, CancellationToken cancellationToken)
 #if NET8_0_OR_GREATER
         => reader.ReadLineAsync(cancellationToken).AsTask();
