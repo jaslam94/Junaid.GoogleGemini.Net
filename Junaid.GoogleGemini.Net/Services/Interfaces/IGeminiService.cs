@@ -83,11 +83,11 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <see cref="ChatAsync(MessageObject[], GeminiRequestOptions?, CancellationToken)"/> can't carry.
         /// </summary>
         /// <remarks>
-        /// <b>Not covered by <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/>:</b>
-        /// there is no token-counting endpoint for a raw <see cref="Content"/> list, so this overload
-        /// has nothing to base a pre-flight estimate on and skips that check. The cumulative daily
-        /// budget (<see cref="Infrastructure.Options.BudgetOptions.MaxCostPerDayUsd"/>) still applies as
-        /// normal — only the best-effort per-request estimate is unavailable here.
+        /// Covered by <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/> like the
+        /// other generation overloads, via <see cref="CountTokensChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>
+        /// for the pre-flight estimate. The same general estimate caveats apply (standard-rate-only
+        /// input pricing, output bounded only when <see cref="GeminiRequestOptions.MaxTokens"/> is set —
+        /// see the XML docs on <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/>).
         /// </remarks>
         Task<GenerateContentResponse> ChatAsync(
             IList<Content> contents,
@@ -95,7 +95,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>Streaming counterpart of <see cref="ChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>.</summary>
-        /// <remarks>Same <c>MaxCostPerRequestUsd</c> coverage gap as the non-streaming overload above.</remarks>
+        /// <remarks>Same <c>MaxCostPerRequestUsd</c> coverage as the non-streaming overload above.</remarks>
         IAsyncEnumerable<GenerateContentResponse> StreamChatAsync(
             IList<Content> contents,
             GeminiRequestOptions? options = null,
@@ -233,6 +233,22 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         Task<CountTokensResponse> CountTokensChatAsync(
             MessageObject[] messages,
             GeminiRequestOptions? options,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Counts tokens for a raw list of <see cref="Content"/> turns against a specific model — the
+        /// token-counting counterpart to <see cref="ChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>.
+        /// </summary>
+        /// <param name="contents">The content turns to count. Must contain at least one item.</param>
+        /// <param name="options">
+        /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
+        /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
+        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<CountTokensResponse> CountTokensChatAsync(
+            IList<Content> contents,
+            GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default);
     }
 }

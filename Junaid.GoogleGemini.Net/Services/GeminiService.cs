@@ -158,11 +158,8 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 throw new ArgumentException("At least one content item is required.", nameof(contents));
             }
+            await CheckPerRequestBudgetForContentAsync(contents, options, cancellationToken);
 
-            // NOT covered by BudgetOptions.MaxCostPerRequestUsd: there is no CountTokensAsync overload
-            // that accepts a raw IList<Content>, so there's nothing to base a pre-flight estimate on.
-            // The cumulative daily budget (MaxCostPerDayUsd) still applies via GeminiClient.PostAsync
-            // regardless — only the best-effort per-request estimate is skipped for this overload.
             var request = RequestFactory.CreateRequest(contents, options);
             var endpoint = GetGenerateEndpoint(options?.Model);
 
@@ -184,9 +181,8 @@ namespace Junaid.GoogleGemini.Net.Services
             {
                 throw new ArgumentException("At least one content item is required.", nameof(contents));
             }
+            await CheckPerRequestBudgetForContentAsync(contents, options, cancellationToken);
 
-            // NOT covered by BudgetOptions.MaxCostPerRequestUsd — see the non-streaming
-            // ChatAsync(IList<Content>) overload above for why.
             var request = RequestFactory.CreateRequest(contents, options);
             var endpoint = GetStreamEndpoint(options?.Model);
 
@@ -376,6 +372,28 @@ namespace Junaid.GoogleGemini.Net.Services
                 cancellationToken);
         }
 
+        /// <inheritdoc/>
+        public async Task<CountTokensResponse> CountTokensChatAsync(
+            IList<Content> contents,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default)
+        {
+            if (contents is null || contents.Count == 0)
+            {
+                throw new ArgumentException("At least one content item is required.", nameof(contents));
+            }
+
+            var request = RequestFactory.CreateTokenCountingRequest(contents);
+            var endpoint = GetCountTokensEndpoint(options?.Model);
+
+            return await ExecuteRequestAsync<CountTokensRequest, CountTokensResponse>(
+                "chat token counting",
+                endpoint,
+                request,
+                new { MessageCount = contents.Count },
+                cancellationToken);
+        }
+
         #region Private Helper Methods
 
         // Streaming and non-streaming requests have identical bodies (streaming is purely an endpoint
@@ -446,6 +464,22 @@ namespace Junaid.GoogleGemini.Net.Services
             }
 
             var counted = await CountTokensChatAsync(messages, options, cancellationToken);
+            costGovernor.CheckEstimatedRequestCost(options?.Model ?? Options?.DefaultModel, counted.TotalTokens, ResolveMaxOutputTokens(options));
+        }
+
+        // Closes the gap called out in the ChatAsync(IList<Content>) doc history: there IS now a
+        // countTokens counterpart for a raw Content list (RequestFactory.CreateTokenCountingRequest /
+        // CountTokensChatAsync(IList<Content>, ...)), so the raw multi-turn overload gets the same
+        // pre-flight estimate coverage as the MessageObject[]-based one, with the same general
+        // limitations (standard-rate-only input, output bounded only when MaxTokens is set).
+        private async Task CheckPerRequestBudgetForContentAsync(IList<Content> contents, GeminiRequestOptions? options, CancellationToken cancellationToken)
+        {
+            if (!costGovernor.HasRequestCeiling)
+            {
+                return;
+            }
+
+            var counted = await CountTokensChatAsync(contents, options, cancellationToken);
             costGovernor.CheckEstimatedRequestCost(options?.Model ?? Options?.DefaultModel, counted.TotalTokens, ResolveMaxOutputTokens(options));
         }
 

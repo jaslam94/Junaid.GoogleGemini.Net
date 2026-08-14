@@ -310,6 +310,21 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
         }
 
         /// <summary>
+        /// Creates a token-counting request directly from a raw list of <see cref="Content"/> turns
+        /// (without generation config or safety settings). The counterpart to <see cref="CreateRequest"/>
+        /// for the <c>countTokens</c> endpoint, used to estimate cost for the raw-<c>Content</c>
+        /// overload of <c>IGeminiService.ChatAsync</c>, the same way the other
+        /// <c>CreateTokenCounting*Request</c> methods support their matching generation overloads.
+        /// </summary>
+        public static CountTokensRequest CreateTokenCountingRequest(IEnumerable<Content> contents)
+        {
+            return new CountTokensRequest
+            {
+                Contents = contents.ToList()
+            };
+        }
+
+        /// <summary>
         /// Creates an embedding request for single text input (without generation config or safety settings)
         /// </summary>
         public static SingleEmbedContentRequest CreateEmbeddingRequest(string text, EmbeddingOptions? options = null)

@@ -1,6 +1,7 @@
 using System.Net;
 using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
+using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;
 using Junaid.GoogleGemini.Net.Services;
 using Junaid.GoogleGemini.Net.Tests.Infrastructure;
@@ -66,5 +67,42 @@ public class CountTokensModelOverloadTests
 
         var requestUri = Assert.Single(handler.Requests).RequestUri!;
         Assert.Contains("gemini-2.5-flash", requestUri.ToString());
+    }
+
+    // The IList<Content> overload is new (closing the ChatAsync(IList<Content>) cost-governance gap),
+    // so it gets its own direct model-resolution coverage rather than relying only on the indirect
+    // assertions in GeminiServiceCostGovernanceTests.
+    [Fact]
+    public async Task CountTokensChatAsync_ContentList_WithModelOverride_ResolvesEndpointAgainstThatModel_NotDefaultModel()
+    {
+        var (service, handler) = CreateService();
+        var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
+
+        await service.CountTokensChatAsync(contents, new GeminiRequestOptions { Model = "gemini-3.1-pro-preview" });
+
+        var requestUri = Assert.Single(handler.Requests).RequestUri!;
+        Assert.Contains("gemini-3.1-pro-preview", requestUri.ToString());
+        Assert.DoesNotContain("gemini-2.5-flash", requestUri.ToString());
+    }
+
+    [Fact]
+    public async Task CountTokensChatAsync_ContentList_WithoutOptions_FallsBackToDefaultModel()
+    {
+        var (service, handler) = CreateService();
+        var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
+
+        await service.CountTokensChatAsync(contents);
+
+        var requestUri = Assert.Single(handler.Requests).RequestUri!;
+        Assert.Contains("gemini-2.5-flash", requestUri.ToString());
+    }
+
+    [Fact]
+    public async Task CountTokensChatAsync_ContentList_EmptyList_Throws()
+    {
+        var (service, _) = CreateService();
+        var emptyContents = new List<Content>();
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.CountTokensChatAsync(emptyContents));
     }
 }

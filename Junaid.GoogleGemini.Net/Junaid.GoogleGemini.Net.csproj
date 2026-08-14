@@ -16,11 +16,19 @@
 
 		<!-- Package metadata -->
 		<Title>Junaid.GoogleGemini.Net</Title>
-		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic) — see the README.</Description>
+		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.3.0</Version>
+		<Version>6.3.1</Version>
 		<PackageReleaseNotes>
+			6.3.1: closes the ChatAsync(IList&lt;Content&gt;)/StreamChatAsync(IList&lt;Content&gt;) cost-
+			governance gap noted in 6.2.0. New IGeminiService.CountTokensChatAsync(IList&lt;Content&gt;,
+			options, ct) overload (and RequestFactory.CreateTokenCountingRequest) provide a token-counting
+			counterpart for a raw Content list, so BudgetOptions.MaxCostPerRequestUsd now covers the raw
+			multi-turn overloads (used for Gemini 3 function-calling/thoughtSignature replay) the same way
+			it already covered the MessageObject[]-based ones. The cumulative daily budget
+			(MaxCostPerDayUsd) already applied to these calls regardless, since it's enforced lower down in
+			GeminiClient; only the best-effort per-request estimate was missing. No breaking changes.
 			6.3.0: a live-verification and completeness pass across the whole client -- every major
 			feature was re-tested against the real Gemini API (not mocks) and two real response-parsing
 			gaps were found and fixed along the way.

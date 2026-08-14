@@ -16,8 +16,8 @@ namespace Junaid.GoogleGemini.Net.Tests.Services;
 /// Covers how <see cref="GeminiService"/> wires <see cref="BudgetOptions.MaxCostPerRequestUsd"/>
 /// pre-flight estimation into its generation call sites: the gate that skips the extra
 /// <c>CountTokensAsync</c> round-trip entirely when no ceiling is configured, the rejection path
-/// before the real request is ever sent, the MaxTokens/ThinkingBudget-&gt;maxOutputTokens
-/// translation, and the documented <c>IList&lt;Content&gt;</c> coverage gap.
+/// before the real request is ever sent, and the MaxTokens/ThinkingBudget-&gt;maxOutputTokens
+/// translation. Every generation overload is covered, including the raw <c>IList&lt;Content&gt;</c> ones.
 /// </summary>
 public class GeminiServiceCostGovernanceTests
 {
@@ -137,11 +137,36 @@ public class GeminiServiceCostGovernanceTests
     }
 
     [Fact]
-    public async Task ChatAsync_ContentList_NeverChecksEstimate_EvenWhenCeilingConfigured()
+    public async Task ChatAsync_ContentList_WhenCeilingConfigured_UsesCountTokensChat()
     {
-        // Documented gap: there's no CountTokensAsync overload for a raw IList<Content>, so this
-        // overload must skip the estimate entirely rather than silently misestimate or throw.
         var (service, handler, governor) = CreateService(hasRequestCeiling: true);
+        var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
+
+        await service.ChatAsync(contents);
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Contains(":countTokens", handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains(":generateContent", handler.Requests[1].RequestUri!.ToString());
+        Assert.Single(governor.EstimateCalls);
+    }
+
+    [Fact]
+    public async Task ChatAsync_ContentList_WhenEstimateExceedsCeiling_ThrowsUnwrapped_AndNeverSendsTheGenerateRequest()
+    {
+        var (service, handler, governor) = CreateService(hasRequestCeiling: true);
+        governor.ThrowOnEstimate = true;
+        var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
+
+        await Assert.ThrowsAsync<GeminiRequestCostExceededException>(() => service.ChatAsync(contents));
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains(":countTokens", request.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task ChatAsync_ContentList_WhenNoCeilingConfigured_SkipsCountTokens()
+    {
+        var (service, handler, governor) = CreateService(hasRequestCeiling: false);
         var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
 
         await service.ChatAsync(contents);
@@ -170,9 +195,44 @@ public class GeminiServiceCostGovernanceTests
     }
 
     [Fact]
-    public async Task StreamChatAsync_ContentList_NeverChecksEstimate_EvenWhenCeilingConfigured()
+    public async Task StreamChatAsync_ContentList_WhenCeilingConfigured_UsesCountTokensChat()
     {
         var (service, handler, governor) = CreateService(hasRequestCeiling: true);
+        var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
+
+        await foreach (var _ in service.StreamChatAsync(contents))
+        {
+        }
+
+        Assert.Equal(2, handler.Requests.Count);
+        Assert.Contains(":countTokens", handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains(":streamGenerateContent", handler.Requests[1].RequestUri!.ToString());
+        Assert.Single(governor.EstimateCalls);
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_ContentList_WhenEstimateExceedsCeiling_ThrowsBeforeAnyChunkYielded_AndNeverStreams()
+    {
+        var (service, handler, governor) = CreateService(hasRequestCeiling: true);
+        governor.ThrowOnEstimate = true;
+        var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
+
+        await Assert.ThrowsAsync<GeminiRequestCostExceededException>(async () =>
+        {
+            await foreach (var _ in service.StreamChatAsync(contents))
+            {
+                Assert.Fail("No chunk should ever be yielded when the pre-flight estimate rejects the call.");
+            }
+        });
+
+        var request = Assert.Single(handler.Requests);
+        Assert.Contains(":countTokens", request.RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task StreamChatAsync_ContentList_WhenNoCeilingConfigured_SkipsCountTokens()
+    {
+        var (service, handler, governor) = CreateService(hasRequestCeiling: false);
         var contents = new List<Content> { new() { Role = "user", Parts = [new Part { Text = "hi" }] } };
 
         await foreach (var _ in service.StreamChatAsync(contents))

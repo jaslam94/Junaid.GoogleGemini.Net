@@ -70,11 +70,10 @@ Read this before relying on `MaxCostPerRequestUsd`: it is a genuine estimate, no
 - **Output cost is only bounded when the request sets `GeminiRequestOptions.MaxTokens`** (widened by a
   positive `ThinkingBudget`, since thinking tokens bill as output too). Leave `MaxTokens` unset and
   only the input side is bounded; the real call's output cost is unknown until it completes.
-- **Not checked at all for `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)`** (the raw
-  multi-turn overloads used for function-calling replay), because there is no token-counting endpoint
-  for a raw `Content` list, so there's nothing to estimate against. The daily budget
-  (`MaxCostPerDayUsd`) still applies to these calls as normal; only the per-request estimate is
-  unavailable.
+- **Covers `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)` too** (the raw multi-turn
+  overloads used for function-calling/`thoughtSignature` replay), via
+  `CountTokensChatAsync(IList<Content>, options, ct)`. Same general caveats as above; the token-counting
+  request omits `SystemInstruction`/`Tools`/`CachedContent`, same as every other overload.
 - **Enabling it doubles rate-limiter consumption per logical call**: the pre-flight
   `CountTokensAsync` call also goes through the client's rate limiter, so it consumes its own permit.
   Factor that into `RateLimitOptions.RequestsPerMinute` if you enable it.
@@ -176,5 +175,3 @@ vision, chat, image generation, and their streaming counterparts. Not covered in
 - Per-minute/per-hour budgets. Daily (UTC calendar day) only, for now.
 - Image-generation model pricing (`gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, and
   similar). Image pricing is often per-image, not per-token, so it needs separate design.
-- The per-request estimate (`MaxCostPerRequestUsd`) specifically does not cover
-  `ChatAsync(IList<Content>)`/`StreamChatAsync(IList<Content>)`. See above.
