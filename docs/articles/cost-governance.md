@@ -175,3 +175,6 @@ vision, chat, image generation, and their streaming counterparts. Not covered in
 - Per-minute/per-hour budgets. Daily (UTC calendar day) only, for now.
 - Image-generation model pricing (`gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, and
   similar). Image pricing is often per-image, not per-token, so it needs separate design.
+- The [Batch API](batch-api.md) (`IBatchService`). It bypasses this entirely, on purpose:
+  `BatchService` uses its own `HttpClient` rather than the shared pipeline `ICostGovernor` hooks into,
+  and batch is priced at a 50% discount this library's pricing model doesn't yet represent.

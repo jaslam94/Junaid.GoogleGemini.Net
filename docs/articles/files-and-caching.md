@@ -13,11 +13,14 @@ await files.WaitUntilActiveAsync(file.Name!);
 // Other operations:
 var info = await files.GetFileAsync(file.Name!);
 var list = await files.ListFilesAsync(pageSize: 20);
+var bytes = await files.DownloadFileAsync(file.Name!);
 await files.DeleteFileAsync(file.Name!);
 ```
 
 Uploads use the resumable protocol over a dedicated HttpClient. Reference an uploaded file in a
-request with a `FileData` part (`MimeType` + `FileUri`).
+request with a `FileData` part (`MimeType` + `FileUri`). `DownloadFileAsync` fetches a file's raw
+bytes back; the [Batch API](batch-api.md) uses it internally to retrieve file-based results, but it
+works for any uploaded file.
 
 ## Context caching
 

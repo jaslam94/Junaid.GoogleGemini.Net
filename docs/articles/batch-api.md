@@ -146,7 +146,11 @@ of whether you called `DeleteAsync` yourself.
   model doesn't yet represent. Tracking batch spend is a possible future addition, not something this
   release does.
 - **Rate limiting.** Batch calls intentionally bypass `IRateLimiter` (which is tuned for interactive
-  per-minute request limits); batch draws from a wholly separate quota pool on Google's side.
+  per-minute request limits); batch draws from a wholly separate quota pool on Google's side. Retries
+  still apply, though (see [Resilience & rate limiting](resilience-and-rate-limiting.md)).
+- **OpenTelemetry instrumentation.** No spans, no duration/token/cost metrics - `IBatchService` uses
+  its own `HttpClient` rather than the shared pipeline that emits those (see
+  [Observability](observability.md)).
 - **Batch embeddings, or batch image generation.** This release covers `generateContent` only.
 
 ## A note on the state string

@@ -34,3 +34,10 @@ call you get a `GeminiRateLimitException`. Disable it with `RateLimit.Enabled = 
 
 `TimeoutSeconds` bounds each request; on expiry you get a `GeminiTimeoutException`. Genuine caller
 cancellation (your `CancellationToken`) propagates as `OperationCanceledException` instead.
+
+## Batch API is the one exception
+
+`IBatchService` calls get the same retry handling described above, but deliberately **bypass the
+client-side rate limiter**: batch draws from a wholly separate quota pool on Google's side, so gating
+it behind a limiter tuned for interactive per-minute requests would be actively wrong, not just
+redundant. See [Batch API](batch-api.md) for the full picture.
