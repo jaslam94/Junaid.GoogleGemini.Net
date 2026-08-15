@@ -49,6 +49,34 @@ public class GeminiJsonTests
         Assert.Equal(4, response.UsageMetadata!.TotalTokenCount);
     }
 
+    // Fixture trimmed from a real live GenerateImageAsync response (2026-08-15, gemini-3.1-flash-image)
+    // captured while auditing this library: promptTokensDetails/candidatesTokensDetails carry a
+    // per-modality token breakdown that UsageMetadata previously had no properties for, so it was
+    // silently dropped on every response (image-gen or not) despite the API actually sending it.
+    [Fact]
+    public void Deserialize_Response_CapturesModalityTokenBreakdown()
+    {
+        const string json = """
+        {"candidates":[{"content":{"role":"model","parts":[{"inlineData":{"mimeType":"image/jpeg","data":"//"}}]},
+         "finishReason":"STOP","index":0}],
+         "usageMetadata":{"promptTokenCount":9,"candidatesTokenCount":1452,"totalTokenCount":1461,
+         "promptTokensDetails":[{"modality":"TEXT","tokenCount":9}],
+         "candidatesTokensDetails":[{"modality":"IMAGE","tokenCount":1120}],"serviceTier":"standard"},
+         "modelVersion":"gemini-3.1-flash-image","responseId":"zWGAas6iN_X6nsEPlpPRmAE"}
+        """;
+
+        var response = JsonSerializer.Deserialize<GenerateContentResponse>(json, GeminiJson.Default)!;
+        var usage = response.UsageMetadata!;
+
+        Assert.NotNull(usage.PromptTokensDetails);
+        Assert.Equal("TEXT", usage.PromptTokensDetails![0].Modality);
+        Assert.Equal(9, usage.PromptTokensDetails[0].TokenCount);
+
+        Assert.NotNull(usage.CandidatesTokensDetails);
+        Assert.Equal("IMAGE", usage.CandidatesTokensDetails![0].Modality);
+        Assert.Equal(1120, usage.CandidatesTokensDetails[0].TokenCount);
+    }
+
     [Fact]
     public void RequestFactory_AppliesSystemInstructionThinkingAndJsonMode()
     {

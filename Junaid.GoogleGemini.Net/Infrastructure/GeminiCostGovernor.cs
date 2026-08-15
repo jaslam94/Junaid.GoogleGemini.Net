@@ -64,19 +64,29 @@ public interface ICostGovernor
 public sealed class GeminiCostGovernor : ICostGovernor
 {
     /// <summary>
-    /// Built-in USD-per-1,000,000-token pricing, fetched from
+    /// Built-in USD-per-1,000,000-token pricing, re-verified against
     /// <see href="https://ai.google.dev/gemini-api/docs/pricing">Google's published pricing page</see>
-    /// on 2026-08-02 (paid tier). This snapshot WILL go stale as Google updates prices — override via
+    /// on 2026-08-15 (paid tier). This snapshot WILL go stale as Google updates prices — override via
     /// <see cref="BudgetOptions.ModelPricingOverrides"/> for accuracy, especially in production.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, ModelPricing> DefaultPricing =
         new Dictionary<string, ModelPricing>(StringComparer.Ordinal)
         {
+            // gemini-3.6-flash and gemini-3.7-flash share the same introductory rate, in effect since
+            // 3.7's August 13, 2026 launch (Google moved 3.6-flash onto it at the same time), through
+            // December 31, 2026. Standard rate (double these numbers: $1.50/$7.50/$0.15) resumes
+            // January 1, 2027 — re-verify and update this table again before then.
+            ["gemini-3.7-flash"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 0.75m,
+                OutputPerMillionTokensUsd = 3.75m,
+                CachedInputPerMillionTokensUsd = 0.075m,
+            },
             ["gemini-3.6-flash"] = new ModelPricing
             {
-                InputPerMillionTokensUsd = 1.50m,
-                OutputPerMillionTokensUsd = 7.50m,
-                CachedInputPerMillionTokensUsd = 0.15m,
+                InputPerMillionTokensUsd = 0.75m,
+                OutputPerMillionTokensUsd = 3.75m,
+                CachedInputPerMillionTokensUsd = 0.075m,
             },
             ["gemini-3.5-flash"] = new ModelPricing
             {
@@ -133,6 +143,46 @@ public sealed class GeminiCostGovernor : ICostGovernor
                 InputPerMillionTokensUsd = 0.30m,
                 OutputPerMillionTokensUsd = 2.50m,
                 CachedInputPerMillionTokensUsd = 0.03m,
+            },
+
+            // Native image generation models. Confirmed (2026-08-15) these ARE priced per-1M-tokens on
+            // both sides, same shape as text models — the "likely per-image, needs separate design"
+            // assumption in PLAN-cost-governance.md §11 turned out to be wrong for these three; only
+            // gemini-2.5-flash-image (older, omitted below) is priced strictly per-image with no
+            // token-rate equivalent published, so it still can't be represented here without guessing a
+            // token-per-image conversion.
+            //
+            // Two nuances specific to this group, worth reading before touching these numbers:
+            // (1) OutputPerMillionTokensUsd below is the IMAGE output rate. gemini-3-pro-image and
+            //     gemini-3.1-flash-lite-image actually publish a cheaper second output rate for any
+            //     text/thinking tokens in the same response ("$12.00 (text and thinking) $120.00
+            //     (images)" for pro, similarly for flash-lite) — but UsageMetadata has no field that
+            //     breaks candidatesTokenCount down by modality, so there's no way to price the two
+            //     portions separately today. Using the image (higher) rate for 100% of output tokens
+            //     overcounts any text/thinking portion, which is the safe direction for a budget
+            //     ceiling (fails closed, not open) — just don't mistake this for an exact figure.
+            // (2) Only gemini-3.1-flash-image has a published cached-input rate ($0.25/1M, confirmed
+            //     directly on the pricing page) — it's HALF the standard input rate, not "no discount".
+            //     gemini-3-pro-image and gemini-3.1-flash-lite-image publish no cached rate at all for
+            //     the standard tier, so those two fall back to "= standard input rate" (assume no
+            //     discount) rather than 0, since 0 would silently price cached input as free.
+            ["gemini-3.1-flash-image"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 0.50m,
+                OutputPerMillionTokensUsd = 60.00m,
+                CachedInputPerMillionTokensUsd = 0.25m,
+            },
+            ["gemini-3-pro-image"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 2.00m,
+                OutputPerMillionTokensUsd = 120.00m,
+                CachedInputPerMillionTokensUsd = 2.00m,
+            },
+            ["gemini-3.1-flash-lite-image"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 0.25m,
+                OutputPerMillionTokensUsd = 30.00m,
+                CachedInputPerMillionTokensUsd = 0.25m,
             },
         };
 
