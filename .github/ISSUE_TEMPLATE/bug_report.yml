@@ -1,0 +1,81 @@
+name: Bug report
+description: Something in the library doesn't behave the way the docs or the API contract say it should.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting this. A few fields below exist specifically because they're the ones
+        needed to tell "the library has a bug" apart from "Google changed something on their end"
+        (both have happened; the 6.4.1 release notes are a real example of the former).
+
+        **Never paste your API key, even a partial one, anywhere in this form.**
+
+  - type: input
+    id: version
+    attributes:
+      label: Package version
+      description: The exact version from your .csproj/packages.lock.json, e.g. 6.4.1.
+      placeholder: "6.4.1"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tfm
+    attributes:
+      label: Target framework
+      options:
+        - net9.0
+        - net8.0
+        - netstandard2.0 (.NET Framework / Mono / Unity)
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: input
+    id: model
+    attributes:
+      label: Model, if relevant
+      description: The exact model string passed, e.g. gemini-3.7-flash. Leave blank if not applicable.
+      placeholder: "gemini-3.7-flash"
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected to happen
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+      description: Include the full exception type, message, and stack trace if there was one.
+        GeminiApiException carries a StatusCode and an Error object with Google's own error
+        code/message; include those verbatim if present, they're the fastest way to tell a client
+        bug from a server-side change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal repro
+      description: The smallest code snippet that reproduces it. Strip anything not needed to show the bug.
+      render: csharp
+
+  - type: dropdown
+    id: reproduces-raw
+    attributes:
+      label: Have you confirmed this against the raw REST API (not just this library)?
+      description: If a raw HTTP call to Google's endpoint with the same payload behaves differently
+        than this library, that strongly points at a client-side bug rather than an API-side change.
+        Not required, but it's the single most useful thing you can check first.
+      options:
+        - "Not checked"
+        - "Yes, raw REST behaves the same (points at this library)"
+        - "Yes, raw REST behaves differently (points at this library)"
+        - "N/A for this issue"
+    validations:
+      required: true
