@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Junaid.GoogleGemini.Net.Asp
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Junaid.GoogleGemini.Net.IntegrationTests", "tests\Junaid.GoogleGemini.Net.IntegrationTests\Junaid.GoogleGemini.Net.IntegrationTests.csproj", "{B19E0514-80FD-419D-A70B-929E28C872F6}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "benchmarks", "benchmarks", "{66320409-64EC-F7C5-3DEF-65E7510DAAD1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Junaid.GoogleGemini.Net.Benchmarks", "benchmarks\Junaid.GoogleGemini.Net.Benchmarks\Junaid.GoogleGemini.Net.Benchmarks.csproj", "{D7B9B42B-8193-4868-BD9D-419AA7C9E725}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -87,6 +91,18 @@ Global
 		{B19E0514-80FD-419D-A70B-929E28C872F6}.Release|x64.Build.0 = Release|Any CPU
 		{B19E0514-80FD-419D-A70B-929E28C872F6}.Release|x86.ActiveCfg = Release|Any CPU
 		{B19E0514-80FD-419D-A70B-929E28C872F6}.Release|x86.Build.0 = Release|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Debug|x64.Build.0 = Debug|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Debug|x86.Build.0 = Debug|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Release|x64.ActiveCfg = Release|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Release|x64.Build.0 = Release|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Release|x86.ActiveCfg = Release|Any CPU
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -95,6 +111,7 @@ Global
 		{09EA83CD-C324-48D2-A41F-248C2E255110} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{A81ECD67-58AC-4B87-846D-CEC2AED3ACBC} = {5D20AA90-6969-D8BD-9DCD-8634F4692FDA}
 		{B19E0514-80FD-419D-A70B-929E28C872F6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{D7B9B42B-8193-4868-BD9D-419AA7C9E725} = {66320409-64EC-F7C5-3DEF-65E7510DAAD1}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6CB5F522-7B50-4320-A3FC-C23F2BDA4550}
