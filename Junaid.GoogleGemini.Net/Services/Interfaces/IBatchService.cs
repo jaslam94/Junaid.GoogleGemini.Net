@@ -110,7 +110,11 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <see cref="IFileService.DownloadFileAsync"/>) destinations. Throws
         /// <see cref="GeminiException"/> if the job has no output yet (i.e. hasn't reached a
         /// state where results exist) — call <see cref="WaitUntilCompleteAsync"/> or check
-        /// <see cref="BatchJob.State"/> first.
+        /// <see cref="BatchJob.State"/> first. Also throws if the job has an
+        /// <see cref="BatchJob.Output"/> object but neither inline responses nor a results file name:
+        /// deliberately not treated as "zero results," since that could otherwise mask a real API
+        /// response shape this library doesn't recognize yet (see <see cref="BatchJobDestination"/>'s
+        /// remarks) as if it were a legitimately empty, successful result set.
         /// </summary>
         Task<IReadOnlyList<InlinedBatchResponse>> GetResultsAsync(BatchJob job, CancellationToken cancellationToken = default);
     }

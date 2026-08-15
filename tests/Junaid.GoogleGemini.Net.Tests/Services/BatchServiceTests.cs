@@ -354,6 +354,18 @@ public class BatchServiceTests
         await Assert.ThrowsAsync<GeminiException>(() => batch.GetResultsAsync(job));
     }
 
+    [Fact]
+    public async Task GetResultsAsync_ThrowsGeminiException_WhenOutputHasNeitherInlineNorFile()
+    {
+        // Deliberately NOT treated as "zero results" - see BatchService.GetResultsAsync's comment on
+        // why: an empty list here would look identical to a legitimately empty, successful result set,
+        // silently masking either a job-level failure or an unrecognized live response field name.
+        var batch = BuildBatchService(FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, "{}"));
+        var job = new BatchJob { Name = "batches/1", State = "JOB_STATE_FAILED", Output = new BatchJobDestination() };
+
+        await Assert.ThrowsAsync<GeminiException>(() => batch.GetResultsAsync(job));
+    }
+
     // -- DI wiring --------------------------------------------------------------------------------
 
     private static IBatchService BuildBatchService(FakeHttpMessageHandler batchHandler, FakeHttpMessageHandler? filesHandler = null)

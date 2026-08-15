@@ -1,6 +1,17 @@
 # Plan: Batch API for Junaid.GoogleGemini.Net
 
-**Status:** Not started. **Audience:** an AI coding agent (Cursor) implementing this directly against
+**Status:** Implemented in `6.4.0` (PR #42), not yet released or live-verified. Kept here as a
+historical record, same convention as `PLAN-cost-governance.md`. **Post-implementation addendum:**
+`CancelAsync` ended up simpler than §4.7 specified — rather than deserializing into the
+`EmptyBatchResponse` type this plan describes, the actual implementation discards the cancel response
+body entirely (success/failure is determined purely by the HTTP status code), so `EmptyBatchResponse`
+was never added to the codebase. The reasoning in §4.7 for *why* the response shape can't be trusted
+still holds; it just turned out there was no need to model it at all once the implementation didn't try
+to read it. A second, unplanned addition: `GetResultsAsync` throws (rather than returning an empty
+list) when a job's `Output` object exists but has neither inline responses nor a results file name,
+found during a second-pass review after implementation — an empty list there would look identical to a
+legitimately empty result set and could silently mask the exact field-name risk §2.3 flags. Everything
+else below matches what shipped. **Audience:** an AI coding agent (Cursor) implementing this directly against
 the current `master` branch (post-6.3.1). **Author's confidence:** every file path, method signature,
 and integration point below was verified by reading the actual current source on 2026-08-15. The
 Gemini Batch API's own shape was researched from Google's live docs on the same date (see §2), and

@@ -107,6 +107,14 @@ foreach (var result in results)
 already on the `BatchJob` object and this returns them directly; if they're file-based, this downloads
 and parses the JSONL output for you. Either way you get back the same `IReadOnlyList<InlinedBatchResponse>`.
 
+Call it on a completed job (see [Waiting for completion](#waiting-for-completion) above), not one still
+running: it throws if the job has no `Output` yet at all, and it also throws (rather than quietly
+returning an empty list) if `Output` exists but has neither inline responses nor a results file name.
+That second case is deliberately treated as exceptional rather than "zero results", since a silent
+empty list would look identical to a job that genuinely produced nothing, and could otherwise hide a
+job-level failure (check `BatchJob.Error`) or a results-file field name this library doesn't recognize
+yet (see the note below).
+
 A batch job succeeding as a whole doesn't mean every request in it succeeded. Check
 `BatchJob.BatchStats.FailedRequestCount`, and check each result's `Error` individually the way the
 loop above does. One bad request in a 10,000-request batch doesn't fail the other 9,999.
