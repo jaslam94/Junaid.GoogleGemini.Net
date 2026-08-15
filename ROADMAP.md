@@ -218,6 +218,54 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       working end-to-end, including a new permanent live test
       (`BatchLiveTests.CreateAsync_WaitUntilComplete_ReturnsRealGeneratedText`) that waits for a real
       job to complete and asserts on the real generated text and real usage metadata.
+- [x] **Full audit and live re-verification** (`6.4.1`): every transport, service, and options file
+      read again against the shipped `6.4.0` source and Google's current docs/pricing/changelog
+      (re-fetched, not assumed current), then every fix confirmed against a real, billing-enabled key.
+      Six real bugs found and fixed, no breaking changes:
+      1. `GenerateImageAsync()`'s default model had been broken since `6.1.0`. `RecommendedImage`
+         (and `Gemini31FlashImage`/`Gemini3ProImage`) pointed at `-preview`-suffixed model IDs Google
+         promoted to GA under unsuffixed names on May 28, 2026 and shut down on June 25. Fixed; added
+         the previously-uncatalogued `Gemini31FlashLiteImage`. Live-verified with a raw REST call
+         bypassing the library first, then the actual paid-tier test suite, including decoding real
+         returned pixel dimensions.
+      2. Cost-governance pricing for `gemini-3.6-flash` was stale by 2x: Google moved it onto
+         `gemini-3.7-flash`'s introductory rate when 3.7-flash shipped August 13, two days before this
+         audit. Corrected both entries after a cross-check itself surfaced a false lead (a different
+         Google product's pricing page and a stale third-party listing both disagreed with the real
+         rate); added `gemini-3.7-flash` as the new default; added real per-token pricing for the
+         current image models, which turned out to be token-priced rather than per-image as assumed
+         in `PLAN-cost-governance.md` §11.
+      3. `GeminiRateLimiter` floored any `RequestsPerMinute` under 60 to an effective 60 RPM via
+         integer division, exactly the range free/low-tier quotas live in. Fixed; the fix's own
+         structure made a divide-by-zero/negative-`TimeSpan` crash newly reachable through the public
+         constructor, so added explicit null/range guards too.
+      4. `ISafetyService.IsContentSafe` only recognized safety-rating probability strings, not the
+         `BLOCK_*` threshold vocabulary every sibling method on the same interface uses or produces,
+         so the natural, consistent way to call it reported almost all content as unsafe. Both
+         vocabularies are now recognized. Zero prior test coverage; added `SafetyServiceTests.cs`.
+      5. Live testing surfaced a real field this library was silently discarding on every response:
+         `promptTokensDetails`/`candidatesTokensDetails`, a per-modality token breakdown Google sends
+         but `UsageMetadata` had no properties for. Added `ModalityTokenCount` and both properties;
+         this is also the data a future pass would need to price `gemini-3-pro-image`'s and
+         `gemini-3.1-flash-lite-image`'s mixed text/image output exactly instead of the current
+         safe-but-approximate single-rate estimate (documented on `GeminiCostGovernor.DefaultPricing`).
+      6. Assorted doc-comment fixes naming the previous default model after `Models.Recommended`
+         moved, caught only in a deliberate second pass, not the first.
+
+      Also confirmed still-open, not touched this pass: File Search (managed RAG), Google Maps
+      grounding, TTS, Computer Use, multimodal embeddings input (the `gemini-embedding-2` model
+      constant exists but `EmbedContentAsync` is still text-only), and Flex/Priority inference tiers.
+      Full result: build 0 warnings/errors on all three targets, 143/143 unit tests, 36/36 live tests
+      (main suite, paid-tier-gated image generation and context caching, and a real Batch API job
+      polled to completion).
+
+      **Cost-governance competitive note**: since April 1, 2026, Google itself enforces mandatory
+      account-wide monthly spend caps (not configurable, not per-project, no daily granularity, blocks
+      every request account-wide when hit, no in-app observability). This sharpens rather than weakens
+      the differentiation case: this library remains the only one of ten surveyed .NET Gemini clients,
+      including Google's own official SDK, offering a configurable daily ceiling, an optional
+      per-request estimate, and a live `gemini.client.cost.usd` OpenTelemetry metric enforced
+      in-process before a wasted call goes out. See `docs/articles/cost-governance.md`.
 
 ---
 

@@ -19,8 +19,37 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.4.0</Version>
+		<Version>6.4.1</Version>
 		<PackageReleaseNotes>
+			6.4.1: a full audit against the current Gemini API, including live-key verification, found
+			and fixed six bugs. No breaking changes; all fixes are corrections or additive.
+			(1) GenerateImageAsync()'s default model was broken since 6.1.0 -- Models.RecommendedImage
+			(and Gemini31FlashImage/Gemini3ProImage) pointed at "-preview"-suffixed model IDs Google
+			promoted to GA under unsuffixed names on May 28, 2026 and shut the preview IDs down on June
+			25. Fixed to the GA names; added the previously-missing Gemini31FlashLiteImage (Nano Banana
+			2 Lite). Live-verified end-to-end, including decoding real returned image pixel dimensions.
+			(2) Cost-governance pricing for gemini-3.6-flash was stale by 2x: Google moved it onto
+			gemini-3.7-flash's 50%-off introductory rate (in effect through 2026-12-31) when 3.7-flash
+			shipped on August 13. Corrected both entries; added gemini-3.7-flash as a model constant and
+			the new Models.Recommended/Defaults.Model default; added real per-token pricing for the
+			three current native image-generation models (they're priced per-token, not per-image as
+			previously assumed).
+			(3) GeminiRateLimiter's below-60-RPM math floored ANY configured RequestsPerMinute under 60
+			to an effective 60 RPM via integer division -- exactly the range free/low-tier Gemini quotas
+			live in, so the limiter gave no real protection there. Fixed with a sub-1-token-per-second
+			replenishment branch; added null/range guards to the public constructor to keep it from
+			handing a non-finite value to TimeSpan.FromSeconds.
+			(4) ISafetyService.IsContentSafe only recognized safety-rating probability strings, not the
+			BLOCK_* threshold vocabulary every sibling method on the same interface uses, so passing the
+			natural, consistent vocabulary reported almost all content as unsafe. Both vocabularies are
+			now recognized.
+			(5) UsageMetadata gained PromptTokensDetails/CandidatesTokensDetails: live testing surfaced
+			a real per-modality token breakdown (e.g. how many output tokens were IMAGE vs TEXT) that
+			the API sends but this library silently discarded on every response. This is also what a
+			future cost-governance pass needs to price mixed text/image output exactly instead of the
+			current safe-but-approximate single-rate estimate.
+			(6) Assorted doc-comment fixes naming the previous default model after Models.Recommended
+			moved to gemini-3.7-flash.
 			6.4.0: adds the Batch API. New IBatchService submits large volumes of generateContent
 			requests asynchronously at Google's 50%-discounted batch rate: create (inline, from an
 			already-uploaded JSONL file, or CreateFromRequestsFileAsync, which writes and uploads the
