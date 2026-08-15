@@ -36,6 +36,37 @@ public class FileServiceTests
         Assert.True(handler.Requests[0].Headers.Contains("X-Goog-Upload-Protocol"));
     }
 
+    [Fact]
+    public async Task DownloadFileAsync_ReturnsRawBytes()
+    {
+        var bytes = new byte[] { 1, 2, 3, 4, 5 };
+        var handler = new FakeHttpMessageHandler(req =>
+        {
+            Assert.Equal(HttpMethod.Get, req.Method);
+            Assert.Contains("download/v1beta/files/abc:download", req.RequestUri!.ToString());
+            Assert.Contains("alt=media", req.RequestUri!.ToString());
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(bytes) };
+        });
+        var files = BuildFileService(handler);
+
+        var result = await files.DownloadFileAsync("files/abc");
+
+        Assert.Equal(bytes, result);
+    }
+
+    [Fact]
+    public async Task DownloadFileAsync_NormalizesBareName()
+    {
+        var handler = new FakeHttpMessageHandler(req =>
+        {
+            Assert.Contains("download/v1beta/files/abc:download", req.RequestUri!.ToString());
+            return new HttpResponseMessage(HttpStatusCode.OK) { Content = new ByteArrayContent(new byte[] { 9 }) };
+        });
+        var files = BuildFileService(handler);
+
+        await files.DownloadFileAsync("abc"); // no "files/" prefix supplied
+    }
+
     private static IFileService BuildFileService(FakeHttpMessageHandler handler)
     {
         var services = new ServiceCollection();

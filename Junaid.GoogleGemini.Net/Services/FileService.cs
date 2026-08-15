@@ -114,6 +114,15 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public async Task<byte[]> DownloadFileAsync(string name, CancellationToken cancellationToken = default)
+        {
+            using var response = await _httpClient.GetAsync(
+                $"download/{Version}/{Normalize(name)}:download?alt=media", cancellationToken);
+            await EnsureSuccessAsync(response, "download file", cancellationToken);
+            return await response.Content.ReadBytesAsync(cancellationToken);
+        }
+
+        /// <inheritdoc/>
         public async Task<FileResource> WaitUntilActiveAsync(
             string name,
             TimeSpan? pollInterval = null,

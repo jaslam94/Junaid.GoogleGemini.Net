@@ -34,6 +34,10 @@ builder.Services.AddOpenTelemetry()
 Streaming calls (`StreamAsync`/`StreamChatAsync`) are instrumented the same way as non-streaming
 ones, including spans and all three metrics above.
 
+**Batch API calls are not instrumented at all** (no spans, no duration/token/cost metrics).
+`IBatchService` deliberately uses its own `HttpClient` rather than the shared `GeminiClient` pipeline
+that emits the above (see [Batch API](batch-api.md)), so none of it applies there today.
+
 ## Exporting
 
 Add any OpenTelemetry exporter, such as console, OTLP, or Azure Monitor. For example, the console exporter

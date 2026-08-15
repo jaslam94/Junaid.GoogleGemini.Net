@@ -172,6 +172,39 @@ namespace Junaid.GoogleGemini.Net.Extensions
             })
             .AddHttpMessageHandler<GeminiAuthHandler>();
 
+            // Dedicated client for the Batch API (versioned base address + auth + retry, but
+            // deliberately NOT routed through GeminiClient/IGeminiClient — see
+            // GeminiHttpClients.Batches's doc comment for why: GeminiClient unconditionally runs every
+            // call through the interactive rate limiter and cost governor, neither of which apply to
+            // batch's separate quota pool and discounted pricing).
+            var batchClientBuilder = services.AddHttpClient(GeminiHttpClients.Batches, (sp, client) =>
+            {
+                var options = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                client.BaseAddress = options.BaseUrl;
+                client.Timeout = TimeSpan.FromSeconds(options.TimeoutSeconds);
+            })
+            .AddHttpMessageHandler<GeminiAuthHandler>();
+
+#if NET8_0_OR_GREATER
+            batchClientBuilder.AddResilienceHandler("gemini-batch", static (builder, context) =>
+            {
+                var resilienceOptions = context.ServiceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                builder.AddRetry(new HttpRetryStrategyOptions
+                {
+                    MaxRetryAttempts = resilienceOptions.MaxRetries,
+                    BackoffType = DelayBackoffType.Exponential,
+                    UseJitter = true,
+                    Delay = resilienceOptions.RetryBaseDelay,
+                });
+            });
+#else
+            batchClientBuilder.AddHttpMessageHandler(sp =>
+            {
+                var resilienceOptions = sp.GetRequiredService<IOptions<GeminiOptions>>().Value;
+                return new GeminiRetryHandler(resilienceOptions.MaxRetries, resilienceOptions.RetryBaseDelay);
+            });
+#endif
+
             // Register authentication handler
             services.AddTransient<GeminiAuthHandler>();
             
@@ -187,6 +220,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             services.AddTransient<IEmbeddingService, EmbeddingService>();
             services.AddTransient<IFileService, FileService>();
             services.AddTransient<ICachingService, CachingService>();
+            services.AddTransient<IBatchService, BatchService>();
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
 
