@@ -1,13 +1,37 @@
 name: Integration (live)
 
-# Live tests against the real Gemini API. MANUAL ONLY — run from the Actions tab.
-# Add a repo secret named GEMINI_API_KEY (Settings → Secrets and variables → Actions).
-# Without it, the tests self-skip (the run stays green).
+# Live tests against the real Gemini API, run two ways:
+#
+# 1. On a weekly schedule, unattended. This is the actual point: Google has changed model IDs,
+#    pricing, and response shapes under this library's feet before (an entire release cycle's worth
+#    of GenerateImageAsync() calls silently 404'd for ~7 weeks before anyone with a live key happened
+#    to notice, see the 6.4.1 audit). A scheduled run turns "someone eventually notices and files an
+#    issue" into "we get a GitHub issue opened automatically, usually within days." Runs the lean
+#    subset only (excludes the Batch API suite, which costs real per-job money and ~90s to poll a job
+#    to completion) to keep the recurring cost and runtime low; that subset still covers the model IDs,
+#    auth, and response-shape classes of bug this exists to catch.
+#
+# 2. On demand (workflow_dispatch), from the Actions tab, same as before. Optionally run the FULL
+#    suite (including Batch) via the "full" input.
+#
+# Needs a repo secret GEMINI_API_KEY (Settings -> Secrets and variables -> Actions). Optionally also
+# GEMINI_PAID_TIER=1 if that key is billing-enabled, to also exercise image generation, context
+# caching, and (with "full") Batch — otherwise those self-skip cleanly (not a failure).
 on:
+  schedule:
+    # 06:00 UTC every Monday. Cron, not a "true" weekly keyword — GitHub Actions schedules don't
+    # support anything friendlier than five-field cron.
+    - cron: '0 6 * * 1'
   workflow_dispatch:
+    inputs:
+      full:
+        description: 'Also run the Batch API suite (real cost, ~90s job poll)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
+  issues: write # only used by the failure-reporting step below
 
 jobs:
   live:
@@ -20,8 +44,82 @@ jobs:
           dotnet-version: |
             8.0.x
             9.0.x
+
       - name: Run live integration tests
+        id: live_tests
         env:
           # The library reads the key from the GeminiApiKey environment variable.
           GeminiApiKey: ${{ secrets.GEMINI_API_KEY }}
-        run: dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal
+          GeminiPaidTier: ${{ secrets.GEMINI_PAID_TIER }}
+        run: |
+          FILTER="FullyQualifiedName!~Batch"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.full }}" = "true" ]; then
+            FILTER=""
+          fi
+          if [ -n "$FILTER" ]; then
+            dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal --filter "$FILTER"
+          else
+            dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal
+          fi
+
+      # Only reached if the step above failed. Opens (or reuses, if one's already open — no point
+      # filing a duplicate every week the same thing is still broken) a GitHub issue with a direct
+      # link to the failing run, so a real API-side break gets surfaced without anyone needing to
+      # notice it manually or wait for a customer bug report.
+      - name: File an issue on failure
+        if: failure() && steps.live_tests.outcome == 'failure'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Ensure both labels exist before referencing them below. The REST API does not
+            // reliably auto-create labels it hasn't seen before, and "bug" being a GitHub default
+            // doesn't guarantee it's still present on this repo (defaults can be deleted/renamed).
+            // Idempotent: swallow the 422 a repeat run gets once the label already exists.
+            for (const [name, color, description] of [
+              ['live-test-failure', 'b60205', 'Scheduled live Gemini API test run failed'],
+              ['bug', 'd73a4a', 'Something is not working'],
+            ]) {
+              try {
+                await github.rest.issues.createLabel({ owner, repo, name, color, description });
+              } catch (e) {
+                if (e.status !== 422) throw e;
+              }
+            }
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: 'live-test-failure',
+            });
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+            const body = [
+              `The scheduled live integration run against the real Gemini API failed: ${runUrl}`,
+              '',
+              'This usually means Google changed something this library depends on (a model ID, a',
+              'response field, pricing, or an error code), not that the workflow itself is broken.',
+              'Check the failing test names in the run log first; they name the feature affected.',
+              '',
+              'See ROADMAP.md\'s 6.4.1 entry for the class of bug this workflow exists to catch faster',
+              'than a customer bug report or an ad-hoc manual audit.',
+            ].join('\n');
+
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing[0].number,
+                body: `Still failing: ${runUrl}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Live Gemini API tests failed',
+                body,
+                labels: ['live-test-failure', 'bug'],
+              });
+            }
