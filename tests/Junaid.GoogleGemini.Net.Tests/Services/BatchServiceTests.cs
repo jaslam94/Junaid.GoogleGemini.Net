@@ -19,8 +19,10 @@ public class BatchServiceTests
     [Fact]
     public async Task CreateAsync_SendsBatchWrapperWithNoModelField_AndReturnsJob()
     {
+        // Real create/get responses are wrapped in a Google long-running-operation envelope
+        // ({name, metadata, done, error|response}), confirmed live 2026-08-15 - see BatchJob's remarks.
         const string responseJson =
-            """{"name":"batches/123","displayName":"my-job","state":"JOB_STATE_PENDING"}""";
+            """{"name":"batches/123","metadata":{"displayName":"my-job","state":"BATCH_STATE_PENDING"}}""";
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, responseJson);
         var batch = BuildBatchService(handler);
 
@@ -32,7 +34,8 @@ public class BatchServiceTests
         var job = await batch.CreateAsync("gemini-3.6-flash", requests, "my-job");
 
         Assert.Equal("batches/123", job.Name);
-        Assert.Equal("JOB_STATE_PENDING", job.State);
+        Assert.Equal("BATCH_STATE_PENDING", job.State);
+        Assert.Equal("my-job", job.DisplayName);
 
         Assert.Equal(HttpMethod.Post, handler.Requests[0].Method);
         Assert.Contains("models/gemini-3.6-flash:batchGenerateContent", handler.Requests[0].RequestUri!.ToString());
@@ -75,7 +78,7 @@ public class BatchServiceTests
     [Fact]
     public async Task CreateFromFileAsync_NormalizesFileName_AndSendsFileNameInputConfig()
     {
-        const string responseJson = """{"name":"batches/456","state":"JOB_STATE_PENDING"}""";
+        const string responseJson = """{"name":"batches/456","metadata":{"state":"BATCH_STATE_PENDING"}}""";
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, responseJson);
         var batch = BuildBatchService(handler);
 
@@ -100,7 +103,7 @@ public class BatchServiceTests
         var filesHandler = FakeHttpMessageHandler.Sequence(
             uploadStart, FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, uploadFinalizeJson));
 
-        const string createJson = """{"name":"batches/789","state":"JOB_STATE_PENDING"}""";
+        const string createJson = """{"name":"batches/789","metadata":{"state":"BATCH_STATE_PENDING"}}""";
         var batchHandler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, createJson);
 
         var batch = BuildBatchService(batchHandler, filesHandler);
@@ -142,26 +145,80 @@ public class BatchServiceTests
     [Fact]
     public async Task GetAsync_NormalizesBareId_AndReturnsJob()
     {
-        const string json = """{"name":"batches/123","state":"JOB_STATE_RUNNING"}""";
+        const string json = """{"name":"batches/123","metadata":{"state":"BATCH_STATE_RUNNING"}}""";
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
         var batch = BuildBatchService(handler);
 
         var job = await batch.GetAsync("123"); // bare id, no "batches/" prefix
 
-        Assert.Equal("JOB_STATE_RUNNING", job.State);
+        Assert.Equal("BATCH_STATE_RUNNING", job.State);
         Assert.Contains("batches/123", handler.Requests[0].RequestUri!.ToString());
+    }
+
+    [Fact]
+    public async Task GetAsync_DeserializesRealCompletedResponseShape()
+    {
+        // This is a trimmed but otherwise verbatim copy of a real response captured live on
+        // 2026-08-15 (see PLAN-batch-api.md's addendum and ROADMAP.md's entry) - batchStats' numeric
+        // fields as JSON strings ("1", not 1), the "done"/"response" envelope fields, and inline
+        // results nested under both metadata.output and the top-level response.
+        const string json = """
+            {
+              "name": "batches/1ch1hexmg3cmdlebwiqhd845q9ampwn234fo",
+              "metadata": {
+                "@type": "type.googleapis.com/google.ai.generativelanguage.v1main.GenerateContentBatch",
+                "model": "models/gemini-3.5-flash-lite",
+                "displayName": "raw-verify-inline-run-to-completion",
+                "output": { "inlinedResponses": { "inlinedResponses": [ { "response": { "candidates": [] } } ] } },
+                "createTime": "2026-08-15T11:00:02.210101258Z",
+                "endTime": "2026-08-15T11:01:38.635024440Z",
+                "updateTime": "2026-08-15T11:01:38.635024470Z",
+                "batchStats": { "requestCount": "1", "successfulRequestCount": "1" },
+                "state": "BATCH_STATE_SUCCEEDED",
+                "name": "batches/1ch1hexmg3cmdlebwiqhd845q9ampwn234fo"
+              },
+              "done": true,
+              "response": {
+                "@type": "type.googleapis.com/google.ai.generativelanguage.v1main.GenerateContentBatchOutput",
+                "inlinedResponses": { "inlinedResponses": [ { "response": { "candidates": [] } } ] }
+              }
+            }
+            """;
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
+        var batch = BuildBatchService(handler);
+
+        var job = await batch.GetAsync("batches/1ch1hexmg3cmdlebwiqhd845q9ampwn234fo");
+
+        Assert.Equal("BATCH_STATE_SUCCEEDED", job.State);
+        Assert.Equal("raw-verify-inline-run-to-completion", job.DisplayName);
+        Assert.Equal("models/gemini-3.5-flash-lite", job.Model);
+        Assert.True(job.Done);
+        Assert.Null(job.Error);
+
+        // The whole point of this test: these must NOT throw despite arriving as JSON strings.
+        Assert.Equal(1, job.BatchStats!.RequestCount);
+        Assert.Equal(1, job.BatchStats!.SuccessfulRequestCount);
+
+        // Output resolves via the top-level "response" field (preferred over metadata.output).
+        Assert.NotNull(job.Output);
+        Assert.Single(job.Output!.InlinedResponses!.InlinedResponses!);
     }
 
     [Fact]
     public async Task ListAsync_AppliesPagingParams()
     {
-        const string json = """{"batches":[{"name":"batches/1"},{"name":"batches/2"}],"nextPageToken":"tok"}""";
+        // "operations", not "batches" - confirmed live 2026-08-15 (see BatchJobList's remarks); the
+        // whole Batch API surface is implemented as instances of Google's generic long-running-
+        // operations pattern, and ListOperationsResponse's field is genuinely called "operations".
+        const string json =
+            """{"operations":[{"name":"batches/1","metadata":{"state":"BATCH_STATE_RUNNING"}},{"name":"batches/2","metadata":{"state":"BATCH_STATE_SUCCEEDED"}}],"nextPageToken":"tok"}""";
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
         var batch = BuildBatchService(handler);
 
         var page = await batch.ListAsync(pageSize: 10, pageToken: "prev");
 
         Assert.Equal(2, page.Batches!.Length);
+        Assert.Equal("BATCH_STATE_RUNNING", page.Batches![0].State);
         Assert.Equal("tok", page.NextPageToken);
         var url = handler.Requests[0].RequestUri!.ToString();
         Assert.Contains("pageSize=10", url);
@@ -171,7 +228,7 @@ public class BatchServiceTests
     [Fact]
     public async Task ListAsync_NoPagingParams_OmitsQueryString()
     {
-        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, """{"batches":[]}""");
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, """{"operations":[]}""");
         var batch = BuildBatchService(handler);
 
         await batch.ListAsync();
@@ -225,12 +282,12 @@ public class BatchServiceTests
     [Fact]
     public async Task WaitUntilCompleteAsync_ReturnsImmediately_WhenAlreadyTerminal()
     {
-        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, """{"name":"batches/1","state":"JOB_STATE_SUCCEEDED"}""");
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, """{"name":"batches/1","metadata":{"state":"BATCH_STATE_SUCCEEDED"}}""");
         var batch = BuildBatchService(handler);
 
         var job = await batch.WaitUntilCompleteAsync("batches/1", pollInterval: TimeSpan.FromMilliseconds(1));
 
-        Assert.Equal("JOB_STATE_SUCCEEDED", job.State);
+        Assert.Equal("BATCH_STATE_SUCCEEDED", job.State);
         Assert.Equal(1, handler.CallCount); // no extra polling once already terminal
     }
 
@@ -240,21 +297,21 @@ public class BatchServiceTests
         // Each response is consumed (and disposed) at most once, so the sequence needs distinct
         // instances per poll rather than reusing one "pending" response twice.
         var handler = FakeHttpMessageHandler.Sequence(
-            FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, """{"name":"batches/1","state":"JOB_STATE_RUNNING"}"""),
-            FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, """{"name":"batches/1","state":"JOB_STATE_RUNNING"}"""),
-            FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, """{"name":"batches/1","state":"JOB_STATE_SUCCEEDED"}"""));
+            FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, """{"name":"batches/1","metadata":{"state":"BATCH_STATE_RUNNING"}}"""),
+            FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, """{"name":"batches/1","metadata":{"state":"BATCH_STATE_RUNNING"}}"""),
+            FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, """{"name":"batches/1","metadata":{"state":"BATCH_STATE_SUCCEEDED"}}"""));
         var batch = BuildBatchService(handler);
 
         var job = await batch.WaitUntilCompleteAsync("batches/1", pollInterval: TimeSpan.FromMilliseconds(1));
 
-        Assert.Equal("JOB_STATE_SUCCEEDED", job.State);
+        Assert.Equal("BATCH_STATE_SUCCEEDED", job.State);
         Assert.Equal(3, handler.CallCount);
     }
 
     [Fact]
     public async Task WaitUntilCompleteAsync_ThrowsTimeout_WhenNeverTerminal()
     {
-        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, """{"name":"batches/1","state":"JOB_STATE_RUNNING"}""");
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, """{"name":"batches/1","metadata":{"state":"BATCH_STATE_RUNNING"}}""");
         var batch = BuildBatchService(handler);
 
         await Assert.ThrowsAsync<GeminiTimeoutException>(() =>
@@ -286,8 +343,10 @@ public class BatchServiceTests
         var job = new BatchJob
         {
             Name = "batches/1",
-            State = "JOB_STATE_SUCCEEDED",
-            Output = new BatchJobDestination
+            Metadata = new BatchJobMetadata { State = "BATCH_STATE_SUCCEEDED" },
+            // Real completed responses duplicate output at the top-level "response" field (confirmed
+            // live) - BatchJob.Output reads that first, so tests construct via Response too.
+            Response = new BatchJobDestination
             {
                 InlinedResponses = new InlinedBatchResponseList
                 {
@@ -306,6 +365,40 @@ public class BatchServiceTests
     }
 
     [Fact]
+    public async Task GetAsync_DeserializesRealFileModeCompletedResponse_UsingResponsesFileField()
+    {
+        // Verbatim (trimmed) copy of a real file-mode job's completed response, captured live
+        // 2026-08-15. The point of this test: the destination field really is "responsesFile", not
+        // "fileName" - an earlier version of this library guessed wrong here (see BatchJobDestination's
+        // remarks) until a real key proved it.
+        const string json = """
+            {
+              "name": "batches/v0gdksb77wrf2s32sygkuzg43yvyurtl0u4l",
+              "metadata": {
+                "model": "models/gemini-3.5-flash-lite",
+                "displayName": "raw-verify-file-mode",
+                "inputConfig": { "fileName": "files/cgjm4dkvf6lw" },
+                "output": { "responsesFile": "files/batch-v0gdksb77wrf2s32sygkuzg43yvyurtl0u4l" },
+                "batchStats": { "requestCount": "1", "successfulRequestCount": "1" },
+                "state": "BATCH_STATE_SUCCEEDED",
+                "name": "batches/v0gdksb77wrf2s32sygkuzg43yvyurtl0u4l"
+              },
+              "done": true,
+              "response": {
+                "responsesFile": "files/batch-v0gdksb77wrf2s32sygkuzg43yvyurtl0u4l"
+              }
+            }
+            """;
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
+        var batch = BuildBatchService(handler);
+
+        var job = await batch.GetAsync("batches/v0gdksb77wrf2s32sygkuzg43yvyurtl0u4l");
+
+        Assert.Equal("files/cgjm4dkvf6lw", job.InputConfig!.FileName); // input side: unaffected, still "fileName"
+        Assert.Equal("files/batch-v0gdksb77wrf2s32sygkuzg43yvyurtl0u4l", job.Output!.ResponsesFile); // output side: "responsesFile"
+    }
+
+    [Fact]
     public async Task GetResultsAsync_DownloadsAndParsesJsonl_ForFileBasedOutput()
     {
         const string jsonl =
@@ -320,8 +413,8 @@ public class BatchServiceTests
         var job = new BatchJob
         {
             Name = "batches/1",
-            State = "JOB_STATE_SUCCEEDED",
-            Output = new BatchJobDestination { FileName = "files/results" }
+            Metadata = new BatchJobMetadata { State = "BATCH_STATE_SUCCEEDED" },
+            Response = new BatchJobDestination { ResponsesFile = "files/results" }
         };
 
         var results = await batch.GetResultsAsync(job);
@@ -340,7 +433,7 @@ public class BatchServiceTests
             new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent("not-json\n") });
         var batch = BuildBatchService(FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, "{}"), filesHandler);
 
-        var job = new BatchJob { Output = new BatchJobDestination { FileName = "files/results" } };
+        var job = new BatchJob { Response = new BatchJobDestination { ResponsesFile = "files/results" } };
 
         await Assert.ThrowsAsync<GeminiSerializationException>(() => batch.GetResultsAsync(job));
     }
@@ -349,7 +442,7 @@ public class BatchServiceTests
     public async Task GetResultsAsync_ThrowsGeminiException_WhenJobHasNoOutputYet()
     {
         var batch = BuildBatchService(FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, "{}"));
-        var job = new BatchJob { Name = "batches/1", State = "JOB_STATE_PENDING", Output = null };
+        var job = new BatchJob { Name = "batches/1", Metadata = new BatchJobMetadata { State = "BATCH_STATE_PENDING" } };
 
         await Assert.ThrowsAsync<GeminiException>(() => batch.GetResultsAsync(job));
     }
@@ -359,9 +452,14 @@ public class BatchServiceTests
     {
         // Deliberately NOT treated as "zero results" - see BatchService.GetResultsAsync's comment on
         // why: an empty list here would look identical to a legitimately empty, successful result set,
-        // silently masking either a job-level failure or an unrecognized live response field name.
+        // silently masking a job-level failure.
         var batch = BuildBatchService(FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, "{}"));
-        var job = new BatchJob { Name = "batches/1", State = "JOB_STATE_FAILED", Output = new BatchJobDestination() };
+        var job = new BatchJob
+        {
+            Name = "batches/1",
+            Metadata = new BatchJobMetadata { State = "BATCH_STATE_FAILED" },
+            Response = new BatchJobDestination()
+        };
 
         await Assert.ThrowsAsync<GeminiException>(() => batch.GetResultsAsync(job));
     }

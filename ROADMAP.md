@@ -179,20 +179,45 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       (cost governance and rate limiting integration, batch embeddings, client-side limit
       enforcement).
 
-      Two facts couldn't be pinned down from Google's documentation alone (their own docs disagree
-      with themselves): the exact `state` string prefix (`JOB_STATE_*` vs `BATCH_STATE_*`) and the
-      field name for file-based results (`fileName` vs `responsesFile`). `BatchJob.State` is modeled
-      as a plain string (not a C# enum), and `BatchService.IsTerminalState` matches by suffix rather
-      than exact literal, so this works regardless of which prefix is real; the destination file field
-      is modeled as `fileName` (the guide's and the Python SDK's own examples agree on that, against
-      the REST reference page alone). **Both are still genuinely unverified against a real API
-      response** as of this entry: unlike every other live-docs-uncertainty this project has resolved
-      (e.g. the `thoughtSignature` gap in `6.3.1`), this one hasn't yet had a real key run against it.
-      The two fast, non-blocking live tests that exist specifically to resolve this
-      (`BatchLiveTests.CreateAsync_ThenGetAsync_ResolvesActualStateStringAndAcceptsRequestShape` and
-      `..._ThenCancelAsync_...`) are written and correctly skip without a key, but have not actually
-      been run live yet. Treat this feature as implemented and unit-tested, not yet fully
-      live-verified, until that happens.
+      **Live-verified end-to-end on 2026-08-15** against a real, paid-tier key, after an initial
+      unit-tested-only version shipped with two guesses that live testing proved wrong, plus a third,
+      more serious structural gap docs research never surfaced at all:
+
+      - **State prefix**: confirmed `BATCH_STATE_*` (`BATCH_STATE_PENDING`/`RUNNING`/`SUCCEEDED`/
+        `CANCELLED`), not `JOB_STATE_*`. Google's REST reference was right; the guide's and cookbook's
+        `JOB_STATE_*` examples describe the Python SDK's own naming, not the raw wire format.
+      - **File-based results field**: confirmed `responsesFile`, not `fileName` (the initial guess,
+        based on the guide's worked example and the Python SDK sample, both of which turned out to
+        describe the SDK layer, not the wire format). `BatchJobDestination.FileName` was renamed to
+        `ResponsesFile` as a result - a real, breaking-if-anyone-had-depended-on-it fix caught before
+        release only because a live key was actually used.
+      - **The bigger find**: Create/Get/List responses aren't the flat batch resource this feature was
+        originally modeled as. They're wrapped in a Google long-running-operation envelope
+        (`{ name, metadata, done, error | response }`), with the real batch fields (`state`,
+        `batchStats`, `output`, `displayName`, ...) nested under `metadata`. None of the three research
+        sources (guide, REST reference, cookbook) surfaced this as the actual Create/Get/List response
+        shape - one fetch mentioned an "Operation" concept but it read as tangential, not central, and
+        was filed away as such. Against the real API, the original flat `BatchJob` would have
+        deserialized `State`/`BatchStats`/`DisplayName` as permanently `null` - meaning
+        `WaitUntilCompleteAsync` would have looped until timeout on every real job, succeeded or not.
+        Fixed by nesting a new `BatchJobMetadata` type under `BatchJob.Metadata`, with `BatchJob`
+        itself exposing the original flat properties (`State`, `Output`, `BatchStats`, ...) as
+        read-only passthroughs, so the public `IBatchService` surface and every caller-facing code
+        example didn't have to change.
+      - **A fourth, smaller find**: `batchStats`' counts (`requestCount`, `successfulRequestCount`,
+        etc.) arrive as JSON strings (`"1"`), not JSON numbers - standard protobuf-JSON behavior for
+        `int64` fields, but not something the docs research had translated into "the C# properties need
+        `[JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]` or they'll throw." Fixed the
+        same way.
+
+      Verification method: raw REST calls (bypassing this library's own types entirely, to see Google's
+      actual wire format without risk of the library's own mapping masking a mismatch) for the create/
+      get/cancel/list/delete shapes on both inline and file-mode jobs, including polling one of each
+      to real completion (a trivial 1-request job completed in under two minutes both times); then the
+      actual `IBatchService`/`BatchService` code, fixed, run against the same live API and confirmed
+      working end-to-end, including a new permanent live test
+      (`BatchLiveTests.CreateAsync_WaitUntilComplete_ReturnsRealGeneratedText`) that waits for a real
+      job to complete and asserts on the real generated text and real usage metadata.
 
 ---
 

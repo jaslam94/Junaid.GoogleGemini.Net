@@ -81,4 +81,49 @@ public class BatchLiveTests(GeminiFixture fixture)
 
         await Batch.DeleteAsync(created.Name!);
     }
+
+    /// <summary>
+    /// The one live test that waits for a real completion, rather than a fast create+get/cancel check.
+    /// Justified here (contrary to the general "don't block on real completion" guidance elsewhere in
+    /// this suite - see PLAN-batch-api.md §7): a trivial 1-request job was empirically observed to
+    /// complete in under two minutes during live verification on 2026-08-15, so a bounded ~5 minute
+    /// wait is a reasonable regression test, not an open-ended one. This is what actually proved the
+    /// results-parsing path (inline results, real usage metadata, real generated text) works end to
+    /// end against the real API, not just against fabricated fixtures.
+    /// </summary>
+    [RequiresPaidGeminiKey]
+    public async Task CreateAsync_WaitUntilComplete_ReturnsRealGeneratedText()
+    {
+        var requests = new List<InlinedBatchRequest>
+        {
+            new()
+            {
+                Request = new GenerateContentRequest
+                {
+                    Contents = { new Content { Parts = { new Part { Text = "Reply with exactly the word: pong" } } } }
+                }
+            }
+        };
+
+        var created = await Batch.CreateAsync(
+            GeminiConstants.Models.Gemini35FlashLite, requests, "junaid-googlegemini-net-live-test-full-roundtrip");
+
+        var finished = await Batch.WaitUntilCompleteAsync(
+            created.Name!, pollInterval: TimeSpan.FromSeconds(20), timeout: TimeSpan.FromMinutes(5));
+
+        Assert.True(BatchService.IsTerminalState(finished.State));
+        Assert.True(finished.Done);
+        Assert.Null(finished.Error);
+        Assert.NotNull(finished.BatchStats);
+        Assert.Equal(1, finished.BatchStats!.SuccessfulRequestCount); // confirms batchStats' string-typed numbers parse correctly
+
+        var results = await Batch.GetResultsAsync(finished);
+
+        Assert.Single(results);
+        Assert.NotNull(results[0].Response);
+        Assert.Contains("pong", results[0].Response!.Text(), StringComparison.OrdinalIgnoreCase);
+        Assert.True(results[0].Response!.Usage?.TotalTokenCount > 0);
+
+        await Batch.DeleteAsync(created.Name!);
+    }
 }

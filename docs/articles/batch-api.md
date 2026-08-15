@@ -79,7 +79,10 @@ var finished = await batchService.WaitUntilCompleteAsync(
 
 This polls `GetAsync` until the job reaches a terminal state (succeeded, failed, cancelled, or
 expired). Given the 24-hour target turnaround and 48-hour hard expiry, don't block a request/response
-web request on this. Run it from a background job, a queue worker, or similar.
+web request on this. Run it from a background job, a queue worker, or similar. (In live testing, a
+trivial single-request job consistently completed in under two minutes, but that's one data point on
+one small job, not something to design around; the documented 24-hour target is the number that
+matters for capacity planning.)
 
 If you're polling manually instead, `BatchService.IsTerminalState(job.State)` is the same check
 `WaitUntilCompleteAsync` uses internally.
@@ -111,9 +114,8 @@ Call it on a completed job (see [Waiting for completion](#waiting-for-completion
 running: it throws if the job has no `Output` yet at all, and it also throws (rather than quietly
 returning an empty list) if `Output` exists but has neither inline responses nor a results file name.
 That second case is deliberately treated as exceptional rather than "zero results", since a silent
-empty list would look identical to a job that genuinely produced nothing, and could otherwise hide a
-job-level failure (check `BatchJob.Error`) or a results-file field name this library doesn't recognize
-yet (see the note below).
+empty list would look identical to a job that genuinely produced nothing and could otherwise hide a
+job-level failure - check `BatchJob.Error` if you ever hit it.
 
 A batch job succeeding as a whole doesn't mean every request in it succeeded. Check
 `BatchJob.BatchStats.FailedRequestCount`, and check each result's `Error` individually the way the
@@ -149,9 +151,23 @@ of whether you called `DeleteAsync` yourself.
 
 ## A note on the state string
 
-`BatchJob.State` is a plain string, not a C# enum, because Google's own documentation is inconsistent
-about the exact prefix (some pages/tools show `JOB_STATE_RUNNING`, `JOB_STATE_SUCCEEDED`, etc.; others
-show `BATCH_STATE_RUNNING`). `BatchService.IsTerminalState` checks the *suffix* (`SUCCEEDED`,
-`FAILED`, `CANCELLED`, `EXPIRED`) case-insensitively, so it works correctly regardless of which prefix
-your project's API responses actually use. Don't compare `State` against a hardcoded literal like
-`"JOB_STATE_SUCCEEDED"` in your own code for the same reason.
+`BatchJob.State` is a plain string, not a C# enum. Real responses use a `BATCH_STATE_*` prefix
+(`BATCH_STATE_PENDING`, `BATCH_STATE_RUNNING`, `BATCH_STATE_SUCCEEDED`, `BATCH_STATE_CANCELLED`,
+confirmed live against the real API) - Google's guide and cookbook samples show `JOB_STATE_*` instead,
+which turned out to describe the Python SDK's own naming, not the raw wire format. `State` is still
+kept as a plain string rather than a hardcoded enum, and `BatchService.IsTerminalState` still checks
+the *suffix* (`SUCCEEDED`, `FAILED`, `CANCELLED`, `EXPIRED`) rather than the full literal, so your code
+keeps working even if this changes again. Don't compare `State` against a hardcoded full literal like
+`"BATCH_STATE_SUCCEEDED"` in your own code for the same reason - use `IsTerminalState` or a suffix
+check.
+
+## A note on the response shape (if you're reading raw JSON yourself)
+
+You shouldn't need this for normal use of `IBatchService` - it's handled for you - but if you're ever
+inspecting raw API responses directly: Create/Get/List responses are wrapped in a Google
+long-running-operation envelope (`{ name, metadata, done, error | response }`), not a flat batch
+resource. The fields you'd expect at the root (`state`, `batchStats`, `displayName`, `output`, ...)
+actually live under `metadata`. This isn't documented anywhere in Google's guide, REST reference, or
+cookbook for this feature; it was confirmed only by making real calls. `BatchJob`'s properties
+(`State`, `Output`, `BatchStats`, etc.) already read from the right place, so this only matters if
+you're working with the wire format directly.

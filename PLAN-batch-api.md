@@ -1,7 +1,27 @@
 # Plan: Batch API for Junaid.GoogleGemini.Net
 
-**Status:** Implemented in `6.4.0` (PR #42), not yet released or live-verified. Kept here as a
-historical record, same convention as `PLAN-cost-governance.md`. **Post-implementation addendum:**
+**Status:** Implemented and live-verified in `6.4.0` (PR #42) on 2026-08-15. Kept here as a
+historical record, same convention as `PLAN-cost-governance.md`.
+
+**Live-verification addendum (2026-08-15, after a real key was finally used):** this plan's own
+epistemic-hygiene effort (the self-review pass, the source-reliability calibration, hedging §2.4/§2.3
+as unresolved rather than guessing) was the right instinct but insufficient on its own. Live testing
+found the two flagged facts BOTH resolved differently than this plan's working assumptions, plus a
+third, more serious gap none of the three research sources (guide, REST reference, cookbook) surfaced
+as central: **Create/Get/List responses are wrapped in a Google long-running-operation envelope**
+(`{ name, metadata, done, error | response }`), not the flat resource this entire plan assumed
+throughout §2.3 and §4. The real batch fields live under `metadata`. Against the real API, the
+originally-shipped flat `BatchJob` would have deserialized `State`/`BatchStats`/`DisplayName` as
+permanently null, meaning `WaitUntilCompleteAsync` would loop until timeout on every real job. One of
+this plan's own early research fetches *did* mention an "Operation" shape (§ omitted from the final
+plan text as apparently tangential) - it was the actual answer, misfiled as a side note. Lesson for next
+time: when research surfaces a shape that doesn't obviously fit the working model, don't file it away:
+figure out where it fits before continuing. See `ROADMAP.md`'s `6.4.0` entry for the full list of what
+live testing corrected (state prefix, results-file field name, the operation-envelope restructure, and
+`batchStats`' string-typed numbers) and exactly how it was verified (raw REST calls independent of this
+library's own types, plus the actual library code, run against real jobs taken to real completion).
+
+**Post-implementation addendum (pre-live-verification, still accurate):**
 `CancelAsync` ended up simpler than §4.7 specified — rather than deserializing into the
 `EmptyBatchResponse` type this plan describes, the actual implementation discards the cancel response
 body entirely (success/failure is determined purely by the HTTP status code), so `EmptyBatchResponse`

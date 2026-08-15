@@ -227,28 +227,22 @@ namespace Junaid.GoogleGemini.Net.Services
                 return inline;
             }
 
-            if (!string.IsNullOrWhiteSpace(job.Output.FileName))
+            if (!string.IsNullOrWhiteSpace(job.Output.ResponsesFile))
             {
-                var bytes = await _fileService.DownloadFileAsync(job.Output.FileName!, cancellationToken);
+                var bytes = await _fileService.DownloadFileAsync(job.Output.ResponsesFile!, cancellationToken);
                 return ParseJsonl(bytes);
             }
 
             // Output is non-null, yet neither destination has anything in it. Deliberately an
             // exception, not a silent empty list: per this method's own contract (see
             // IBatchService.GetResultsAsync's doc comment) it's meant to be called on a completed job,
-            // where "an Output object exists but is empty on both sides" is not a normal outcome. It's
-            // either a genuine job-level failure with truly no per-request output (check BatchJob.Error
-            // first) — or exactly the failure mode BatchJobDestination.FileName's remarks warn about:
-            // the live API using a results-file field name this library doesn't recognize yet
-            // (fileName vs responsesFile, unresolved per PLAN-batch-api.md §2.3/§7). An empty list here
-            // would silently look like "the job legitimately produced zero results," which is a much
-            // easier mistake to miss than an exception.
+            // where "an Output object exists but is empty on both sides" is not a normal outcome.
+            // Most likely a genuine job-level failure with truly no per-request output - check
+            // BatchJob.Error first.
             throw new GeminiException(
                 $"Batch job '{job.Name}' has an Output object but no inline responses and no results " +
-                "file name. Check BatchJob.Error and BatchJob.State first (a job-level failure can " +
-                "produce genuinely empty output); if the job actually succeeded, this may indicate the " +
-                "live API returned the results file under a field name this library doesn't recognize " +
-                "yet (see BatchJobDestination's remarks).");
+                "file name. Check BatchJob.Error and BatchJob.State first: a job-level failure can " +
+                "produce genuinely empty output.");
         }
 
         /// <summary>

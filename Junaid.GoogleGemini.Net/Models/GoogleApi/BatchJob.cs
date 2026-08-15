@@ -9,9 +9,15 @@ namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
 /// retrieval, and the library's known limitations around this feature).
 /// </summary>
 /// <remarks>
-/// Deliberately named <c>BatchJob</c>, not <c>Batch</c> — see <c>PLAN-batch-api.md</c> §4.1:
-/// <see cref="BatchEmbedContentResponse"/> already exists for something unrelated (the synchronous
-/// multi-embedding call), and a bare "Batch*" name would be an easy thing to confuse it with.
+/// <b>Wire shape, confirmed live (2026-08-15) against the real API</b> — this took a real key to get
+/// right and corrects an earlier, docs-only version of this type that had the wrong shape entirely.
+/// Create/Get/List do not return the batch fields (state, batchStats, output, ...) directly at the
+/// JSON root. They return a Google long-running-<c>Operation</c> envelope
+/// (<c>{ name, metadata, done, error | response }</c>), with the actual batch resource nested under
+/// <c>metadata</c>. This wasn't documented anywhere in Google's guide, REST reference, or cookbook
+/// research for this feature; it was only visible by making real calls. See <see cref="Metadata"/> and
+/// the passthrough properties below for how this is handled without changing the public shape callers
+/// already write code against.
 /// </remarks>
 public class BatchJob
 {
@@ -19,24 +25,131 @@ public class BatchJob
     [JsonPropertyName("name")]
     public string? Name { get; set; }
 
-    /// <summary>Optional human-readable display name, set at creation.</summary>
-    [JsonPropertyName("displayName")]
-    public string? DisplayName { get; set; }
+    /// <summary>
+    /// The actual batch resource fields, as nested by the API under the long-running-operation
+    /// envelope's <c>metadata</c> property. Most callers won't need to touch this directly; the
+    /// passthrough properties below (<see cref="DisplayName"/>, <see cref="State"/>, etc.) read from
+    /// here so existing code keeps working against the flat shape.
+    /// </summary>
+    [JsonPropertyName("metadata")]
+    public BatchJobMetadata? Metadata { get; set; }
 
     /// <summary>
-    /// The model the job runs against, e.g. <c>models/gemini-3.6-flash</c>. Only present when reading
-    /// a job back (Get/List) — the create request does not send this as a body field; the model is
-    /// expressed in the create call's URL instead (see <c>PLAN-batch-api.md</c> §2.3).
+    /// Whether the underlying operation has finished (in any outcome: succeeded, failed, cancelled, or
+    /// expired). Absent (and therefore <c>false</c>, proto3's default-value-omission behavior) while
+    /// still pending/running - confirmed live, not merely assumed. Prefer
+    /// <c>BatchService.IsTerminalState</c> on <see cref="State"/> for polling logic; this flag
+    /// is provided for completeness since it's what the raw API actually exposes.
+    /// </summary>
+    [JsonPropertyName("done")]
+    public bool Done { get; set; }
+
+    /// <summary>
+    /// The operation-level error, present when <see cref="Done"/> and the job did not succeed
+    /// (including a user-initiated cancellation - confirmed live: a cancelled job's <c>error</c> is
+    /// populated too, with a generic message, not left null).
+    /// </summary>
+    [JsonPropertyName("error")]
+    public ApiError? Error { get; set; }
+
+    /// <summary>
+    /// The operation's result payload, present once <see cref="Done"/> and the job succeeded. Same
+    /// shape as <see cref="BatchJobMetadata.Output"/> - confirmed live, Google duplicates the output
+    /// here and under <c>metadata.output</c> once a job completes. <see cref="Output"/> below prefers
+    /// this field (the canonical long-running-operation "result" location) and falls back to
+    /// <see cref="BatchJobMetadata.Output"/> only if this is somehow absent.
+    /// </summary>
+    [JsonPropertyName("response")]
+    public BatchJobDestination? Response { get; set; }
+
+    /// <summary>Optional human-readable display name, set at creation.</summary>
+    [JsonIgnore]
+    public string? DisplayName => Metadata?.DisplayName;
+
+    /// <summary>The model the job runs against, e.g. <c>models/gemini-3.6-flash</c>.</summary>
+    [JsonIgnore]
+    public string? Model => Metadata?.Model;
+
+    /// <summary>Where the job's input requests came from (inline or an uploaded file).</summary>
+    [JsonIgnore]
+    public BatchJobSource? InputConfig => Metadata?.InputConfig;
+
+    /// <summary>
+    /// Where the job's results ended up, once available. Null until the job has made progress. Reads
+    /// <see cref="Response"/> first, falling back to <see cref="BatchJobMetadata.Output"/> - see
+    /// <see cref="Response"/>'s remarks for why there are two places this could come from.
+    /// </summary>
+    [JsonIgnore]
+    public BatchJobDestination? Output => Response ?? Metadata?.Output;
+
+    /// <summary>Creation timestamp (RFC 3339).</summary>
+    [JsonIgnore]
+    public string? CreateTime => Metadata?.CreateTime;
+
+    /// <summary>Last update timestamp (RFC 3339).</summary>
+    [JsonIgnore]
+    public string? UpdateTime => Metadata?.UpdateTime;
+
+    /// <summary>Completion timestamp (RFC 3339); set once the job reaches a terminal state.</summary>
+    [JsonIgnore]
+    public string? EndTime => Metadata?.EndTime;
+
+    /// <summary>Per-request success/failure counts, populated as the job progresses.</summary>
+    [JsonIgnore]
+    public BatchStats? BatchStats => Metadata?.BatchStats;
+
+    /// <summary>
+    /// Optional creation-time priority hint. Documented by Google but not surfaced by any method on
+    /// <c>IBatchService</c> in this release - see <c>PLAN-batch-api.md</c> §3/§9 for why (out of scope,
+    /// not because it's unsupported on the wire).
+    /// </summary>
+    [JsonIgnore]
+    public long? Priority => Metadata?.Priority;
+
+    /// <summary>
+    /// The job's current status. Modeled as a plain string (not a C# enum) even though the exact prefix
+    /// is now confirmed (<c>BATCH_STATE_*</c> - see <see cref="Metadata"/>'s type remarks): a string
+    /// still round-trips correctly if Google ever changes it again, and
+    /// <c>BatchService.IsTerminalState</c>'s suffix match doesn't care about the prefix anyway.
+    /// </summary>
+    [JsonIgnore]
+    public string? State => Metadata?.State;
+}
+
+/// <summary>
+/// The actual <c>GenerateContentBatch</c> resource fields, as returned nested under a
+/// long-running-operation envelope's <c>metadata</c> property (see <see cref="BatchJob"/>'s remarks).
+/// </summary>
+/// <remarks>
+/// <b>State prefix, confirmed live (2026-08-15):</b> real responses use <c>BATCH_STATE_PENDING</c>,
+/// <c>BATCH_STATE_RUNNING</c>, <c>BATCH_STATE_SUCCEEDED</c>, and <c>BATCH_STATE_CANCELLED</c> - i.e.
+/// Google's REST reference page was right, and the guide's/cookbook's <c>JOB_STATE_*</c> examples
+/// reflect the Python SDK's own naming, not the raw wire format. Still modeled as a plain string
+/// (see <see cref="BatchJob.State"/>) rather than hardcoding this prefix into an enum, since a suffix
+/// match is just as correct and doesn't risk breaking if Google changes it a third time.
+/// </remarks>
+public class BatchJobMetadata
+{
+    /// <summary>
+    /// The model this job runs against, e.g. <c>models/gemini-3.6-flash</c>. Present on Get/List;
+    /// confirmed absent from the create request body itself (see <c>CreateBatchRequest</c>'s remarks -
+    /// the model is expressed only in the create call's URL).
     /// </summary>
     [JsonPropertyName("model")]
     public string? Model { get; set; }
+
+    /// <summary>Optional human-readable display name, set at creation.</summary>
+    [JsonPropertyName("displayName")]
+    public string? DisplayName { get; set; }
 
     /// <summary>Where the job's input requests came from (inline or an uploaded file).</summary>
     [JsonPropertyName("inputConfig")]
     public BatchJobSource? InputConfig { get; set; }
 
     /// <summary>
-    /// Where the job's results ended up, once available. Null until the job has made progress.
+    /// Where the job's results ended up, once available. See <see cref="BatchJobDestination"/> - the
+    /// same content is also duplicated at the envelope's top-level <c>response</c> field once the job
+    /// completes (<see cref="BatchJob.Response"/>).
     /// </summary>
     [JsonPropertyName("output")]
     public BatchJobDestination? Output { get; set; }
@@ -58,32 +171,30 @@ public class BatchJob
     public BatchStats? BatchStats { get; set; }
 
     /// <summary>
-    /// Optional creation-time priority hint. Documented by Google but not surfaced by any method on
-    /// <c>IBatchService</c> in this release — see <c>PLAN-batch-api.md</c> §3/§9 for why (out of scope,
-    /// not because it's unsupported on the wire).
+    /// Optional creation-time priority hint. Confirmed (by analogy with <see cref="BatchStats"/>'s
+    /// fields, both being <c>int64</c> per Google's REST reference) to likely arrive as a JSON string
+    /// rather than a JSON number - not itself observed live (no test job set a priority), but handled
+    /// the same defensive way regardless.
     /// </summary>
     [JsonPropertyName("priority")]
+    [JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
     public long? Priority { get; set; }
 
-    /// <summary>
-    /// The job's current status. Modeled as a plain string (not a C# enum) deliberately — Google's own
-    /// docs disagree with themselves on the exact prefix (<c>JOB_STATE_*</c> vs <c>BATCH_STATE_*</c>);
-    /// see <c>PLAN-batch-api.md</c> §2.4. Compare via an ordinal-insensitive suffix check (does the
-    /// value end in <c>"SUCCEEDED"</c>, <c>"FAILED"</c>, <c>"CANCELLED"</c>, or <c>"EXPIRED"</c>?)
-    /// rather than an exact prefixed literal, so this keeps working whichever prefix the live API
-    /// actually returns. <c>BatchService.IsTerminalState</c> implements exactly that check.
-    /// </summary>
+    /// <summary>The job's current status. See this type's remarks for the confirmed state prefix.</summary>
     [JsonPropertyName("state")]
     public string? State { get; set; }
 
-    /// <summary>Job-level error, if the job itself failed outright (distinct from per-request errors).</summary>
-    [JsonPropertyName("error")]
-    public ApiError? Error { get; set; }
+    // Note: the raw response also duplicates "name" inside metadata (identical to the envelope's
+    // top-level name in every observed case). Deliberately not modeled here - BatchJob.Name is the
+    // canonical source, and an unmapped "name" inside this object is silently ignored by
+    // System.Text.Json's default unmapped-member handling, same as any other unmodeled field.
 }
 
 /// <summary>
 /// The <c>inputConfig</c> oneof: either a reference to an uploaded JSONL file, or a list of inline
-/// requests. Exactly one of <see cref="FileName"/> / <see cref="Requests"/> is set.
+/// requests. Exactly one of <see cref="FileName"/> / <see cref="Requests"/> is set. Confirmed live
+/// (2026-08-15): <c>{"inputConfig": {"fileName": "files/..."}}</c> is exactly the shape the real API
+/// accepts for file mode.
 /// </summary>
 public class BatchJobSource
 {
@@ -106,7 +217,7 @@ public class InlinedBatchRequestList
 
 /// <summary>
 /// One request in <b>inline</b> mode. Distinct from the JSONL file-mode line shape
-/// (<see cref="BatchRequestLine"/>) — inline mode's per-item envelope field is
+/// (<see cref="BatchRequestLine"/>) - inline mode's per-item envelope field is
 /// <c>metadata</c>, not <c>key</c>. Don't conflate the two; see <c>PLAN-batch-api.md</c> §2.3.
 /// </summary>
 public class InlinedBatchRequest
@@ -121,26 +232,25 @@ public class InlinedBatchRequest
 }
 
 /// <summary>
-/// The <c>output</c>/<c>dest</c> oneof: either a reference to a results file, or the results embedded
-/// directly in the job resource. Exactly one of <see cref="FileName"/> / <see cref="InlinedResponses"/>
-/// is set, once the job has results.
+/// The <c>output</c>/<c>response</c> oneof: either a reference to a results file, or the results
+/// embedded directly. Exactly one of <see cref="ResponsesFile"/> / <see cref="InlinedResponses"/> is
+/// set, once the job has results.
 /// </summary>
 /// <remarks>
-/// <b>Field-name uncertainty:</b> the field for the results file is modeled here as <c>fileName</c>,
-/// which is what the guide's worked example and the Python SDK's own code sample both show. Google's
-/// REST reference page says <c>responsesFile</c> instead — but that same page independently produced a
-/// wrong answer elsewhere in this research (the <see cref="BatchJob.State"/> prefix, see
-/// <c>PLAN-batch-api.md</c> §2.4), so it's the lower-confidence source here too. This has not yet been
-/// confirmed against a live file-mode job's actual response — see <c>PLAN-batch-api.md</c> §7's
-/// manual-verification note. If a live response turns out to use <c>responsesFile</c> instead, update
-/// this property's <see cref="JsonPropertyNameAttribute"/> (case-insensitive matching does not bridge
-/// the two, since they differ by more than case).
+/// <b>Field name, confirmed live (2026-08-15):</b> the results-file field is <c>responsesFile</c>, not
+/// <c>fileName</c> - an earlier version of this type guessed <c>fileName</c> based on the guide's
+/// worked example and the Python SDK's own sample code, both of which turned out to describe the SDK's
+/// abstraction rather than the raw wire field name. Confirmed directly from a real completed file-mode
+/// job's response: <c>{"output": {"responsesFile": "files/batch-..."}}</c>, duplicated identically at
+/// the envelope's top-level <c>response.responsesFile</c>. Inline mode's shape
+/// (<c>{"inlinedResponses": {"inlinedResponses": [...]}}</c>, the double-nesting is real, also
+/// confirmed live) needed no correction.
 /// </remarks>
 public class BatchJobDestination
 {
-    /// <summary>File-mode: the results file's resource name (e.g. <c>files/xyz789</c>). See remarks.</summary>
-    [JsonPropertyName("fileName")]
-    public string? FileName { get; set; }
+    /// <summary>File-mode: the results file's resource name (e.g. <c>files/xyz789</c>).</summary>
+    [JsonPropertyName("responsesFile")]
+    public string? ResponsesFile { get; set; }
 
     /// <summary>Inline-mode: the results embedded directly in the job resource.</summary>
     [JsonPropertyName("inlinedResponses")]
@@ -179,7 +289,14 @@ public class InlinedBatchResponse
     public ApiError? Error { get; set; }
 }
 
-/// <summary>Per-request progress/outcome counts for a batch job.</summary>
+/// <summary>
+/// Per-request progress/outcome counts for a batch job. Confirmed live (2026-08-15): every count here
+/// arrives as a JSON <b>string</b> (e.g. <c>"requestCount": "1"</c>), not a JSON number - the
+/// protobuf-JSON convention for <c>int64</c> fields (avoids precision loss in JS number parsing).
+/// <see cref="JsonNumberHandlingAttribute"/> below tolerates that; without it, deserializing a real
+/// response into <c>long?</c>-typed properties would throw.
+/// </summary>
+[JsonNumberHandling(JsonNumberHandling.AllowReadingFromString)]
 public class BatchStats
 {
     /// <summary>Total number of requests in the job.</summary>

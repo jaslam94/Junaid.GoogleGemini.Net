@@ -112,9 +112,9 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// state where results exist) — call <see cref="WaitUntilCompleteAsync"/> or check
         /// <see cref="BatchJob.State"/> first. Also throws if the job has an
         /// <see cref="BatchJob.Output"/> object but neither inline responses nor a results file name:
-        /// deliberately not treated as "zero results," since that could otherwise mask a real API
-        /// response shape this library doesn't recognize yet (see <see cref="BatchJobDestination"/>'s
-        /// remarks) as if it were a legitimately empty, successful result set.
+        /// deliberately not treated as "zero results," since an empty list there would look identical
+        /// to a job that genuinely produced nothing, most likely indicating a job-level failure worth
+        /// surfacing (check <see cref="BatchJob.Error"/>) rather than a successful empty result set.
         /// </summary>
         Task<IReadOnlyList<InlinedBatchResponse>> GetResultsAsync(BatchJob job, CancellationToken cancellationToken = default);
     }
