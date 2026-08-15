@@ -3,9 +3,11 @@
 Gemini's "Nano Banana" models can return generated images from the same `generateContent` endpoint
 used for text; the client just needs to ask for `IMAGE` output. `GenerateImageAsync` does that for you.
 
-> **Note:** both `Gemini31FlashImage` and `Gemini3ProImage` are still **preview** models per Google's
-> own naming (the `-preview` suffix in the model ID), not GA yet, unlike the current flagship text
-> models. Expect the usual preview caveats: behavior/pricing can change, and availability may vary.
+> **Note:** `Gemini31FlashImage` (Nano Banana 2) and `Gemini3ProImage` (Nano Banana Pro) are both
+> **GA** (since May 2026, under their current unsuffixed model IDs). Earlier releases of this library
+> pointed these constants at the older `-preview`-suffixed model IDs; those were shut down June 25,
+> 2026, so upgrade if you pinned the string literal yourself instead of the constant. There's also a
+> `Gemini31FlashLiteImage` (Nano Banana 2 Lite) for the fastest/cheapest option.
 
 ```csharp
 var response = await gemini.GenerateImageAsync("A watercolor painting of a lighthouse at sunset.");

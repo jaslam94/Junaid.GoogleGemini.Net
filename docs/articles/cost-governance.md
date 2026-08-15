@@ -104,12 +104,17 @@ options.Budget.ModelPricingOverrides = new Dictionary<string, ModelPricing>
 {
     ["gemini-3.6-flash"] = new ModelPricing
     {
-        InputPerMillionTokensUsd = 1.50m,
-        OutputPerMillionTokensUsd = 7.50m,
-        CachedInputPerMillionTokensUsd = 0.15m,
+        InputPerMillionTokensUsd = 0.75m,
+        OutputPerMillionTokensUsd = 3.75m,
+        CachedInputPerMillionTokensUsd = 0.075m,
     },
 };
 ```
+
+Watch for **time-limited introductory pricing**: Google launched `gemini-3.7-flash` on August 13, 2026
+and moved `gemini-3.6-flash` onto the same 50%-off introductory rate shown above; both revert to the
+standard rate (double these numbers) on January 1, 2027. The built-in table will need updating again
+around then, same as any other pricing change.
 
 A model with no pricing entry (built-in or overridden) has its cost calculation skipped entirely:
 token usage is still recorded as normal, but nothing is added to the running daily total and no
@@ -173,8 +178,10 @@ vision, chat, image generation, and their streaming counterparts. Not covered in
   *generation* calls that reference a `CachedContent` are covered, since they still return
   `GenerateContentResponse`.
 - Per-minute/per-hour budgets. Daily (UTC calendar day) only, for now.
-- Image-generation model pricing (`gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, and
-  similar). Image pricing is often per-image, not per-token, so it needs separate design.
+- `gemini-2.5-flash-image` (the older "Nano Banana" model) specifically: Google prices its output
+  strictly per-image with no published per-token equivalent, unlike the three current image models
+  (`gemini-3.1-flash-image`, `gemini-3-pro-image`, `gemini-3.1-flash-lite-image`), which *are* priced
+  per-1M-tokens on both input and output and so do have built-in pricing entries like any text model.
 - The [Batch API](batch-api.md) (`IBatchService`). It bypasses this entirely, on purpose:
   `BatchService` uses its own `HttpClient` rather than the shared pipeline `ICostGovernor` hooks into,
   and batch is priced at a 50% discount this library's pricing model doesn't yet represent.

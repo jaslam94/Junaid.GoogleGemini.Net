@@ -10,9 +10,10 @@ public class GenerationConfig
 {
     /// <summary>
     /// Sampling temperature. Higher = more random.
-    /// <b>Deprecated by Google (July 2026):</b> ignored on <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c>
-    /// and later model generations, which will reject it with HTTP 400 in a future release. Google's guidance
-    /// for those models is to steer determinism via <c>SystemInstruction</c> instead of sampling params.
+    /// <b>Deprecated by Google (July-August 2026):</b> ignored on <c>gemini-3.7-flash</c>,
+    /// <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c> and later model generations, which will
+    /// reject it with HTTP 400 in a future release. Google's guidance for those models is to steer
+    /// determinism via <c>SystemInstruction</c> instead of sampling params.
     /// </summary>
     [JsonPropertyName("temperature")]
     public float? Temperature { get; set; }

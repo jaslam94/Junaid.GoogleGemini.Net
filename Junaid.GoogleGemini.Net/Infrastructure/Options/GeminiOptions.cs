@@ -78,8 +78,18 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         public int RequestsPerMinute { get; set; } = 60;
 
         /// <summary>
-        /// Maximum number of tokens per minute
+        /// Maximum number of tokens per minute.
         /// </summary>
+        /// <remarks>
+        /// <b>Not currently enforced.</b> This property is validated and stored, but
+        /// <see cref="GeminiRateLimiter"/> only throttles on <see cref="RequestsPerMinute"/> today;
+        /// no code path reads this value to gate a call. True token-aware limiting would need to know
+        /// a request's token cost before sending it (the same estimation problem
+        /// <c>BudgetOptions.MaxCostPerRequestUsd</c> solves for cost, at the price of an extra
+        /// <c>countTokens</c> round-trip) and hasn't been built yet. Left in place, rather than
+        /// removed, for config-compatibility and because a future release may wire it up; don't rely
+        /// on it for enforcement in the meantime.
+        /// </remarks>
         [Range(1, 1000000)]
         public int TokensPerMinute { get; set; } = 60000;
 

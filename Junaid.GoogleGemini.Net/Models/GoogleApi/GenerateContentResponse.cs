@@ -223,4 +223,35 @@ public class UsageMetadata
     /// <summary>Tokens served from cached content, when context caching is used.</summary>
     [JsonPropertyName("cachedContentTokenCount")]
     public int CachedContentTokenCount { get; set; }
+
+    /// <summary>
+    /// Per-modality breakdown of <see cref="PromptTokenCount"/> (e.g. how many prompt tokens were
+    /// TEXT vs IMAGE). Live-confirmed present on the real API (2026-08-15, a native image-generation
+    /// response) but not documented ahead of time in any of the sources this library was built from,
+    /// so it went uncaptured until now. Null when the API omits it (observed on plain-text responses).
+    /// </summary>
+    [JsonPropertyName("promptTokensDetails")]
+    public List<ModalityTokenCount>? PromptTokensDetails { get; set; }
+
+    /// <summary>
+    /// Per-modality breakdown of <see cref="CandidatesTokenCount"/> (e.g. how many output tokens were
+    /// TEXT vs IMAGE on a native image-generation response). See <see cref="PromptTokensDetails"/> for
+    /// how this was found. This is what would let a future cost-governance pricing pass distinguish
+    /// text/thinking output tokens from image output tokens on mixed-modality models like
+    /// gemini-3-pro-image, instead of pricing the whole response at the image rate.
+    /// </summary>
+    [JsonPropertyName("candidatesTokensDetails")]
+    public List<ModalityTokenCount>? CandidatesTokensDetails { get; set; }
+}
+
+/// <summary>One entry in a <see cref="UsageMetadata"/> per-modality token breakdown.</summary>
+public class ModalityTokenCount
+{
+    /// <summary>The content modality, e.g. <c>"TEXT"</c>, <c>"IMAGE"</c>, <c>"AUDIO"</c>.</summary>
+    [JsonPropertyName("modality")]
+    public string? Modality { get; set; }
+
+    /// <summary>Token count for this modality.</summary>
+    [JsonPropertyName("tokenCount")]
+    public int TokenCount { get; set; }
 }

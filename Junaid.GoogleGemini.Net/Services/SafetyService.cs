@@ -122,10 +122,26 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             return level switch
             {
+                // Probability vocabulary: what AnalyzeSafetyRatings/the API's SafetyRatings actually
+                // return (GeminiConstants.SafetyProbabilities.*).
                 GeminiConstants.SafetyProbabilities.Negligible => 0,
                 GeminiConstants.SafetyProbabilities.Low => 1,
                 GeminiConstants.SafetyProbabilities.Medium => 2,
                 GeminiConstants.SafetyProbabilities.High => 3,
+
+                // Threshold vocabulary (GeminiConstants.SafetyThresholds.*, e.g. "BLOCK_MEDIUM_AND_ABOVE"):
+                // accepted here too, and mapped onto the same 0-3 scale as the matching-severity
+                // probability. Bug fix: every other method on this class (CreateSafetySettings,
+                // CreateStrictSafetySettings, ...) takes/produces SafetyThresholds.* strings, so a
+                // caller reusing that same vocabulary for IsContentSafe's "thresholds" dictionary is the
+                // natural, expected usage — but before this vocabulary was recognized here at all, any
+                // BLOCK_* string fell through to -1, which (since every real probability level is >=0)
+                // made CompareSafetyLevels return "unsafe" for essentially any response that had a
+                // safety rating at all, regardless of how benign it actually was.
+                GeminiConstants.SafetyThresholds.Low => 1,
+                GeminiConstants.SafetyThresholds.Medium => 2,
+                GeminiConstants.SafetyThresholds.High => 3,
+                GeminiConstants.SafetyThresholds.None => int.MaxValue, // "block nothing" never trips as unsafe
                 _ => -1
             };
         }
