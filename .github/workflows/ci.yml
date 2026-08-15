@@ -43,6 +43,11 @@ jobs:
     runs-on: ubuntu-latest
     # Only run for pushed version tags, never for branch pushes or PRs.
     if: startsWith(github.ref, 'refs/tags/v')
+    # id-token: write lets this job request an OIDC token to exchange for a short-lived NuGet
+    # API key via Trusted Publishing (see nuget-login step below) instead of a stored secret.
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v6
         with:
@@ -66,6 +71,14 @@ jobs:
           dotnet pack Junaid.GoogleGemini.Net/Junaid.GoogleGemini.Net.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
           dotnet pack Junaid.GoogleGemini.Net.Extensions.AI/Junaid.GoogleGemini.Net.Extensions.AI.csproj -c Release --no-build -o ${{ github.workspace }}/artifacts
 
+      - name: Log in to NuGet.org
+        # Exchanges this job's OIDC token for a short-lived NuGet API key via the Trusted
+        # Publishing policy configured at nuget.org/account/trustedpublishing for this repo +
+        # workflow file. No stored secret, nothing to rotate or expire.
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: junaidaslam
+
       - name: Push to NuGet
-        # NUGET_API_KEY must be added under Settings → Secrets and variables → Actions.
-        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --api-key "${{ secrets.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --api-key "${{ steps.nuget-login.outputs.api-key }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
