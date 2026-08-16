@@ -9,11 +9,15 @@ namespace Junaid.GoogleGemini.Net.Benchmarks;
 /// only this library's own code, never Gemini's real latency or Google's infrastructure.
 /// </summary>
 /// <remarks>
-/// Registered two different ways depending on which benchmark uses it — see
-/// <see cref="PipelineOverheadBenchmarks"/>: as the <c>HttpClient</c>'s primary handler for the
-/// raw baseline, and as the DI pipeline's outermost <c>DelegatingHandler</c> (same technique as
-/// <c>Junaid.GoogleGemini.Net.Testing</c>'s cassette replay handler) for the full-pipeline cases,
-/// so it still short-circuits before ever reaching a real <see cref="HttpClientHandler"/>.
+/// Always registered as the <em>primary</em> handler, replacing <see cref="HttpClientHandler"/>
+/// outright rather than wrapping it — <see cref="RawHttpClientBenchmarks"/> passes it directly to
+/// <c>new HttpClient(...)</c>, and <see cref="GeminiClientDefaultBenchmarks"/> /
+/// <see cref="GeminiClientFullyObservedBenchmarks"/> install it via
+/// <c>ConfigurePrimaryHttpMessageHandler</c> after <c>AddGemini</c> has already wired up the real
+/// pipeline. That's the opposite end from <c>Junaid.GoogleGemini.Net.Testing</c>'s cassette
+/// handler, which sits OUTERMOST (before auth) so a recording never sees the API key — this
+/// handler needs to sit INNERMOST instead, so auth and the resilience/retry handler still run for
+/// real and only the final network hop is faked.
 /// </remarks>
 public sealed class FakeGeminiHandler : DelegatingHandler
 {

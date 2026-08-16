@@ -38,8 +38,6 @@ public class GeminiClientFullyObservedBenchmarks
             ShouldListenTo = source => source.Name == GeminiTelemetry.SourceName,
             Sample = (ref ActivityCreationOptions<ActivityContext> _) => ActivitySamplingResult.AllDataAndRecorded,
         };
-        ActivitySource.AddActivityListener(_activityListener);
-
         _meterListener = new MeterListener
         {
             InstrumentPublished = (instrument, listener) =>
@@ -50,29 +48,45 @@ public class GeminiClientFullyObservedBenchmarks
                 }
             },
         };
-        _meterListener.Start();
 
-        var services = new ServiceCollection();
-        services.AddLogging();
-        services.AddGemini(options =>
+        // Everything from here on can throw (options validation inside BuildServiceProvider,
+        // GetRequiredService resolving it) -- if it does, BenchmarkDotNet won't call Cleanup()
+        // below (GlobalSetup failing is fatal), so clean up whatever was already registered/built
+        // ourselves rather than leaking the listeners (and, if it got that far, the provider).
+        try
         {
-            options.ApiKey = "benchmark-key";
-            options.BaseUrl = new Uri("https://benchmark.invalid/v1beta/");
-            options.RateLimit.Enabled = false; // isolate CPU/allocation overhead — see the sibling
-                                                // benchmark class's remarks for why this doesn't
-                                                // change the per-call cost being measured.
-            options.Budget = new BudgetOptions
+            ActivitySource.AddActivityListener(_activityListener);
+            _meterListener.Start();
+
+            var services = new ServiceCollection();
+            services.AddLogging();
+            services.AddGemini(options =>
             {
-                Enabled = true,
-                MaxCostPerDayUsd = 1_000_000m, // effectively never reached, so CheckBudget's real
-                                                // comparison runs without ever throwing mid-benchmark
-            };
-        });
+                options.ApiKey = "benchmark-key";
+                options.BaseUrl = new Uri("https://benchmark.invalid/v1beta/");
+                options.RateLimit.Enabled = false; // isolate CPU/allocation overhead — see the sibling
+                                                    // benchmark class's remarks for why this doesn't
+                                                    // change the per-call cost being measured.
+                options.Budget = new BudgetOptions
+                {
+                    Enabled = true,
+                    MaxCostPerDayUsd = 1_000_000m, // effectively never reached, so CheckBudget's real
+                                                    // comparison runs without ever throwing mid-benchmark
+                };
+            });
 
-        services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeGeminiHandler());
+            services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeGeminiHandler());
 
-        _provider = services.BuildServiceProvider();
-        _service = _provider.GetRequiredService<IGeminiService>();
+            _provider = services.BuildServiceProvider();
+            _service = _provider.GetRequiredService<IGeminiService>();
+        }
+        catch
+        {
+            _provider?.Dispose();
+            _meterListener.Dispose();
+            _activityListener.Dispose();
+            throw;
+        }
     }
 
     [GlobalCleanup]

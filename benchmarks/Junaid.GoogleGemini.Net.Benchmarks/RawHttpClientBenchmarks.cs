@@ -3,6 +3,7 @@ using System.Text.Json;
 using BenchmarkDotNet.Attributes;
 using Junaid.GoogleGemini.Net.Infrastructure.Factories;
 using Junaid.GoogleGemini.Net.Infrastructure.Serialization;
+using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
 using Junaid.GoogleGemini.Net.Models.Requests;
 
@@ -19,6 +20,7 @@ public class RawHttpClientBenchmarks
 {
     private HttpClient _httpClient = null!;
     private GenerateContentRequest _request = null!;
+    private string _endpoint = null!;
 
     [GlobalSetup]
     public void Setup()
@@ -28,6 +30,11 @@ public class RawHttpClientBenchmarks
             BaseAddress = new Uri("https://benchmark.invalid/v1beta/"),
         };
         _request = RequestFactory.CreateTextRequest(BenchmarkPrompt.Text);
+        // Same default model IGeminiService.GenerateAsync resolves to in the other two benchmark
+        // classes (via GeminiConstants.Defaults.Model), computed here rather than hardcoded so
+        // this stays true by construction if that default ever changes -- not something to
+        // remember to update by hand every time it does.
+        _endpoint = $"models/{GeminiConstants.Defaults.Model}:generateContent";
     }
 
     [GlobalCleanup]
@@ -38,7 +45,7 @@ public class RawHttpClientBenchmarks
     {
         var json = JsonSerializer.Serialize(_request, GeminiJson.Default);
         using var content = new StringContent(json, Encoding.UTF8, "application/json");
-        using var response = await _httpClient.PostAsync("models/gemini-3.7-flash:generateContent", content);
+        using var response = await _httpClient.PostAsync(_endpoint, content);
         var body = await response.Content.ReadAsStringAsync();
         var result = JsonSerializer.Deserialize<GenerateContentResponse>(body, GeminiJson.Default);
         return result!.Text();

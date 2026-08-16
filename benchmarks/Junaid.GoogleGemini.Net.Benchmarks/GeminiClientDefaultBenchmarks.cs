@@ -49,8 +49,20 @@ public class GeminiClientDefaultBenchmarks
         // every layer, it just never touches a real socket.
         services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeGeminiHandler());
 
+        // Assign _provider before resolving from it: if GetRequiredService throws (e.g. options
+        // validation), BenchmarkDotNet won't call Cleanup() below (GlobalSetup failing is fatal),
+        // so the provider must already be in a field we can dispose from the catch below rather
+        // than leaked in a local that's about to go out of scope.
         _provider = services.BuildServiceProvider();
-        _service = _provider.GetRequiredService<IGeminiService>();
+        try
+        {
+            _service = _provider.GetRequiredService<IGeminiService>();
+        }
+        catch
+        {
+            _provider.Dispose();
+            throw;
+        }
     }
 
     [GlobalCleanup]
