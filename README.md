@@ -276,15 +276,7 @@ Requires a paid-tier Gemini project; Google's target turnaround is 24 hours (no 
 
 ## Performance
 
-Auth, retries, rate limiting, cost governance, and telemetry are all real work, so what does the full pipeline cost per call versus a bare `HttpClient`? Measured with BenchmarkDotNet against an in-memory fake handler (no real network involved):
-
-| Scenario | Mean latency | Allocated |
-|---|---:|---:|
-| Bare `HttpClient` (serialize + POST + parse only) | ~5 μs | 7.8 KB |
-| This library, default config | ~10 μs | 11.2 KB |
-| This library, everything on (budget + OTel listeners) | ~11-12 μs | 12.2 KB |
-
-All of this is noise next to a real Gemini call (200ms+). See [Performance benchmarks](docs/articles/benchmarks.md) for methodology, caveats, and how to reproduce these numbers on your own hardware.
+Auth, retries, rate limiting, cost governance, and telemetry are all real work, so what does the full pipeline cost per call versus a bare `HttpClient`? Measured with BenchmarkDotNet against an in-memory fake handler (no real network involved): a few microseconds and a handful of KB, all of it noise next to a real Gemini call (200ms+). The actual numbers, methodology, and caveats live in one place so they can't drift out of sync with a copy here — see [Performance benchmarks](docs/articles/benchmarks.md).
 
 ## Documentation & samples
 

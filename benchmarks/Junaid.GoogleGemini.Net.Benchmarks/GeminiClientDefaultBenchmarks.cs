@@ -1,6 +1,4 @@
 using BenchmarkDotNet.Attributes;
-using Junaid.GoogleGemini.Net.Extensions;
-using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -13,16 +11,9 @@ namespace Junaid.GoogleGemini.Net.Benchmarks;
 /// consumer's overhead actually looks like.
 /// </summary>
 /// <remarks>
-/// Rate limiting is turned off here specifically, not because it's disabled by default (it isn't —
-/// <see cref="Infrastructure.Options.RateLimitOptions.Enabled"/> defaults to <c>true</c>), but
-/// because a benchmark loop issues thousands of calls/second, which the default 60-requests/minute
-/// limiter would correctly start queuing after the first couple of calls. That queuing delay is
-/// the rate limiter doing its job, not overhead — measuring it here would just be timing
-/// <c>Task.Delay</c>. With headroom under the configured RPM (the normal case for a real app,
-/// which isn't calling in a tight loop), <c>TokenBucketRateLimiter.AcquireAsync</c> takes the same
-/// fast synchronous-lease path this benchmark exercises either way, so disabling it changes nothing
-/// about the number reported here — see <see cref="GeminiClientFullyObservedBenchmarks"/> for the
-/// same reasoning applied to cost governance and telemetry.
+/// See <see cref="BenchmarkHost"/> for the shared DI wiring, and its doc comment for why rate
+/// limiting is disabled here specifically (isolating measured overhead from the limiter's
+/// intentional throttling delay, not a claim that it's off by default).
 /// </remarks>
 [MemoryDiagnoser]
 public class GeminiClientDefaultBenchmarks
@@ -31,39 +22,7 @@ public class GeminiClientDefaultBenchmarks
     private IGeminiService _service = null!;
 
     [GlobalSetup]
-    public void Setup()
-    {
-        var services = new ServiceCollection();
-        services.AddLogging(); // no providers registered => near-zero-cost no-op logging
-        services.AddGemini(options =>
-        {
-            options.ApiKey = "benchmark-key";
-            options.BaseUrl = new Uri("https://benchmark.invalid/v1beta/");
-            options.RateLimit.Enabled = false; // see remarks above
-        });
-
-        // Swap the real transport for the in-memory fake, after AddGemini has already wired up
-        // auth + resilience as DelegatingHandlers around it. Re-opening the same named
-        // IHttpClientBuilder like this only replaces the primary handler; the handler chain
-        // AddGemini already configured is untouched, so this benchmark still pays the full cost of
-        // every layer, it just never touches a real socket.
-        services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeGeminiHandler());
-
-        // Assign _provider before resolving from it: if GetRequiredService throws (e.g. options
-        // validation), BenchmarkDotNet won't call Cleanup() below (GlobalSetup failing is fatal),
-        // so the provider must already be in a field we can dispose from the catch below rather
-        // than leaked in a local that's about to go out of scope.
-        _provider = services.BuildServiceProvider();
-        try
-        {
-            _service = _provider.GetRequiredService<IGeminiService>();
-        }
-        catch
-        {
-            _provider.Dispose();
-            throw;
-        }
-    }
+    public void Setup() => (_provider, _service) = BenchmarkHost.BuildGeminiService();
 
     [GlobalCleanup]
     public void Cleanup() => _provider.Dispose();
@@ -71,7 +30,7 @@ public class GeminiClientDefaultBenchmarks
     [Benchmark]
     public async Task<string> TextGeneration()
     {
-        var response = await _service.GenerateAsync(BenchmarkPrompt.Text);
+        var response = await _service.GenerateAsync(BenchmarkFixtures.Text);
         return response.Text();
     }
 }

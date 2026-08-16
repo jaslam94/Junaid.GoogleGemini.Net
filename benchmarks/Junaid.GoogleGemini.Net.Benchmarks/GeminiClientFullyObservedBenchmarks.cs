@@ -1,8 +1,6 @@
 using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using BenchmarkDotNet.Attributes;
-using Junaid.GoogleGemini.Net.Extensions;
-using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Services.Interfaces;
@@ -49,40 +47,27 @@ public class GeminiClientFullyObservedBenchmarks
             },
         };
 
-        // Everything from here on can throw (options validation inside BuildServiceProvider,
-        // GetRequiredService resolving it) -- if it does, BenchmarkDotNet won't call Cleanup()
-        // below (GlobalSetup failing is fatal), so clean up whatever was already registered/built
-        // ourselves rather than leaking the listeners (and, if it got that far, the provider).
+        // BenchmarkHost.BuildGeminiService already disposes the provider on its own failure (see
+        // its doc comment); this catch only needs to cover the two listener resources it doesn't
+        // know about.
         try
         {
             ActivitySource.AddActivityListener(_activityListener);
             _meterListener.Start();
 
-            var services = new ServiceCollection();
-            services.AddLogging();
-            services.AddGemini(options =>
+            (_provider, _service) = BenchmarkHost.BuildGeminiService(options =>
             {
-                options.ApiKey = "benchmark-key";
-                options.BaseUrl = new Uri("https://benchmark.invalid/v1beta/");
-                options.RateLimit.Enabled = false; // isolate CPU/allocation overhead — see the sibling
-                                                    // benchmark class's remarks for why this doesn't
-                                                    // change the per-call cost being measured.
                 options.Budget = new BudgetOptions
                 {
                     Enabled = true,
-                    MaxCostPerDayUsd = 1_000_000m, // effectively never reached, so CheckBudget's real
-                                                    // comparison runs without ever throwing mid-benchmark
+                    MaxCostPerDayUsd = 1_000_000m, // effectively never reached, so CheckBudget's
+                                                    // real comparison runs without ever throwing
+                                                    // mid-benchmark
                 };
             });
-
-            services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => new FakeGeminiHandler());
-
-            _provider = services.BuildServiceProvider();
-            _service = _provider.GetRequiredService<IGeminiService>();
         }
         catch
         {
-            _provider?.Dispose();
             _meterListener.Dispose();
             _activityListener.Dispose();
             throw;
@@ -100,7 +85,7 @@ public class GeminiClientFullyObservedBenchmarks
     [Benchmark]
     public async Task<string> TextGeneration()
     {
-        var response = await _service.GenerateAsync(BenchmarkPrompt.Text);
+        var response = await _service.GenerateAsync(BenchmarkFixtures.Text);
         return response.Text();
     }
 }

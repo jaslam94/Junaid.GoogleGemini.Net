@@ -65,11 +65,13 @@ public static class GeminiTelemetry
         }
 
         // Instrument<T>.Enabled reports whether anything is actually subscribed (a MeterListener
-        // with a matching InstrumentPublished callback) -- skip building tags AND boxing the two
-        // int token counts into the TagList's `object?` values when nobody's listening, the same
-        // "don't do the work if nobody's watching" guard IsAllDataRequested already gives the
-        // Activity tags right below. Before this guard, every successful call paid this allocation
-        // unconditionally, whether or not OpenTelemetry was ever wired up.
+        // with a matching InstrumentPublished callback) -- Histogram<T>.Record/Counter<T>.Add
+        // already no-op internally when this is false, so the guards below don't change what gets
+        // recorded, only whether the (cheap, non-allocating -- TagList's inline storage covers our
+        // handful of string tags with no heap allocation, and neither Record nor Add boxes its
+        // generic value parameter) tag-building work and the call itself still run on the way to
+        // that no-op. Small, but free, and the same "don't do the work if nobody's watching"
+        // shape IsAllDataRequested already gives the Activity tags right below.
         if (TokenUsage.Enabled)
         {
             var baseTags = new TagList { { "gen_ai.system", SystemName }, { "gen_ai.operation.name", operation } };

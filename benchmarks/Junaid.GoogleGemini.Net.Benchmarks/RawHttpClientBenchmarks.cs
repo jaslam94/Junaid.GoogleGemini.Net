@@ -27,9 +27,9 @@ public class RawHttpClientBenchmarks
     {
         _httpClient = new HttpClient(new FakeGeminiHandler())
         {
-            BaseAddress = new Uri("https://benchmark.invalid/v1beta/"),
+            BaseAddress = new Uri(BenchmarkFixtures.BaseUrl),
         };
-        _request = RequestFactory.CreateTextRequest(BenchmarkPrompt.Text);
+        _request = RequestFactory.CreateTextRequest(BenchmarkFixtures.Text);
         // Same default model IGeminiService.GenerateAsync resolves to in the other two benchmark
         // classes (via GeminiConstants.Defaults.Model), computed here rather than hardcoded so
         // this stays true by construction if that default ever changes -- not something to
