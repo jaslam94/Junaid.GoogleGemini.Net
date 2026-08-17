@@ -1,10 +1,14 @@
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Net;
 using Junaid.GoogleGemini.Net.Exceptions;
+using Junaid.GoogleGemini.Net.Extensions;
 using Junaid.GoogleGemini.Net.Infrastructure;
+using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Xunit;
 
@@ -159,6 +163,103 @@ public class GeminiClientTests
         Assert.Equal("gemini", activity.GetTagItem("gen_ai.system"));
         Assert.Equal("gemini-activity-probe", activity.GetTagItem("gen_ai.request.model"));
         Assert.Equal(5, activity.GetTagItem("gen_ai.usage.input_tokens"));
+    }
+
+    [Fact]
+    public async Task PostAsync_WhenMeterListenerAttached_RecordsTokenCostAndDurationMetrics()
+    {
+        // Before this test, GeminiTelemetry.RecordUsage/RecordCost/RecordDuration's
+        // Instrument<T>.Enabled guards (added alongside this test) had zero coverage anywhere in
+        // the suite -- no other test ever attaches a MeterListener, only ActivityListener. A bug
+        // in this exact logic (e.g. the guard condition inverted, or the input/output token tags
+        // swapped) would previously have shipped with a fully green build.
+        var tokenMeasurements = new List<(long Value, string? TokenType)>();
+        double? durationSeconds = null;
+        double? costUsd = null;
+
+        using var listener = new MeterListener
+        {
+            InstrumentPublished = (instrument, l) =>
+            {
+                if (instrument.Meter.Name == GeminiTelemetry.SourceName) l.EnableMeasurementEvents(instrument);
+            },
+        };
+        listener.SetMeasurementEventCallback<long>((instrument, measurement, tags, _) =>
+        {
+            if (instrument.Name != "gen_ai.client.token.usage") return;
+            if (!HasTag(tags, "gen_ai.request.model", "gemini-metrics-probe")) return; // isolate from parallel tests
+            tokenMeasurements.Add((measurement, GetTag(tags, "gen_ai.token.type")));
+        });
+        listener.SetMeasurementEventCallback<double>((instrument, measurement, tags, _) =>
+        {
+            if (!HasTag(tags, "gen_ai.request.model", "gemini-metrics-probe")) return;
+            switch (instrument.Name)
+            {
+                case "gen_ai.client.operation.duration": durationSeconds = measurement; break;
+                case "gemini.client.cost.usd": costUsd = measurement; break;
+            }
+        });
+        listener.Start();
+
+        const string json =
+            """{"candidates":[{"content":{"role":"model","parts":[{"text":"hi"}]},"finishReason":"STOP"}],"usageMetadata":{"promptTokenCount":5,"candidatesTokenCount":2,"totalTokenCount":7}}""";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, json);
+
+        // GeminiTelemetry.RecordCost is internal with no InternalsVisibleTo into this project, and
+        // reaching it requires ICostGovernor's recordCost callback to actually be wired to it --
+        // that wiring only happens inside GeminiExtensions.AddGemini's DI registration, so (unlike
+        // the rest of this file's tests, which construct GeminiClient directly) this one has to go
+        // through the real DI pipeline, the same way GeminiResilienceTests does. A unique probe
+        // model name (rather than a real priced model like "gemini-3.7-flash") both isolates this
+        // test from parallel cross-talk on the process-global Meter, the same reasoning the
+        // Activity test above uses, and needs its own pricing override since it isn't in the
+        // built-in table.
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddGemini(o =>
+        {
+            o.ApiKey = "AIzaSyDUMMY_KEY_FOR_UNIT_TESTS_12345";
+            o.BaseUrl = new Uri("https://example.test/v1beta/");
+            o.RateLimit.Enabled = false;
+            o.Budget = new BudgetOptions
+            {
+                Enabled = false,
+                ModelPricingOverrides = new Dictionary<string, ModelPricing>
+                {
+                    ["gemini-metrics-probe"] = new() { InputPerMillionTokensUsd = 1m, OutputPerMillionTokensUsd = 1m, CachedInputPerMillionTokensUsd = 1m },
+                },
+            };
+        });
+        services.AddHttpClient<GeminiClient>().ConfigurePrimaryHttpMessageHandler(() => handler);
+        var client = services.BuildServiceProvider().GetRequiredService<IGeminiClient>();
+
+        await client.PostAsync<GenerateContentRequest, GenerateContentResponse>(
+            "models/gemini-metrics-probe:generateContent", new GenerateContentRequest());
+
+        Assert.Contains(tokenMeasurements, m => m.TokenType == "input" && m.Value == 5);
+        Assert.Contains(tokenMeasurements, m => m.TokenType == "output" && m.Value == 2);
+        Assert.NotNull(durationSeconds);
+        Assert.True(durationSeconds >= 0);
+        Assert.NotNull(costUsd);
+        Assert.True(costUsd > 0);
+    }
+
+    private static bool HasTag(ReadOnlySpan<KeyValuePair<string, object?>> tags, string key, string value)
+    {
+        foreach (var tag in tags)
+        {
+            if (tag.Key == key) return Equals(tag.Value, value);
+        }
+        return false;
+    }
+
+    private static string? GetTag(ReadOnlySpan<KeyValuePair<string, object?>> tags, string key)
+    {
+        foreach (var tag in tags)
+        {
+            if (tag.Key == key) return tag.Value as string;
+        }
+        return null;
     }
 
     [Fact]

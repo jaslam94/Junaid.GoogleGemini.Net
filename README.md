@@ -274,10 +274,15 @@ var results = await batchService.GetResultsAsync(finished);
 
 Requires a paid-tier Gemini project; Google's target turnaround is 24 hours (no hard SLA). Not covered by cost governance or rate limiting (batch has its own separate quota pool and pricing on Google's side). See [Batch API](docs/articles/batch-api.md) for the full picture.
 
+## Performance
+
+Auth, retries, rate limiting, cost governance, and telemetry are all real work, so what does the full pipeline cost per call versus a bare `HttpClient`? Measured with BenchmarkDotNet against an in-memory fake handler (no real network involved): a few microseconds and a handful of KB, all of it noise next to a real Gemini call (200ms+). The actual numbers, methodology, and caveats live in one place so they can't drift out of sync with a copy here — see [Performance benchmarks](docs/articles/benchmarks.md).
+
 ## Documentation & samples
 
-- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, cost governance, batch API, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
+- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, cost governance, batch API, performance benchmarks, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
 - **Runnable sample**: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample), a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
+- **Benchmarks**: [`benchmarks/Junaid.GoogleGemini.Net.Benchmarks`](benchmarks/Junaid.GoogleGemini.Net.Benchmarks), a BenchmarkDotNet project measuring the library's own overhead — see [Performance](#performance) above.
 
 ## Requirements
 

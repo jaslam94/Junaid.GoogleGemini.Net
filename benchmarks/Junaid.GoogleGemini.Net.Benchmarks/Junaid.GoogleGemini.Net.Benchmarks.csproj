@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Not packed, not shipped: this project only exists to run BenchmarkDotNet against the core
+    library and is excluded from the solution's packable set. Single-target (net9.0, the newest
+    runtime the repo ships for) is deliberate — a benchmark's job is to characterize current
+    overhead, not to be multi-targeted like the library itself.
+  -->
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- BenchmarkDotNet builds and runs an isolated copy of this project per benchmark run; an
+         out-of-process build needs the real (non-CI-normalized) path layout. -->
+    <ContinuousIntegrationBuild>false</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BenchmarkDotNet" Version="0.14.0" />
+    <!-- Concrete DI/logging implementations, not just the Abstractions the core library depends
+         on: wiring up services.AddGemini(...) + BuildServiceProvider() here needs the real thing. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="9.0.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="9.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Junaid.GoogleGemini.Net\Junaid.GoogleGemini.Net.csproj" />
+  </ItemGroup>
+
+</Project>

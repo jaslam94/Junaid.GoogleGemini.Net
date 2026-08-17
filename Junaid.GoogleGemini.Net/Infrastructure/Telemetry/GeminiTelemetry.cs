@@ -64,19 +64,30 @@ public static class GeminiTelemetry
             return;
         }
 
-        var baseTags = new TagList { { "gen_ai.system", SystemName }, { "gen_ai.operation.name", operation } };
-        if (model is not null)
+        // Instrument<T>.Enabled reports whether anything is actually subscribed (a MeterListener
+        // with a matching InstrumentPublished callback) -- Histogram<T>.Record/Counter<T>.Add
+        // already no-op internally when this is false, so the guards below don't change what gets
+        // recorded, only whether the (cheap, non-allocating -- TagList's inline storage covers our
+        // handful of string tags with no heap allocation, and neither Record nor Add boxes its
+        // generic value parameter) tag-building work and the call itself still run on the way to
+        // that no-op. Small, but free, and the same "don't do the work if nobody's watching"
+        // shape IsAllDataRequested already gives the Activity tags right below.
+        if (TokenUsage.Enabled)
         {
-            baseTags.Add("gen_ai.request.model", model);
+            var baseTags = new TagList { { "gen_ai.system", SystemName }, { "gen_ai.operation.name", operation } };
+            if (model is not null)
+            {
+                baseTags.Add("gen_ai.request.model", model);
+            }
+
+            var inputTags = baseTags;
+            inputTags.Add("gen_ai.token.type", "input");
+            TokenUsage.Record(usage.PromptTokenCount, inputTags);
+
+            var outputTags = baseTags;
+            outputTags.Add("gen_ai.token.type", "output");
+            TokenUsage.Record(usage.CandidatesTokenCount, outputTags);
         }
-
-        var inputTags = baseTags;
-        inputTags.Add("gen_ai.token.type", "input");
-        TokenUsage.Record(usage.PromptTokenCount, inputTags);
-
-        var outputTags = baseTags;
-        outputTags.Add("gen_ai.token.type", "output");
-        TokenUsage.Record(usage.CandidatesTokenCount, outputTags);
 
         if (activity is { IsAllDataRequested: true })
         {
@@ -92,6 +103,14 @@ public static class GeminiTelemetry
     /// <summary>Records the <c>gemini.client.cost.usd</c> cost metric for one call's real usage.</summary>
     internal static void RecordCost(string? model, decimal costUsd)
     {
+        // See the matching Enabled guard in RecordUsage above -- same reasoning, applied here
+        // because RecordCost runs on every priced call whenever cost governance is configured at
+        // all, independently of whether anyone is actually subscribed to the meter.
+        if (!CostUsd.Enabled)
+        {
+            return;
+        }
+
         var tags = new TagList { { "gen_ai.system", SystemName } };
         if (model is not null)
         {
@@ -105,6 +124,15 @@ public static class GeminiTelemetry
     /// <summary>Records the operation-duration metric (seconds).</summary>
     internal static void RecordDuration(string operation, string? model, double seconds)
     {
+        // See the matching Enabled guard in RecordUsage above -- same reasoning. This one matters
+        // most: unlike RecordUsage/RecordCost (gated behind usage/budget being present at all),
+        // RecordDuration runs from PostAsync/StreamAsync's `finally` block on every single call,
+        // successful or not.
+        if (!OperationDuration.Enabled)
+        {
+            return;
+        }
+
         var tags = new TagList { { "gen_ai.system", SystemName }, { "gen_ai.operation.name", operation } };
         if (model is not null)
         {

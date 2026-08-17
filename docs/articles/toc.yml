@@ -18,5 +18,7 @@
   href: cost-governance.md
 - name: Batch API
   href: batch-api.md
+- name: Performance benchmarks
+  href: benchmarks.md
 - name: Migrating from v5 to v6
   href: migration-v5-to-v6.md
