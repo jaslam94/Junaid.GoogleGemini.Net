@@ -266,6 +266,42 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       including Google's own official SDK, offering a configurable daily ceiling, an optional
       per-request estimate, and a live `gemini.client.cost.usd` OpenTelemetry metric enforced
       in-process before a wasted call goes out. See `docs/articles/cost-governance.md`.
+- [x] **Model refresh and a real GenerationConfig bug** (`6.4.2`): triggered by Google's September 2,
+      2026 GA of `gemini-3.8-flash` ("our most intelligent Flash model, engineered for long-horizon
+      software engineering, autonomous agents, and complex enterprise workflows"). Added as a model
+      constant and promoted to `Models.Recommended`/`Defaults.Model` (`gemini-3.7-flash` now marked
+      superseded-but-supported); same introductory `DefaultPricing` rate as 3.7-flash
+      ($0.75/$3.75/$0.075 per 1M through 2026-12-31).
+
+      A deliberate second, harder-verification pass while researching this caught two things a
+      first pass missed:
+      1. A `WebSearch`-summarized claim that Gemini 2.5 Pro/Flash/Flash-Lite "shut down October 16,
+         2026" turned out to be wrong — the official
+         [deprecations page](https://ai.google.dev/gemini-api/docs/deprecations) literally reads "No
+         shutdown date announced" for all three (verified by quoting the table cells verbatim, not
+         trusting a summarized answer). What's actually happening, confirmed via a Google staff forum
+         reply (Pooja Kapse, July 30, 2026): Google is gating **new** API keys/projects off the 2.5
+         line ("limiting access to the 2.5 models to users who have actively used them in the past.
+         These models are not deprecated") while leaving existing active users unaffected. This was
+         already known to this repo's own live-test infrastructure (`LiveTestInfrastructure.cs` moved
+         off `gemini-2.5-flash` on 2026-08-10 for exactly this reason) but had never propagated to the
+         user-facing docs and samples — `README.md`, `docs/articles/getting-started.md`,
+         `docs/articles/extensions-ai.md`, `docs/articles/files-and-caching.md`, the ASP.NET Core
+         sample, and the .NET Framework smoke sample all still used `gemini-2.5-flash`/`gemini-2.5-pro`
+         as their copy-paste example, meaning a first-time reader could hit a 404 unrelated to this
+         library. All refreshed to `gemini-3.8-flash`.
+      2. A separate, third-party claim that `GenerationConfig.FrequencyPenalty`/`PresencePenalty`/
+         `CandidateCount` now hard-error on Gemini 3.x (rather than being silently ignored, like
+         `Temperature`/`TopP`/`TopK`) was only half right. Live-verified directly against
+         `gemini-3.8-flash` with a real, billing-enabled key: `presencePenalty` and `frequencyPenalty`
+         each return `HTTP 400 INVALID_ARGUMENT` ("Penalty is not enabled for this model");
+         `candidateCount: 1` returns `200` normally. Documented the real behavior on both penalty
+         properties; left `CandidateCount` alone since it already works as advertised.
+
+      Verification: `dotnet build` 0 warnings/errors on all three targets; 144/144 unit tests; the
+      `presencePenalty`/`frequencyPenalty`/`candidateCount` behavior confirmed via raw REST calls
+      against `gemini-3.8-flash` (bypassing this library's own types, same verification style as the
+      Batch API and 6.4.1 audits), not inferred from any secondary source.
 
 ---
 
