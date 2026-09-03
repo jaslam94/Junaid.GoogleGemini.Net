@@ -72,10 +72,17 @@ public sealed class GeminiCostGovernor : ICostGovernor
     public static readonly IReadOnlyDictionary<string, ModelPricing> DefaultPricing =
         new Dictionary<string, ModelPricing>(StringComparer.Ordinal)
         {
-            // gemini-3.6-flash and gemini-3.7-flash share the same introductory rate, in effect since
-            // 3.7's August 13, 2026 launch (Google moved 3.6-flash onto it at the same time), through
-            // December 31, 2026. Standard rate (double these numbers: $1.50/$7.50/$0.15) resumes
-            // January 1, 2027 — re-verify and update this table again before then.
+            // gemini-3.6-flash, gemini-3.7-flash, and gemini-3.8-flash all share the same introductory
+            // rate, in effect since 3.7's August 13, 2026 launch (Google moved 3.6-flash onto it at the
+            // same time; 3.8-flash launched September 2, 2026 already at this rate), through December
+            // 31, 2026. Standard rate (double these numbers: $1.50/$7.50/$0.15) resumes January 1, 2027
+            // — re-verify and update this table again before then.
+            ["gemini-3.8-flash"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 0.75m,
+                OutputPerMillionTokensUsd = 3.75m,
+                CachedInputPerMillionTokensUsd = 0.075m,
+            },
             ["gemini-3.7-flash"] = new ModelPricing
             {
                 InputPerMillionTokensUsd = 0.75m,

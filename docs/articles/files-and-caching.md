@@ -30,7 +30,7 @@ name from later requests to save tokens and latency. Inject `ICachingService`.
 ```csharp
 var cache = await caching.CreateAsync(new CachedContent
 {
-    Model = "models/gemini-2.5-flash",
+    Model = "models/gemini-3.8-flash",
     Contents = [ /* large shared context */ ],
     Ttl = "3600s",
 });

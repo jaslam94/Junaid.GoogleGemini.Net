@@ -35,8 +35,17 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             // Gemini 3 family (current). These names are informational; model names are not validated
             // against any allow-list, so newer models work without a library update.
             /// <summary>
+            /// GA (September 2, 2026), the most capable Flash model: "engineered for long-horizon
+            /// software engineering, autonomous agents, and complex enterprise workflows" per Google's
+            /// own description. Same introductory pricing as <see cref="Gemini37Flash"/> (through
+            /// December 31, 2026). Also ignores temperature/topP/topK (see the deprecation note on
+            /// <c>GenerationConfig</c>).
+            /// </summary>
+            public const string Gemini38Flash = "gemini-3.8-flash";
+            /// <summary>
             /// GA (August 2026), the most capable Flash model: built for complex coding and agentic
-            /// workflows. Introductory pricing through December 31, 2026. Also ignores
+            /// workflows. Superseded as the default by <see cref="Gemini38Flash"/> (September 2026) but
+            /// still fully supported, same introductory pricing through December 31, 2026. Also ignores
             /// temperature/topP/topK (see the deprecation note on <c>GenerationConfig</c>).
             /// </summary>
             public const string Gemini37Flash = "gemini-3.7-flash";
@@ -95,6 +104,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>A non-exhaustive list of common content-generation models (informational).</summary>
             public static readonly string[] ContentGenerationModels =
             {
+                Gemini38Flash,
                 Gemini37Flash,
                 Gemini36Flash,
                 Gemini35Flash,
@@ -116,7 +126,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             };
 
             /// <summary>The recommended general-purpose model (GA).</summary>
-            public static string Recommended => Gemini37Flash;
+            public static string Recommended => Gemini38Flash;
 
             /// <summary>The fastest / most cost-efficient model (GA).</summary>
             public static string Fastest => Gemini35FlashLite;
@@ -323,7 +333,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// Default model for new requests (a current GA model).
             /// </summary>
-            public const string Model = Models.Gemini37Flash;
+            public const string Model = Models.Gemini38Flash;
         }
 
         #endregion Default Values

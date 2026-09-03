@@ -179,7 +179,7 @@ await files.WaitUntilActiveAsync(file.Name!);
 // Cache a large reusable context, then reference it by name to save tokens
 var cache = await caching.CreateAsync(new CachedContent
 {
-    Model = "models/gemini-2.5-flash",
+    Model = "models/gemini-3.8-flash",
     Contents = [ /* large shared context */ ],
     Ttl = "3600s",
 });
@@ -201,7 +201,7 @@ Use Gemini anywhere the .NET AI abstractions are consumed (Semantic Kernel, agen
 
 ```csharp
 builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
-builder.Services.AddGeminiChatClient("gemini-2.5-flash");          // registers IChatClient
+builder.Services.AddGeminiChatClient("gemini-3.8-flash");          // registers IChatClient
 builder.Services.AddGeminiEmbeddingGenerator("gemini-embedding-001"); // registers IEmbeddingGenerator
 
 // elsewhere:
