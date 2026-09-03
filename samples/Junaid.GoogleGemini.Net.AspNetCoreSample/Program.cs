@@ -18,7 +18,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
 
 // 2) Also expose Gemini through the Microsoft.Extensions.AI IChatClient abstraction.
-builder.Services.AddGeminiChatClient(GeminiConstants.Models.Gemini37Flash);
+builder.Services.AddGeminiChatClient(GeminiConstants.Models.Gemini38Flash);
 
 // 3) Wire the library's OpenTelemetry traces + metrics to the console exporter so you can see
 //    per-call spans (model, token counts, finish reason) and the duration/token histograms.
@@ -83,7 +83,7 @@ app.MapPost("/chat", async (IChatClient chat, ChatRequest request) =>
 
 app.Run();
 
-// gemini-3.7-flash (like the 3.x flash models before it) defaults to a "high" thinking level, which
+// gemini-3.8-flash (like the 3.x flash models before it) defaults to a "high" thinking level, which
 // can add tens of seconds (even >2 min) of latency per call. For these simple demo endpoints we opt
 // down to "low" so responses are snappy.
 // Drop this (or raise it) when you actually want deeper reasoning.

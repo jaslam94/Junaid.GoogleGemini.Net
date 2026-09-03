@@ -19,8 +19,26 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.4.1</Version>
+		<Version>6.4.2</Version>
 		<PackageReleaseNotes>
+			6.4.2: refreshes the model lineup for Google's September 2, 2026 gemini-3.8-flash release
+			and fixes a real, live-verified GenerationConfig gap found while doing so. No breaking
+			changes.
+			(1) Adds the gemini-3.8-flash model constant ("our most intelligent Flash model, engineered
+			for long-horizon software engineering, autonomous agents, and complex enterprise workflows"
+			per Google) and promotes it to Models.Recommended/Defaults.Model; gemini-3.7-flash is marked
+			superseded-but-supported, matching the existing 3.5/3.6/3.7 pattern. Same introductory
+			DefaultPricing rate as 3.7-flash ($0.75/$3.75/$0.075 per 1M tokens through 2026-12-31).
+			(2) GenerationConfig.PresencePenalty/FrequencyPenalty had no warning, but live-testing
+			against gemini-3.8-flash confirmed each causes a hard HTTP 400 INVALID_ARGUMENT ("Penalty is
+			not enabled for this model") -- unlike Temperature/TopP/TopK, which Gemini 3.x silently
+			ignores rather than rejects. Both properties now document this. (CandidateCount does not
+			have this problem -- confirmed live, verified false a third-party report that it did.)
+			(3) README, docs, and the ASP.NET Core / .NET Framework samples still used gemini-2.5-flash
+			or gemini-2.5-pro as copy-paste example models. Google has restricted new API keys/projects
+			from the 2.5 line since mid-2026 (existing active users are unaffected; confirmed via a
+			Google staff forum reply) -- a first-time reader following the old examples risked a 404
+			unrelated to this library. All example models refreshed to gemini-3.8-flash.
 			6.4.1: a full audit against the current Gemini API, including live-key verification, found
 			and fixed six bugs. No breaking changes; all fixes are corrections or additive.
 			(1) GenerateImageAsync()'s default model was broken since 6.1.0 -- Models.RecommendedImage

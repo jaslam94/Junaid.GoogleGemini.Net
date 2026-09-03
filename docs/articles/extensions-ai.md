@@ -12,7 +12,7 @@ dotnet add package Junaid.GoogleGemini.Net.Extensions.AI
 
 ```csharp
 builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
-builder.Services.AddGeminiChatClient("gemini-2.5-flash");            // IChatClient
+builder.Services.AddGeminiChatClient("gemini-3.8-flash");            // IChatClient
 builder.Services.AddGeminiEmbeddingGenerator("gemini-embedding-001"); // IEmbeddingGenerator
 ```
 

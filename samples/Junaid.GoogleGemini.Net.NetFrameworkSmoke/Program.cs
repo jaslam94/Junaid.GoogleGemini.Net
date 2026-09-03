@@ -24,7 +24,7 @@ internal static class Program
         services.AddGemini(options =>
         {
             options.ApiKey = key;
-            options.DefaultModel = "gemini-2.5-flash";
+            options.DefaultModel = "gemini-3.8-flash";
         });
 
         using var provider = services.BuildServiceProvider();

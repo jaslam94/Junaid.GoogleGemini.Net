@@ -40,7 +40,7 @@ Get an API key from [Google AI Studio](https://aistudio.google.com/app/apikey), 
 {
   "Gemini": {
     "ApiKey": "your-api-key-here",
-    "DefaultModel": "gemini-3.7-flash",
+    "DefaultModel": "gemini-3.8-flash",
     "TimeoutSeconds": 100,
     "MaxRetries": 3,
     "RateLimit": { "Enabled": true, "RequestsPerMinute": 60 }
@@ -123,7 +123,7 @@ var usage  = response.Usage;                    // PromptTokenCount, CandidatesT
 ```csharp
 var options = new GeminiRequestOptions
 {
-    Model = GeminiConstants.Models.Gemini37Flash,        // Gemini 3 (the default is gemini-3.7-flash)
+    Model = GeminiConstants.Models.Gemini38Flash,        // Gemini 3 (the default is gemini-3.8-flash)
     SystemInstruction = "You are a terse senior engineer.",
     ThinkingLevel = GeminiConstants.ThinkingLevels.Low,  // Gemini 3 reasoning depth (use ThinkingBudget on 2.5)
     EnableGoogleSearch = true,                           // ground answers with Google Search
@@ -135,10 +135,12 @@ foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ??
 
 Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`, `.Fast()`.
 
-> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.7-flash`, `gemini-3.6-flash`, and
-> `gemini-3.5-flash-lite` (July-August 2026). Those models ignore the sampling params entirely, so
-> `.Factual()`/`.Code()` won't have the effect you'd expect on the default model. Use
-> `SystemInstruction` with explicit rules instead.
+> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.8-flash`, `gemini-3.7-flash`,
+> `gemini-3.6-flash`, and `gemini-3.5-flash-lite` (July-September 2026). Those models ignore the
+> sampling params entirely, so `.Factual()`/`.Code()` won't have the effect you'd expect on the
+> default model. Use `SystemInstruction` with explicit rules instead. Also, `PresencePenalty`/
+> `FrequencyPenalty` aren't just ignored on these models — they're actively rejected with HTTP 400;
+> see the XML docs on `GenerationConfig` before setting either.
 
 > **Gemini 3 ready.** Model names aren't allow-listed, so any current/future model works without a
 > library update. `ThinkingLevel` and `MediaResolution` are supported, and the model's encrypted
@@ -179,7 +181,7 @@ await files.WaitUntilActiveAsync(file.Name!);
 // Cache a large reusable context, then reference it by name to save tokens
 var cache = await caching.CreateAsync(new CachedContent
 {
-    Model = "models/gemini-2.5-flash",
+    Model = "models/gemini-3.8-flash",
     Contents = [ /* large shared context */ ],
     Ttl = "3600s",
 });
@@ -201,7 +203,7 @@ Use Gemini anywhere the .NET AI abstractions are consumed (Semantic Kernel, agen
 
 ```csharp
 builder.Services.AddGemini(builder.Configuration.GetSection("Gemini"));
-builder.Services.AddGeminiChatClient("gemini-2.5-flash");          // registers IChatClient
+builder.Services.AddGeminiChatClient("gemini-3.8-flash");          // registers IChatClient
 builder.Services.AddGeminiEmbeddingGenerator("gemini-embedding-001"); // registers IEmbeddingGenerator
 
 // elsewhere:

@@ -56,11 +56,22 @@ public class GenerationConfig
     [JsonPropertyName("seed")]
     public int? Seed { get; set; }
 
-    /// <summary>Penalty for token presence (discourages repeating tokens).</summary>
+    /// <summary>
+    /// Penalty for token presence (discourages repeating tokens).
+    /// <b>Not just ignored on Gemini 3.x — actively rejected.</b> Live-verified 2026-09-03 against
+    /// <c>gemini-3.8-flash</c>: setting this returns HTTP 400 <c>INVALID_ARGUMENT</c>, "Penalty is not
+    /// enabled for this model" (surfaces as
+    /// <see cref="Junaid.GoogleGemini.Net.Exceptions.GeminiApiException"/>). This differs
+    /// from <see cref="Temperature"/>/<see cref="TopK"/>/<see cref="TopP"/>, which are silently ignored
+    /// on the same models, not rejected. Leave null for Gemini 3.x.
+    /// </summary>
     [JsonPropertyName("presencePenalty")]
     public float? PresencePenalty { get; set; }
 
-    /// <summary>Penalty scaled by token frequency.</summary>
+    /// <summary>
+    /// Penalty scaled by token frequency. See the "actively rejected on Gemini 3.x" note on
+    /// <see cref="PresencePenalty"/> — the same HTTP 400 applies here. Leave null for Gemini 3.x.
+    /// </summary>
     [JsonPropertyName("frequencyPenalty")]
     public float? FrequencyPenalty { get; set; }
 
