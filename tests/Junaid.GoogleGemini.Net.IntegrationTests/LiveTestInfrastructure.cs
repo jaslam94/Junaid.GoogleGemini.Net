@@ -21,7 +21,7 @@ public sealed class RequiresGeminiKeyAttribute : FactAttribute
 }
 
 /// <summary>
-/// Like <see cref="RequiresGeminiKeyAttribute"/>, but also requires <c>GeminiPaidTier=1</c> — for
+/// Like <see cref="RequiresGeminiKeyAttribute"/>, but also requires <c>GeminiPaidTier=1</c>, for
 /// features the Gemini free tier blocks outright (e.g. context-cache storage has a free-tier limit
 /// of 0). Skips cleanly otherwise so the suite stays green on free-tier keys.
 /// </summary>
@@ -42,7 +42,7 @@ public sealed class RequiresPaidGeminiKeyAttribute : FactAttribute
 
 /// <summary>
 /// Builds a real DI container once for the whole suite (reading the key from the environment), the
-/// same way a consuming app would. Constructing this does not call the API or validate the key —
+/// same way a consuming app would. Constructing this does not call the API or validate the key.
 /// validation happens lazily on first use, which only occurs when a test actually runs.
 /// </summary>
 public sealed class GeminiFixture

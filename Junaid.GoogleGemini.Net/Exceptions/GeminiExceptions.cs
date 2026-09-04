@@ -46,7 +46,7 @@ namespace Junaid.GoogleGemini.Net.Exceptions
 
     /// <summary>
     /// Thrown by <see cref="Models.GoogleApi.GenerateContentResponse.GetTextOrThrow"/> when a response
-    /// carries no usable text — e.g. it was blocked by safety filters or truncated. The
+    /// carries no usable text, for example it was blocked by safety filters or truncated. The
     /// <see cref="FinishReason"/> and <see cref="BlockReason"/> explain why.
     /// </summary>
     public class GeminiContentException : GeminiException
@@ -97,7 +97,7 @@ namespace Junaid.GoogleGemini.Net.Exceptions
     /// <remarks>
     /// Unlike <see cref="GeminiBudgetExceededException"/> (built from real, already-billed usage), this
     /// is an <b>estimate</b>: input cost is exact (from <c>CountTokensAsync</c>), but output cost is
-    /// only bounded when the request set <c>GeminiRequestOptions.MaxTokens</c> — see the XML docs on
+    /// only bounded when the request set <c>GeminiRequestOptions.MaxTokens</c>. See the XML docs on
     /// <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/> for exactly what this
     /// can and cannot guarantee.
     /// </remarks>

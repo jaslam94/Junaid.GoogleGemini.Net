@@ -49,7 +49,7 @@ public class Part
 
     /// <summary>
     /// Encrypted "thought signature" (Gemini 3+). The API returns it on response parts and requires
-    /// it to be echoed back in follow-up turns — for function calling, a missing signature causes a
+    /// it to be echoed back in follow-up turns. For function calling, a missing signature causes a
     /// 400. Preserve the response parts (and this value) when building multi-turn history.
     /// </summary>
     [JsonPropertyName("thoughtSignature")]

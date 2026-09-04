@@ -134,7 +134,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 // probability. Bug fix: every other method on this class (CreateSafetySettings,
                 // CreateStrictSafetySettings, ...) takes/produces SafetyThresholds.* strings, so a
                 // caller reusing that same vocabulary for IsContentSafe's "thresholds" dictionary is the
-                // natural, expected usage — but before this vocabulary was recognized here at all, any
+                // natural, expected usage. But before this vocabulary was recognized here at all, any
                 // BLOCK_* string fell through to -1, which (since every real probability level is >=0)
                 // made CompareSafetyLevels return "unsafe" for essentially any response that had a
                 // safety rating at all, regardless of how benign it actually was.

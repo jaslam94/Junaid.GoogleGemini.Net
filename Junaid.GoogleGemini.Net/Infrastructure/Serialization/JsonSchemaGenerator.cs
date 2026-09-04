@@ -85,7 +85,7 @@ internal static class JsonSchemaGenerator
 
             // A property is required unless it's a Nullable<T> value type, or (net8+) a nullable
             // reference type. netstandard2.0 lacks NullabilityInfoContext, so we can only detect the
-            // Nullable<T> case there — a conservative, still-valid schema.
+            // Nullable<T> case there. That is a conservative, still-valid schema.
             var isNullable = Nullable.GetUnderlyingType(prop.PropertyType) is not null;
 #if NET8_0_OR_GREATER
             isNullable = isNullable || nullability.Create(prop).WriteState == NullabilityState.Nullable;

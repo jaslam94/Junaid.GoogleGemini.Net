@@ -233,7 +233,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <exception cref="ArgumentException">Thrown for invalid model names</exception>
         public static void ValidateEmbeddingModel(string? modelName, string paramName = "model")
         {
-            // No allow-list (see ValidateModelName) — new embedding models (e.g. gemini-embedding-2)
+            // No allow-list (see ValidateModelName). New embedding models (e.g. gemini-embedding-2)
             // must work without a library update.
             if (string.IsNullOrWhiteSpace(modelName))
             {

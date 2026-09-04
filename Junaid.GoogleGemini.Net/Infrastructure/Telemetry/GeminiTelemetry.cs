@@ -6,7 +6,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Telemetry;
 
 /// <summary>
 /// OpenTelemetry-native tracing and metrics for Gemini calls, following the OTel GenAI semantic
-/// conventions. There is <b>no</b> dependency on any OpenTelemetry package — this uses only
+/// conventions. There is <b>no</b> dependency on any OpenTelemetry package. This uses only
 /// <see cref="System.Diagnostics"/> from the BCL. Consumers opt in by subscribing to the source/meter:
 /// <code>
 /// builder.Services.AddOpenTelemetry()

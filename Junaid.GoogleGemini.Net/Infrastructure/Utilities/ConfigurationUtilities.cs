@@ -35,12 +35,12 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         }
 
         /// <summary>
-        /// Sanity-checks an API key's shape (not its validity — only the real API call can confirm
-        /// that). Deliberately <b>not</b> locked to a specific prefix like <c>"AIza"</c>: Google has
-        /// already changed the Gemini API key format once (legacy "AIza..." keys → the newer "AQ...."
-        /// format, staged rollout through September 2026, after which "AIza" keys stop working
+        /// Sanity-checks an API key's shape, not its validity. Only the real API call can confirm
+        /// that. Deliberately <b>not</b> locked to a specific prefix like <c>"AIza"</c>: Google has
+        /// already changed the Gemini API key format once (legacy "AIza..." keys became the newer
+        /// "AQ...." format, staged rollout through September 2026, after which "AIza" keys stop working
         /// entirely) and may again. A prefix allow-list here would silently reject valid keys the
-        /// moment the format changes — exactly what happened to early testers of the new format
+        /// moment the format changes. That is exactly what happened to early testers of the new format
         /// against earlier versions of this check. This only catches the obvious paste-error class of
         /// mistakes (empty, truncated, or containing whitespace from a bad copy/paste).
         /// </summary>

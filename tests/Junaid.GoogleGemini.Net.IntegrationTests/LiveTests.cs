@@ -82,7 +82,7 @@ public class LiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task GetModel_Unknown_ThrowsApiException()
     {
-        // Passes client-side validation (length only), so this reaches the API and returns a 4xx —
+        // Passes client-side validation (length only), so this reaches the API and returns a 4xx,
         // verifying our error mapping against the real service.
         var ex = await Assert.ThrowsAsync<GeminiApiException>(
             () => fixture.Get<IModelInfoService>().GetModelAsync("gemini-does-not-exist-9999"));
@@ -139,7 +139,7 @@ public class LiveTests(GeminiFixture fixture)
             "Expected a thoughtSignature on the Gemini 3 function-call part.");
 
         // Turn 2: echo the model's turn back VERBATIM (carrying the signature) plus our function result.
-        // If the signature were dropped, Gemini 3 returns HTTP 400 — so a clean completion here is the
+        // If the signature were dropped, Gemini 3 returns HTTP 400, so a clean completion here is the
         // end-to-end proof that capture + replay works.
         var replyOptions = new GeminiRequestOptions
         {
@@ -288,8 +288,8 @@ public class LiveTests(GeminiFixture fixture)
     public async Task GenerateImageAsync_WithAspectRatioAndSize_HonorsRequestedAspectRatio()
     {
         // The riskiest unverified surface: ImageAspectRatio/ImageSize -> generationConfig.imageConfig.
-        // A silently-ignored/misspelled field wouldn't error — the API would just fall back to a
-        // default image — so this doesn't just check "an image came back", it decodes the actual
+        // A silently-ignored/misspelled field wouldn't error. The API would just fall back to a
+        // default image, so this doesn't just check "an image came back". It decodes the actual
         // pixel dimensions and confirms the requested 16:9 ratio was honored.
         var options = new GeminiRequestOptions
         {
@@ -311,7 +311,7 @@ public class LiveTests(GeminiFixture fixture)
             var ratio = (double)width / height;
             const double expected = 16.0 / 9.0;
             Assert.True(Math.Abs(ratio - expected) < 0.05,
-                $"Expected ~16:9 ({expected:F3}), got {width}x{height} ({ratio:F3}) — imageConfig may have been ignored.");
+                $"Expected ~16:9 ({expected:F3}), got {width}x{height} ({ratio:F3}). imageConfig may have been ignored.");
         }
         // A non-PNG response isn't itself a failure (format choice isn't what this test targets);
         // it just means the ratio can't be cheaply verified from the bytes here.
@@ -336,7 +336,7 @@ public class LiveTests(GeminiFixture fixture)
         AssertLooksLikeAnImage(images[0]);
     }
 
-    /// <summary>Confirms the decoded bytes are actually image data — PNG/JPEG both have a well-known magic number.</summary>
+    /// <summary>Confirms the decoded bytes are actually image data. PNG/JPEG both have a well-known magic number.</summary>
     private static void AssertLooksLikeAnImage(GeneratedImage image)
     {
         Assert.StartsWith("image/", image.MimeType);

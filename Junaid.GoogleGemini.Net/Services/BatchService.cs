@@ -102,7 +102,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 throw new ArgumentNullException(nameof(requests));
             }
 
-            // Build the JSONL payload: one compact JSON object per line, newline-delimited — NOT a
+            // Build the JSONL payload: one compact JSON object per line, newline-delimited. NOT a
             // single JSON array. See docs/articles/batch-api.md for why this differs from every other
             // request shape in this library.
             var builder = new StringBuilder();
@@ -166,7 +166,7 @@ namespace Junaid.GoogleGemini.Net.Services
         public async Task CancelAsync(string name, CancellationToken cancellationToken = default)
         {
             // The response body's actual shape isn't reliably documented (see BatchJob.cs's history /
-            // PLAN-batch-api.md §4.7) — deliberately not deserialized at all. Success/failure is
+            // PLAN-batch-api.md §4.7), so it is deliberately not deserialized at all. Success or failure is
             // determined purely by EnsureSuccessAsync (status code), which is all CancelAsync promises.
             using var request = new HttpRequestMessage(HttpMethod.Post, $"{Normalize(name)}:cancel")
             {
@@ -248,7 +248,7 @@ namespace Junaid.GoogleGemini.Net.Services
         /// <summary>
         /// Whether a batch job <c>state</c> string represents a terminal outcome. Checked via an
         /// ordinal-insensitive suffix match, not an exact literal, since Google's own docs disagree with
-        /// themselves on the exact prefix (<c>JOB_STATE_*</c> vs <c>BATCH_STATE_*</c>) — see
+        /// themselves on the exact prefix (<c>JOB_STATE_*</c> vs <c>BATCH_STATE_*</c>). See
         /// <c>PLAN-batch-api.md</c> §2.4. This keeps working whichever prefix the live API returns.
         /// Public (not just an internal implementation detail of <see cref="WaitUntilCompleteAsync"/>)
         /// since a caller polling <see cref="GetAsync"/> manually needs the same check.
@@ -257,7 +257,7 @@ namespace Junaid.GoogleGemini.Net.Services
         {
             // string.IsNullOrEmpty isn't annotated [NotNullWhen(false)] on netstandard2.0's older BCL
             // surface, so the compiler can't narrow `state` to non-null below on that TFM even though
-            // it can on net8+ — hence the explicit null check instead, which narrows on every TFM.
+            // it can on net8+, hence the explicit null check instead, which narrows on every TFM.
             if (state is null || state.Length == 0)
             {
                 return false;

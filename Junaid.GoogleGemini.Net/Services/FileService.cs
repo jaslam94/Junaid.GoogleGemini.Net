@@ -43,7 +43,7 @@ namespace Junaid.GoogleGemini.Net.Services
                 throw new ArgumentException("MIME type is required.", nameof(mimeType));
             }
 
-            // Step 1 — start a resumable session; the server returns an upload URL in a header.
+            // Step 1: start a resumable session. The server returns an upload URL in a header.
             using var startRequest = new HttpRequestMessage(HttpMethod.Post, $"upload/{Version}/files");
             startRequest.Headers.TryAddWithoutValidation("X-Goog-Upload-Protocol", "resumable");
             startRequest.Headers.TryAddWithoutValidation("X-Goog-Upload-Command", "start");
@@ -62,7 +62,7 @@ namespace Junaid.GoogleGemini.Net.Services
             }
             var uploadUrl = uploadUrls.First();
 
-            // Step 2 — upload the bytes and finalize in one call.
+            // Step 2: upload the bytes and finalize in one call.
             using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, uploadUrl);
             uploadRequest.Headers.TryAddWithoutValidation("X-Goog-Upload-Offset", "0");
             uploadRequest.Headers.TryAddWithoutValidation("X-Goog-Upload-Command", "upload, finalize");

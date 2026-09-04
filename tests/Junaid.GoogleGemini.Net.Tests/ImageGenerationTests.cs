@@ -115,7 +115,7 @@ public class ImageGenerationTests
     public async Task GenerateImageAsync_WhenApiReturnsNoCandidates_ThrowsWithImageGenerationLabel()
     {
         // Regression test: GenerateImageAsync used to delegate straight to GenerateAsync, which
-        // hardcodes the "text generation" operation label used in this exception message — confusing
+        // hardcodes the "text generation" operation label used in this exception message. That is confusing
         // when debugging a fully-blocked image prompt. It must report its own operation now.
         const string emptyResponse = """{"candidates":[]}""";
         var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, emptyResponse);

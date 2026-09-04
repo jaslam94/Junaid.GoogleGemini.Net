@@ -3,7 +3,7 @@
   <!--
     Not packed, not shipped: this project only exists to run BenchmarkDotNet against the core
     library and is excluded from the solution's packable set. Single-target (net9.0, the newest
-    runtime the repo ships for) is deliberate — a benchmark's job is to characterize current
+    runtime the repo ships for) is deliberate. A benchmark's job is to characterize current
     overhead, not to be multi-targeted like the library itself.
   -->
 

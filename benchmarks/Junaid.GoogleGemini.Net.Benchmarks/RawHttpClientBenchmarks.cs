@@ -12,7 +12,7 @@ namespace Junaid.GoogleGemini.Net.Benchmarks;
 /// <summary>
 /// Baseline: a bare <see cref="HttpClient"/> doing exactly one JSON POST + JSON parse, none of
 /// this library's auth/retry/rate-limit/cost/telemetry layers. Stands in for "the minimum work
-/// any Gemini client — hand-rolled or otherwise — has to do", so the other two benchmark classes
+/// any Gemini client, hand-rolled or otherwise, has to do", so the other two benchmark classes
 /// can be read as "how much does <c>Junaid.GoogleGemini.Net</c> add on top of this".
 /// </summary>
 [MemoryDiagnoser]

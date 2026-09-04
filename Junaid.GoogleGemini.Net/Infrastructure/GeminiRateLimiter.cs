@@ -80,7 +80,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 else
                 {
                     // Below 60 RPM, a 1-second replenishment period can only express whole
-                    // tokens/second, which used to floor via Math.Max(1, RequestsPerMinute / 60) — i.e.
+                    // tokens/second, which used to floor via Math.Max(1, RequestsPerMinute / 60). That means
                     // ANY configured rate under 60 silently became 60 RPM regardless of what was asked
                     // for. That's a real bug: this is exactly the range free/low-tier Gemini quotas
                     // live in, so it defeated the limiter for the callers who most needed it. Fix:

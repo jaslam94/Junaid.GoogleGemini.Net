@@ -14,7 +14,7 @@ internal static class Program
         var key = Environment.GetEnvironmentVariable("GeminiApiKey");
         if (string.IsNullOrWhiteSpace(key))
         {
-            // The library assembly loaded and the DI extension is callable — that alone proves the
+            // The library assembly loaded and the DI extension is callable. That alone proves the
             // netstandard2.0 build is usable on .NET Framework. Skip the network call.
             Console.WriteLine("GeminiApiKey not set; skipping live call. (ns2.0 assembly loaded OK.)");
             return 0;

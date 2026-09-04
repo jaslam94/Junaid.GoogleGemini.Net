@@ -99,7 +99,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
 
         /// <summary>
         /// Builds a request directly from a list of <see cref="Content"/> items. Use this for full
-        /// multi-turn control — echoing back response parts (function calls, function responses, and
+        /// multi-turn control. It echoes back response parts (function calls, function responses, and
         /// Gemini 3 thought signatures) that the simpler text-based chat helpers can't represent.
         /// </summary>
         public static GenerateContentRequest CreateRequest(IEnumerable<Content> contents, GeminiRequestOptions? options = null)

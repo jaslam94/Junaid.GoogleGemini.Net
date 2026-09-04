@@ -18,7 +18,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure;
 /// <remarks>
 /// This type is intentionally thin: it builds requests, applies client-side rate limiting, sends,
 /// and maps responses/errors to typed results. <b>Retries, backoff and timeouts are NOT handled
-/// here</b> — they live on the <see cref="HttpClient"/> pipeline (configured in
+/// here</b>. They live on the <see cref="HttpClient"/> pipeline (configured in
 /// <c>GeminiExtensions.AddGemini</c> via the standard resilience handler). That separation is what
 /// fixes the previous retry bug: the resilience handler re-sends a buffered request internally, so
 /// we never reuse a disposed <see cref="HttpContent"/> across attempts.
@@ -332,7 +332,7 @@ public class GeminiClient : IGeminiClient
         finally
         {
             // Same "only the final chunk carries real usage" reasoning as the cost-governance
-            // recording in StreamCoreAsync below — record the span/metric tags once, from the last
+            // recording in StreamCoreAsync below. Record the span/metric tags once, from the last
             // snapshot seen, not per-chunk (which would double-count the token histogram).
             GeminiTelemetry.RecordUsage(operation, model, finalUsage, finalFinishReason, activity);
             GeminiTelemetry.RecordDuration(operation, model, stopwatch.Elapsed.TotalSeconds);
@@ -426,7 +426,7 @@ public class GeminiClient : IGeminiClient
             }
 
             // The stream completed successfully (no cancellation/exception broke out of the try above).
-            // Record spend from the final usage snapshot only — if the stream was cancelled or failed
+            // Record spend from the final usage snapshot only. If the stream was cancelled or failed
             // partway through, we deliberately do NOT record a guessed partial cost: Gemini bills for
             // what the server actually generated regardless of whether the client kept reading, but
             // this library has no way to know the true billed amount without the final usageMetadata,

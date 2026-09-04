@@ -78,7 +78,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
 
         /// <summary>
         /// Generates content from a raw list of <see cref="Content"/> turns. Use this for full
-        /// multi-turn control — including echoing back the model's previous response parts (function
+        /// multi-turn control, including echoing back the model's previous response parts (function
         /// calls/responses and Gemini 3 <c>thoughtSignature</c> values), which the simple text-based
         /// <see cref="ChatAsync(MessageObject[], GeminiRequestOptions?, CancellationToken)"/> can't carry.
         /// </summary>
@@ -86,8 +86,8 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// Covered by <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/> like the
         /// other generation overloads, via <see cref="CountTokensChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>
         /// for the pre-flight estimate. The same general estimate caveats apply (standard-rate-only
-        /// input pricing, output bounded only when <see cref="GeminiRequestOptions.MaxTokens"/> is set —
-        /// see the XML docs on <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/>).
+        /// input pricing, output bounded only when <see cref="GeminiRequestOptions.MaxTokens"/> is set.
+        /// See the XML docs on <see cref="Infrastructure.Options.BudgetOptions.MaxCostPerRequestUsd"/>).
         /// </remarks>
         Task<GenerateContentResponse> ChatAsync(
             IList<Content> contents,
@@ -173,7 +173,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <param name="options">
         /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
         /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
-        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// Other fields on <paramref name="options"/> are ignored. Only <c>Model</c> is used.
         /// </param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<CountTokensResponse> CountTokensAsync(
@@ -201,7 +201,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <param name="options">
         /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
         /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
-        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// Other fields on <paramref name="options"/> are ignored. Only <c>Model</c> is used.
         /// </param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<CountTokensResponse> CountTokensWithImageAsync(
@@ -227,7 +227,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <param name="options">
         /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
         /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
-        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// Other fields on <paramref name="options"/> are ignored. Only <c>Model</c> is used.
         /// </param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<CountTokensResponse> CountTokensChatAsync(
@@ -236,14 +236,14 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
-        /// Counts tokens for a raw list of <see cref="Content"/> turns against a specific model — the
+        /// Counts tokens for a raw list of <see cref="Content"/> turns against a specific model. This is the
         /// token-counting counterpart to <see cref="ChatAsync(IList{Content}, GeminiRequestOptions?, CancellationToken)"/>.
         /// </summary>
         /// <param name="contents">The content turns to count. Must contain at least one item.</param>
         /// <param name="options">
         /// Options used to resolve the model to count against (<see cref="GeminiRequestOptions.Model"/>).
         /// Falls back to the default model when <paramref name="options"/> or its <c>Model</c> is null.
-        /// Other fields on <paramref name="options"/> are ignored — only <c>Model</c> is used.
+        /// Other fields on <paramref name="options"/> are ignored. Only <c>Model</c> is used.
         /// </param>
         /// <param name="cancellationToken">Cancellation token</param>
         Task<CountTokensResponse> CountTokensChatAsync(

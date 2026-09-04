@@ -53,7 +53,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// GA (July 2026): improved coding/agentic planning and ~17% fewer tokens per response
             /// than <see cref="Gemini35Flash"/>. Superseded as the default by <see cref="Gemini37Flash"/>
             /// (August 2026) but still fully supported. See the temperature/topP/topK deprecation note
-            /// on <c>GenerationConfig</c> — this model ignores those sampling params.
+            /// on <c>GenerationConfig</c>. This model ignores those sampling params.
             /// </summary>
             public const string Gemini36Flash = "gemini-3.6-flash";
             /// <summary>GA, sustained frontier flash performance. Superseded as the default by <see cref="Gemini36Flash"/> (July 2026) but still fully supported.</summary>
@@ -70,13 +70,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// Highest-quality native image generation (Nano Banana Pro). GA (May 2026, unsuffixed
             /// name); the earlier "-preview"-suffixed model ID this constant used to hold was shut
-            /// down June 25, 2026 — pass this value, not the old preview string.
+            /// down June 25, 2026. Pass this value, not the old preview string.
             /// </summary>
             public const string Gemini3ProImage = "gemini-3-pro-image";
             /// <summary>
             /// High-efficiency native image generation (Nano Banana 2). GA (May 2026, unsuffixed
             /// name); the earlier "-preview"-suffixed model ID this constant used to hold was shut
-            /// down June 25, 2026 — pass this value, not the old preview string.
+            /// down June 25, 2026. Pass this value, not the old preview string.
             /// </summary>
             public const string Gemini31FlashImage = "gemini-3.1-flash-image";
             /// <summary>
@@ -132,7 +132,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public static string Fastest => Gemini35FlashLite;
 
             /// <summary>
-            /// The recommended model for image generation — the efficient flash variant, not the
+            /// The recommended model for image generation: the efficient flash variant, not the
             /// higher-cost "pro" one. Both are GA (unsuffixed model IDs). Pass
             /// <see cref="Gemini3ProImage"/> explicitly for higher quality, or
             /// <see cref="Gemini31FlashLiteImage"/> for the fastest/cheapest option.
@@ -240,7 +240,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         #region Embeddings
 
         /// <summary>
-        /// Task types for embeddings — tells the model how the vector will be used so it can optimize it.
+        /// Task types for embeddings. This tells the model how the vector will be used so it can optimize it.
         /// </summary>
         public static class EmbeddingTaskTypes
         {
@@ -369,7 +369,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <summary>
         /// Output modalities for <c>generationConfig.responseModalities</c>. Set <c>[Text, Image]</c>
         /// (or just <c>[Image]</c> on models that allow image-only output) to get generated images back
-        /// as <c>inlineData</c> parts — see <c>GenerateContentResponse.Images()</c>.
+        /// as <c>inlineData</c> parts. See <c>GenerateContentResponse.Images()</c>.
         /// </summary>
         public static class ResponseModalities
         {

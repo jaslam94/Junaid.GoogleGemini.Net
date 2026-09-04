@@ -10,7 +10,7 @@ namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
 /// </summary>
 /// <remarks>
 /// Deliberately a separate type from <see cref="InlinedBatchRequest"/> (the <b>inline</b>-mode
-/// envelope) even though both simply wrap a <see cref="GenerateContentRequest"/> — the two modes use
+/// envelope) even though both simply wrap a <see cref="GenerateContentRequest"/>. The two modes use
 /// different field names for the per-item correlation token (<c>key</c> here vs <c>metadata</c> for
 /// inline), so they are not interchangeable wire shapes. See <c>PLAN-batch-api.md</c> §2.2/§2.3.
 /// </remarks>

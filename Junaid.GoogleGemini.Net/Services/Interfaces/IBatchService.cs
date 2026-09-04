@@ -8,7 +8,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
     /// asynchronously at Google's discounted batch rate (see <c>docs/articles/batch-api.md</c>). A
     /// batch job is create-then-poll-then-fetch, a fundamentally different usage pattern from the
     /// request/response calls on <see cref="IGeminiService"/>, which is why this is its own resource
-    /// client rather than a facade method — the same reasoning behind <see cref="IFileService"/> and
+    /// client rather than a facade method. This is the same reasoning behind <see cref="IFileService"/> and
     /// <see cref="ICachingService"/> being separate services too.
     /// </summary>
     public interface IBatchService
@@ -48,7 +48,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// Convenience wrapper: writes <paramref name="requests"/> as a JSONL file, uploads it via
         /// <see cref="IFileService.UploadFileAsync"/>, then calls <see cref="CreateFromFileAsync"/>.
         /// Exists so a caller with an in-memory list of requests never has to hand-write the JSONL
-        /// protocol themselves — the file-mode equivalent of what <see cref="CreateAsync"/> already
+        /// protocol themselves. It is the file-mode equivalent of what <see cref="CreateAsync"/> already
         /// gives inline callers for free. Recommended over <see cref="CreateAsync"/> for large volumes
         /// (file mode's ceiling is ~2GB vs inline's ~20MB).
         /// </summary>
@@ -75,8 +75,8 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
 
         /// <summary>
         /// Requests cancellation of a running/pending batch job. Cancellation is asynchronous on
-        /// Google's side too — call <see cref="GetAsync"/> afterward to observe the actual state
-        /// transition, don't assume it's cancelled the instant this call returns.
+        /// Google's side too. Call <see cref="GetAsync"/> afterward to observe the actual state
+        /// transition. Do not assume it is cancelled the instant this call returns.
         /// </summary>
         Task CancelAsync(string name, CancellationToken cancellationToken = default);
 
@@ -85,10 +85,10 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
 
         /// <summary>
         /// Polls <see cref="GetAsync"/> until the job reaches a terminal state (succeeded, failed,
-        /// cancelled, or expired — see <see cref="BatchJob.State"/>'s remarks for why this is checked
+        /// cancelled, or expired. See <see cref="BatchJob.State"/>'s remarks for why this is checked
         /// via a suffix match rather than an exact literal). Google's own target turnaround is "24
-        /// hours, often faster," with no hard SLA and up to 48 hours before a job auto-expires — pick a
-        /// <paramref name="timeout"/> that reflects that; there is no sensible default here, so leaving
+        /// hours, often faster," with no hard SLA and up to 48 hours before a job auto-expires. Pick a
+        /// <paramref name="timeout"/> that reflects that. There is no sensible default here, so leaving
         /// it unset means this can legitimately run for hours.
         /// </summary>
         /// <param name="name">The batch job's resource name.</param>
@@ -109,7 +109,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// <paramref name="job"/>) and file-based (downloads and parses the JSONL output via
         /// <see cref="IFileService.DownloadFileAsync"/>) destinations. Throws
         /// <see cref="GeminiException"/> if the job has no output yet (i.e. hasn't reached a
-        /// state where results exist) — call <see cref="WaitUntilCompleteAsync"/> or check
+        /// state where results exist). Call <see cref="WaitUntilCompleteAsync"/> or check
         /// <see cref="BatchJob.State"/> first. Also throws if the job has an
         /// <see cref="BatchJob.Output"/> object but neither inline responses nor a results file name:
         /// deliberately not treated as "zero results," since an empty list there would look identical
