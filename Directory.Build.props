@@ -7,7 +7,7 @@
 
     We keep ONLY things that are safe for every project here (library, tests, examples):
       - universal language/safety switches
-      - shared package *identity* (who/what) — harmless on non-packable projects
+      - shared package *identity* (who/what), harmless on non-packable projects
     Per-package *production* settings (XML docs, symbol packages, version) live in the
     library .csproj, because enabling XML-doc generation on the test project would produce
     noise, and because those settings vary per package.
@@ -25,7 +25,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
 
     <!--
-      Deterministic builds produce byte-for-byte identical output for identical input — a
+      Deterministic builds produce byte-for-byte identical output for identical input. This is a
       prerequisite for reproducible, verifiable NuGet packages. ContinuousIntegrationBuild
       normalizes embedded paths; we only turn it on under GitHub Actions so local builds keep
       friendly absolute paths for debugging.
