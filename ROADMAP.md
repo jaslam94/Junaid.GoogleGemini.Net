@@ -302,6 +302,57 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       `presencePenalty`/`frequencyPenalty`/`candidateCount` behavior confirmed via raw REST calls
       against `gemini-3.8-flash` (bypassing this library's own types, same verification style as the
       Batch API and 6.4.1 audits), not inferred from any secondary source.
+- [x] **Full live re-verification against a confirmed billing-enabled key, and a real CI publishing
+      outage found and fixed twice** (`6.4.3`, same day as `6.4.2`): after `6.4.2` shipped, ran the
+      actual `Junaid.GoogleGemini.Net.IntegrationTests` suite (not the unit suite) against a real,
+      confirmed-billing-enabled key, closing every gap the day's earlier work had left open.
+
+      **The `v6.4.2` tag push itself failed to publish.** `ci.yml`'s `Publish to NuGet` job read
+      `steps.nuget-login.outputs.api-key`, but `NuGet/login`'s real output is `NUGET_API_KEY`
+      (confirmed against the action's own `action.yml` on both `v1.1.0` and current `v1.2.0` — it was
+      never called `api-key`). This had never been exercised live before: Trusted Publishing
+      (commit `181d01d`) landed a few hours *after* `v6.4.1`'s tag was pushed the same day, so
+      `v6.4.2` was the first real tag push to ever hit this code path. Fixed the output name, pinned
+      `NuGet/login` to `v1.2.0` instead of the floating `v1`, retagged `v6.4.2` onto the fix, and
+      confirmed via the actual CI log this time — `201 Created` for both the `.nupkg` and `.snupkg`,
+      not just a green checkmark — before calling it published.
+
+      **The first fix for the underlying gap was itself broken, caught by actually running it.** To
+      stop a future silent break in this path from going unnoticed until the next real release, a
+      standalone `nuget-trust-check.yml` was added to dry-run the login step monthly. Dispatching it
+      immediately 401'd: `nuget.org`'s Trusted Publishing policy for this repo is scoped to the exact
+      workflow **filename** (`ci.yml`), so a separate file fails this check by construction,
+      regardless of whether the real publish path is healthy — it would have filed a false "failure"
+      issue every month forever. It already had (issue #53, closed with an explanation). Corrected by
+      moving the same dry-run logic into `ci.yml`'s own `publish` job, gated by an `IS_DRY_RUN` env
+      var (`true` for `schedule`/`workflow_dispatch`, `false` for an actual tag push) so it runs under
+      the one workflow filename the policy trusts. This time verified live *before* merging — `ci.yml`
+      was already a registered workflow, so `gh workflow run ci.yml --ref <branch>` could dispatch the
+      fix directly: confirmed `IS_DRY_RUN: true`, confirmed `Push to NuGet` did not run at all (not
+      just skipped-and-logged), confirmed the verification step printed a real, non-empty key length.
+      Re-verified again from `master` after merge, both the real tag-push path (`Publish to NuGet`
+      correctly skips on a plain branch push) and the dry-run path (`workflow_dispatch` on master:
+      green).
+
+      **Live test results, against a confirmed billing-enabled key** (Tier 1, real spend visible in
+      the AI Studio dashboard — the first attempt had wrongly assumed free-tier from self-skipped
+      tests, before realizing the skip was gated on a `GeminiPaidTier=1` env var this session had
+      simply never set, not on the key's real status): all 36 tests in
+      `Junaid.GoogleGemini.Net.IntegrationTests` pass — the 28 free-tier-safe tests, the 3 image-
+      generation tests, context caching, and the full Batch API suite including a real job polled to
+      completion (`1m 28s`). Also ran the `.NET Framework` smoke sample live (real .NET Framework 4.8
+      process, real API call, `'pong'` back), which the `6.4.2` docs sweep had fixed but never
+      actually executed.
+
+      **A second doc-comment sweep caught two more "gemini-3.7-flash is the recommended model"
+      claims** the first `6.4.2` pass missed, in `GeminiRequestOptions.Factual()`/`.Code()`'s XML
+      docs — these ship in the package's IntelliSense, so a customer hovering over either method saw
+      a name that was wrong the moment `6.4.2` shipped. Fixed those plus the same models list in
+      `GenerationConfig.Temperature` and `ContentRequestBuilder.WithTemperature` for consistency (both
+      already said "and later," so not actually wrong, just less explicit).
+
+      No functional changes in this entry — `6.4.3` is a same-day doc/CI-only follow-up to `6.4.2`,
+      not a new feature.
 
 ---
 
