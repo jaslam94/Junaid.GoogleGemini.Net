@@ -50,7 +50,7 @@ public class GeminiRateLimiterTests
 
     // Regression test for a real bug: the bucket used to compute tokensPerSecond as
     // Math.Max(1, RequestsPerMinute / 60), which floors ANY RequestsPerMinute under 60 to an
-    // effective 60 RPM — silently ignoring the configured value for exactly the low-RPM range
+    // effective 60 RPM, silently ignoring the configured value for exactly the low-RPM range
     // free/low-tier Gemini quotas live in. This asserts the small fixed burst allowance (2 tokens)
     // is honored and doesn't silently balloon into a 60-RPM-equivalent bucket.
     [Theory]

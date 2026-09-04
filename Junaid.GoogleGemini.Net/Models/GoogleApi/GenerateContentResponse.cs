@@ -36,7 +36,7 @@ public class GenerateContentResponse
     /// <summary>
     /// The concatenated text of the first candidate, or an <b>empty string</b> when the response
     /// carries no text (for example, when it was blocked). This never returns a placeholder
-    /// sentence — use <see cref="TryGetText"/> or <see cref="GetTextOrThrow"/> to distinguish
+    /// sentence. Use <see cref="TryGetText"/> or <see cref="GetTextOrThrow"/> to distinguish
     /// "no text" from a genuinely empty answer.
     /// </summary>
     public string Text() => GetTextInternal() ?? string.Empty;
@@ -73,9 +73,9 @@ public class GenerateContentResponse
     }
 
     /// <summary>
-    /// The generated images in the first candidate (from image-generation requests — see
+    /// The generated images in the first candidate (from image-generation requests, see
     /// <c>IGeminiService.GenerateImageAsync</c>), or an empty list when there are none. Unlike
-    /// <see cref="Text"/>, an empty list already unambiguously means "no images" — no separate
+    /// <see cref="Text"/>, an empty list already unambiguously means "no images." No separate
     /// try/throw distinction is needed for "empty" vs "absent" the way a string requires.
     /// </summary>
     public IReadOnlyList<GeneratedImage> Images() => GetImagesInternal();
@@ -110,7 +110,7 @@ public class GenerateContentResponse
         if (Candidates is not { Length: > 0 }) return [];
         if (Candidates[0].Content?.Parts is not { Count: > 0 } parts) return [];
 
-        // Deliberately filters to image/* — inlineData could in principle carry other binary kinds
+        // Deliberately filters to image/*. inlineData could in principle carry other binary kinds
         // in a future multimodal response (e.g. generated audio), which Images() should not surface.
         return parts
             .Select(p => p.InlineData)

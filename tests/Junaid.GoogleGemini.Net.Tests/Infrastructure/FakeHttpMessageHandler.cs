@@ -21,7 +21,7 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
     /// <summary>The captured request body string for each request (null when there was no body).</summary>
     public List<string?> RequestBodies { get; } = [];
 
-    /// <summary>Number of times the handler was invoked — handy for asserting retry behavior.</summary>
+    /// <summary>Number of times the handler was invoked. Handy for asserting retry behavior.</summary>
     public int CallCount => Requests.Count;
 
     public FakeHttpMessageHandler(Func<HttpRequestMessage, HttpResponseMessage> responder)
@@ -38,7 +38,7 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
     public static FakeHttpMessageHandler RespondWith(HttpStatusCode status, string json) =>
         new(_ => JsonResponse(status, json));
 
-    /// <summary>Returns each queued response in turn (then repeats the last) — useful for retry tests.</summary>
+    /// <summary>Returns each queued response in turn (then repeats the last). Useful for retry tests.</summary>
     public static FakeHttpMessageHandler Sequence(params HttpResponseMessage[] responses) =>
         new((_, attempt, _) => Task.FromResult(responses[Math.Min(attempt, responses.Length - 1)]));
 

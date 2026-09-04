@@ -9,7 +9,7 @@ namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
 /// retrieval, and the library's known limitations around this feature).
 /// </summary>
 /// <remarks>
-/// <b>Wire shape, confirmed live (2026-08-15) against the real API</b> — this took a real key to get
+/// <b>Wire shape, confirmed live (2026-08-15) against the real API</b>. This took a real key to get
 /// right and corrects an earlier, docs-only version of this type that had the wrong shape entirely.
 /// Create/Get/List do not return the batch fields (state, batchStats, output, ...) directly at the
 /// JSON root. They return a Google long-running-<c>Operation</c> envelope

@@ -16,10 +16,10 @@ name: Integration (live)
 #
 # Needs a repo secret GEMINI_API_KEY (Settings -> Secrets and variables -> Actions). Optionally also
 # GEMINI_PAID_TIER=1 if that key is billing-enabled, to also exercise image generation, context
-# caching, and (with "full") Batch — otherwise those self-skip cleanly (not a failure).
+# caching, and (with "full") Batch. Otherwise those self-skip cleanly (not a failure).
 on:
   schedule:
-    # 06:00 UTC every Monday. Cron, not a "true" weekly keyword — GitHub Actions schedules don't
+    # 06:00 UTC every Monday. Cron, not a "true" weekly keyword. GitHub Actions schedules don't
     # support anything friendlier than five-field cron.
     - cron: '0 6 * * 1'
   workflow_dispatch:
@@ -62,10 +62,10 @@ jobs:
             dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal
           fi
 
-      # Only reached if the step above failed. Opens (or reuses, if one's already open — no point
-      # filing a duplicate every week the same thing is still broken) a GitHub issue with a direct
-      # link to the failing run, so a real API-side break gets surfaced without anyone needing to
-      # notice it manually or wait for a customer bug report.
+      # Only reached if the step above failed. Opens a GitHub issue with a direct link to the
+      # failing run, or reuses one already open so it does not file a duplicate every week the same
+      # thing is still broken. This way a real API-side break gets surfaced without anyone needing
+      # to notice it manually or wait for a customer bug report.
       - name: File an issue on failure
         if: failure() && steps.live_tests.outcome == 'failure'
         uses: actions/github-script@v7

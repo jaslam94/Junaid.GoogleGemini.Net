@@ -10,12 +10,12 @@ namespace Junaid.GoogleGemini.Net.Benchmarks;
 /// </summary>
 /// <remarks>
 /// Always registered as the <em>primary</em> handler, replacing <see cref="HttpClientHandler"/>
-/// outright rather than wrapping it — <see cref="RawHttpClientBenchmarks"/> passes it directly to
+/// outright rather than wrapping it. <see cref="RawHttpClientBenchmarks"/> passes it directly to
 /// <c>new HttpClient(...)</c>, and <see cref="GeminiClientDefaultBenchmarks"/> /
 /// <see cref="GeminiClientFullyObservedBenchmarks"/> install it via
 /// <c>ConfigurePrimaryHttpMessageHandler</c> after <c>AddGemini</c> has already wired up the real
 /// pipeline. That's the opposite end from <c>Junaid.GoogleGemini.Net.Testing</c>'s cassette
-/// handler, which sits OUTERMOST (before auth) so a recording never sees the API key — this
+/// handler, which sits OUTERMOST (before auth) so a recording never sees the API key. This
 /// handler needs to sit INNERMOST instead, so auth and the resilience/retry handler still run for
 /// real and only the final network hop is faked.
 /// </remarks>

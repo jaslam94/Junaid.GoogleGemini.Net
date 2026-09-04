@@ -23,7 +23,7 @@ public interface ICostGovernor
     /// today's running total, and records the <c>gemini.client.cost.usd</c> OTel metric (see the
     /// "Telemetry" section of PLAN-cost-governance.md §6.2). Returns the cost of this one call, in
     /// case the caller wants to log/expose it. Returns <c>0</c> (without recording anything) when the
-    /// model has no known pricing — see <see cref="GeminiCostGovernor.DefaultPricing"/>.
+    /// model has no known pricing. See <see cref="GeminiCostGovernor.DefaultPricing"/>.
     /// </summary>
     decimal RecordSpend(string? model, UsageMetadata usage);
 
@@ -33,7 +33,7 @@ public interface ICostGovernor
     /// <summary>
     /// Cheap, in-memory check for whether <see cref="BudgetOptions.MaxCostPerRequestUsd"/> is
     /// configured and enforced. Callers use this to decide whether it's worth spending an extra
-    /// <c>CountTokensAsync</c> round-trip on <see cref="CheckEstimatedRequestCost"/> at all — when this
+    /// <c>CountTokensAsync</c> round-trip on <see cref="CheckEstimatedRequestCost"/> at all. When this
     /// is <c>false</c>, skip straight to sending the request.
     /// </summary>
     bool HasRequestCeiling { get; }
@@ -43,7 +43,7 @@ public interface ICostGovernor
     /// a request is sent. <paramref name="inputTokens"/> should be an exact count (from
     /// <c>CountTokensAsync</c>); <paramref name="maxOutputTokens"/> should be the request's
     /// <c>MaxTokens</c> (plus any positive <c>ThinkingBudget</c>, since thinking tokens bill as output
-    /// too), or <c>null</c> if the caller didn't set one — in which case only the input side of the
+    /// too), or <c>null</c> if the caller didn't set one. In that case only the input side of the
     /// estimate is bounded. No-op (never throws, returns <c>0</c>) when
     /// <see cref="BudgetOptions.MaxCostPerRequestUsd"/> is unset, when enforcement is disabled, or when
     /// the model has no pricing entry. Throws <see cref="GeminiRequestCostExceededException"/> if the
@@ -56,7 +56,7 @@ public interface ICostGovernor
 /// <summary>Default <see cref="ICostGovernor"/> implementation: in-memory, single-process, UTC-daily.</summary>
 /// <remarks>
 /// <b>In-process only.</b> This budget is tracked in-memory, per process. If your app runs as multiple
-/// instances (e.g. horizontally scaled), each instance tracks its own spend independently — the
+/// instances (e.g. horizontally scaled), each instance tracks its own spend independently. The
 /// effective ceiling is <c>MaxCostPerDayUsd × instance count</c>, not a shared global cap. For a true
 /// cross-instance cap, feed the <c>gemini.client.cost.usd</c> metric into an external system (a shared
 /// counter, your APM) and enforce there. This library does not attempt that.
@@ -66,7 +66,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
     /// <summary>
     /// Built-in USD-per-1,000,000-token pricing, re-verified against
     /// <see href="https://ai.google.dev/gemini-api/docs/pricing">Google's published pricing page</see>
-    /// on 2026-08-15 (paid tier). This snapshot WILL go stale as Google updates prices — override via
+    /// on 2026-08-15 (paid tier). This snapshot WILL go stale as Google updates prices. Override via
     /// <see cref="BudgetOptions.ModelPricingOverrides"/> for accuracy, especially in production.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, ModelPricing> DefaultPricing =
@@ -75,8 +75,8 @@ public sealed class GeminiCostGovernor : ICostGovernor
             // gemini-3.6-flash, gemini-3.7-flash, and gemini-3.8-flash all share the same introductory
             // rate, in effect since 3.7's August 13, 2026 launch (Google moved 3.6-flash onto it at the
             // same time; 3.8-flash launched September 2, 2026 already at this rate), through December
-            // 31, 2026. Standard rate (double these numbers: $1.50/$7.50/$0.15) resumes January 1, 2027
-            // — re-verify and update this table again before then.
+            // 31, 2026. Standard rate (double these numbers: $1.50/$7.50/$0.15) resumes January 1, 2027.
+            // Re-verify and update this table again before then.
             ["gemini-3.8-flash"] = new ModelPricing
             {
                 InputPerMillionTokensUsd = 0.75m,
@@ -153,7 +153,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
             },
 
             // Native image generation models. Confirmed (2026-08-15) these ARE priced per-1M-tokens on
-            // both sides, same shape as text models — the "likely per-image, needs separate design"
+            // both sides, same shape as text models. The "likely per-image, needs separate design"
             // assumption in PLAN-cost-governance.md §11 turned out to be wrong for these three; only
             // gemini-2.5-flash-image (older, omitted below) is priced strictly per-image with no
             // token-rate equivalent published, so it still can't be represented here without guessing a
@@ -163,13 +163,13 @@ public sealed class GeminiCostGovernor : ICostGovernor
             // (1) OutputPerMillionTokensUsd below is the IMAGE output rate. gemini-3-pro-image and
             //     gemini-3.1-flash-lite-image actually publish a cheaper second output rate for any
             //     text/thinking tokens in the same response ("$12.00 (text and thinking) $120.00
-            //     (images)" for pro, similarly for flash-lite) — but UsageMetadata has no field that
+            //     (images)" for pro, similarly for flash-lite), but UsageMetadata has no field that
             //     breaks candidatesTokenCount down by modality, so there's no way to price the two
             //     portions separately today. Using the image (higher) rate for 100% of output tokens
             //     overcounts any text/thinking portion, which is the safe direction for a budget
-            //     ceiling (fails closed, not open) — just don't mistake this for an exact figure.
+            //     ceiling (fails closed, not open). Just don't mistake this for an exact figure.
             // (2) Only gemini-3.1-flash-image has a published cached-input rate ($0.25/1M, confirmed
-            //     directly on the pricing page) — it's HALF the standard input rate, not "no discount".
+            //     directly on the pricing page). That is HALF the standard input rate, not "no discount".
             //     gemini-3-pro-image and gemini-3.1-flash-lite-image publish no cached rate at all for
             //     the standard tier, so those two fall back to "= standard input rate" (assume no
             //     discount) rather than 0, since 0 would silently price cached input as free.
@@ -227,8 +227,8 @@ public sealed class GeminiCostGovernor : ICostGovernor
     }
 
     /// <summary>
-    /// Creates a cost governor with enforcement disabled but cost tracking/recording still active —
-    /// mirrors <see cref="GeminiRateLimiter.CreateDisabled"/>'s "always succeeds" semantics rather than
+    /// Creates a cost governor with enforcement disabled but cost tracking/recording still active.
+    /// This mirrors <see cref="GeminiRateLimiter.CreateDisabled"/>'s "always succeeds" semantics rather than
     /// "does nothing at all". Useful for tests, or to keep observability on while opting out of the
     /// daily-budget rejection behavior.
     /// </summary>
@@ -265,7 +265,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
 
         // Budget == null means the feature isn't configured at all: zero overhead, not even the cost
         // computation below runs. This is distinct from Enabled == false (BudgetOptions still present,
-        // enforcement inert, but tracking/recording stays on — see CreateDisabled()).
+        // enforcement inert, but tracking/recording stays on. See CreateDisabled()).
         if (_options is null)
         {
             return 0m;
@@ -312,7 +312,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
         var pricing = ResolvePricing(model);
         if (pricing is null)
         {
-            // Nothing to estimate against — same "skip, don't guess $0" stance as RecordSpend for an
+            // Nothing to estimate against. Same "skip, don't guess $0" stance as RecordSpend for an
             // unpriced model. The call is allowed through rather than silently blocked.
             WarnUnpricedModelOnce(model);
             return 0m;
@@ -326,7 +326,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
         //    (non-cached) rate. This makes the estimate conservative (>= actual) for calls that use
         //    CachedContent, never an under-estimate on that axis.
         //  - Output is only bounded when the caller set MaxTokens (optionally widened by a positive
-        //    ThinkingBudget, since thinking tokens bill as output too — see ComputeCost). If MaxTokens
+        //    ThinkingBudget, since thinking tokens bill as output too (see ComputeCost). If MaxTokens
         //    is unset, maxOutputTokens is null and only the input side is bounded; the real call could
         //    cost more than this estimate once output tokens are billed.
         var inputCost = Math.Max(0, inputTokens) / 1_000_000m * rates.Input;
@@ -356,7 +356,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
     //   cachedCost = CachedContentTokenCount / 1e6 * tier.CachedInputPerMillionTokensUsd
     //   outputCost = (CandidatesTokenCount + ThoughtsTokenCount) / 1e6 * tier.OutputPerMillionTokensUsd
     // ThoughtsTokenCount is billed as OUTPUT per Gemini's own docs (see the XML doc comment on
-    // UsageMetadata.ThoughtsTokenCount) — pricing only CandidatesTokenCount would silently undercount
+    // UsageMetadata.ThoughtsTokenCount). Pricing only CandidatesTokenCount would silently undercount
     // every thinking-enabled call. All math is `decimal`; only the final OTel Counter<double>.Record
     // call (in GeminiTelemetry.RecordCost) casts to double.
     private decimal? ComputeCost(string? model, UsageMetadata usage)
@@ -378,7 +378,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
     }
 
     // Shared by ComputeCost (exact, post-call) and CheckEstimatedRequestCost (pre-flight estimate):
-    // both select the high-volume tier the same way — strictly above the threshold, based on the
+    // both select the high-volume tier the same way: strictly above the threshold, based on the
     // request's actual/counted input token count, never an assumption.
     private static (decimal Input, decimal Output, decimal Cached) SelectRates(ModelPricing pricing, int inputTokensForTierSelection)
     {

@@ -38,7 +38,7 @@ public class Gemini3SupportTests
         var request = RequestFactory.CreateTextRequest("hi", options: null);
         var json = JsonSerializer.Serialize(request, GeminiJson.Default);
 
-        // No forced default — let the model use its native temperature (1.0 on Gemini 3).
+        // No forced default. Let the model use its native temperature (1.0 on Gemini 3).
         Assert.DoesNotContain("temperature", json, StringComparison.OrdinalIgnoreCase);
     }
 

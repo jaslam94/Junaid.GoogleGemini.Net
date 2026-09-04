@@ -2,7 +2,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
 {
     /// <summary>
     /// A single chat message with a validated role ("user" or "model") and non-empty text.
-    /// Immutable by design — validate once at construction, then it can't drift into an invalid state.
+    /// Immutable by design. Validate once at construction, and it can't drift into an invalid state.
     /// </summary>
     public class MessageObject
     {

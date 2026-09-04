@@ -1,13 +1,13 @@
 name: CI
 
 # Build & test on every push to master and every PR. Publishing happens only when a
-# version tag (e.g. v5.2.0) is pushed — see the publish job's `if` condition.
+# version tag (e.g. v5.2.0) is pushed. See the publish job's `if` condition.
 #
 # schedule/workflow_dispatch also reach the publish job, but only ever in DRY-RUN mode (see
-# IS_DRY_RUN below) — they verify NuGet Trusted Publishing's login step still returns a usable key,
+# IS_DRY_RUN below). They verify NuGet Trusted Publishing's login step still returns a usable key,
 # without packing or pushing anything. This has to live in ci.yml itself, not a separate workflow
 # file: NuGet's Trusted Publishing policy for this repo is scoped to the exact workflow filename
-# (see the v6.4.2 release notes — a standalone nuget-trust-check.yml was tried first and every run
+# (see the v6.4.2 release notes: a standalone nuget-trust-check.yml was tried first and every run
 # 401's with "Workflow mismatch", regardless of whether the real publish path is healthy).
 on:
   push:
@@ -16,7 +16,7 @@ on:
   pull_request:
     branches: [master]
   schedule:
-    # 06:00 UTC on the 1st of every month — dry-run only, see IS_DRY_RUN.
+    # 06:00 UTC on the 1st of every month. Dry-run only, see IS_DRY_RUN.
     - cron: '0 6 1 * *'
   workflow_dispatch:
 

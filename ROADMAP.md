@@ -275,21 +275,22 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 
       A deliberate second, harder-verification pass while researching this caught two things a
       first pass missed:
-      1. A `WebSearch`-summarized claim that Gemini 2.5 Pro/Flash/Flash-Lite "shut down October 16,
-         2026" turned out to be wrong — the official
+      1. A `WebSearch`-summarized claim said Gemini 2.5 Pro/Flash/Flash-Lite "shut down October 16,
+         2026." That turned out to be wrong. The official
          [deprecations page](https://ai.google.dev/gemini-api/docs/deprecations) literally reads "No
-         shutdown date announced" for all three (verified by quoting the table cells verbatim, not
-         trusting a summarized answer). What's actually happening, confirmed via a Google staff forum
-         reply (Pooja Kapse, July 30, 2026): Google is gating **new** API keys/projects off the 2.5
-         line ("limiting access to the 2.5 models to users who have actively used them in the past.
-         These models are not deprecated") while leaving existing active users unaffected. This was
-         already known to this repo's own live-test infrastructure (`LiveTestInfrastructure.cs` moved
-         off `gemini-2.5-flash` on 2026-08-10 for exactly this reason) but had never propagated to the
-         user-facing docs and samples — `README.md`, `docs/articles/getting-started.md`,
-         `docs/articles/extensions-ai.md`, `docs/articles/files-and-caching.md`, the ASP.NET Core
-         sample, and the .NET Framework smoke sample all still used `gemini-2.5-flash`/`gemini-2.5-pro`
-         as their copy-paste example, meaning a first-time reader could hit a 404 unrelated to this
-         library. All refreshed to `gemini-3.8-flash`.
+         shutdown date announced" for all three, confirmed by quoting the table cells verbatim
+         instead of trusting a summarized answer. What is actually happening, confirmed via a Google
+         staff forum reply (Pooja Kapse, July 30, 2026): Google is gating **new** API keys and
+         projects off the 2.5 line ("limiting access to the 2.5 models to users who have actively
+         used them in the past. These models are not deprecated"), while existing active users are
+         unaffected. This repo's own live-test infrastructure already knew this
+         (`LiveTestInfrastructure.cs` moved off `gemini-2.5-flash` on 2026-08-10 for exactly this
+         reason), but it had never reached the user-facing docs and samples. `README.md`,
+         `docs/articles/getting-started.md`, `docs/articles/extensions-ai.md`,
+         `docs/articles/files-and-caching.md`, the ASP.NET Core sample, and the .NET Framework smoke
+         sample all still used `gemini-2.5-flash`/`gemini-2.5-pro` as their copy-paste example. A
+         first-time reader could hit a 404 that had nothing to do with this library. All refreshed to
+         `gemini-3.8-flash`.
       2. A separate, third-party claim that `GenerationConfig.FrequencyPenalty`/`PresencePenalty`/
          `CandidateCount` now hard-error on Gemini 3.x (rather than being silently ignored, like
          `Temperature`/`TopP`/`TopK`) was only half right. Live-verified directly against
@@ -308,51 +309,52 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       confirmed-billing-enabled key, closing every gap the day's earlier work had left open.
 
       **The `v6.4.2` tag push itself failed to publish.** `ci.yml`'s `Publish to NuGet` job read
-      `steps.nuget-login.outputs.api-key`, but `NuGet/login`'s real output is `NUGET_API_KEY`
-      (confirmed against the action's own `action.yml` on both `v1.1.0` and current `v1.2.0` — it was
-      never called `api-key`). This had never been exercised live before: Trusted Publishing
+      `steps.nuget-login.outputs.api-key`, but `NuGet/login`'s real output is `NUGET_API_KEY`.
+      Confirmed against the action's own `action.yml` on both `v1.1.0` and current `v1.2.0`: it was
+      never called `api-key`. This had never been exercised live before. Trusted Publishing
       (commit `181d01d`) landed a few hours *after* `v6.4.1`'s tag was pushed the same day, so
       `v6.4.2` was the first real tag push to ever hit this code path. Fixed the output name, pinned
-      `NuGet/login` to `v1.2.0` instead of the floating `v1`, retagged `v6.4.2` onto the fix, and
-      confirmed via the actual CI log this time — `201 Created` for both the `.nupkg` and `.snupkg`,
-      not just a green checkmark — before calling it published.
+      `NuGet/login` to `v1.2.0` instead of the floating `v1`, and retagged `v6.4.2` onto the fix. This
+      time, the actual CI log was checked before calling it published: `201 Created` for both the
+      `.nupkg` and `.snupkg`, not just a green checkmark.
 
-      **The first fix for the underlying gap was itself broken, caught by actually running it.** To
-      stop a future silent break in this path from going unnoticed until the next real release, a
-      standalone `nuget-trust-check.yml` was added to dry-run the login step monthly. Dispatching it
-      immediately 401'd: `nuget.org`'s Trusted Publishing policy for this repo is scoped to the exact
-      workflow **filename** (`ci.yml`), so a separate file fails this check by construction,
-      regardless of whether the real publish path is healthy — it would have filed a false "failure"
-      issue every month forever. It already had (issue #53, closed with an explanation). Corrected by
-      moving the same dry-run logic into `ci.yml`'s own `publish` job, gated by an `IS_DRY_RUN` env
-      var (`true` for `schedule`/`workflow_dispatch`, `false` for an actual tag push) so it runs under
-      the one workflow filename the policy trusts. This time verified live *before* merging — `ci.yml`
-      was already a registered workflow, so `gh workflow run ci.yml --ref <branch>` could dispatch the
-      fix directly: confirmed `IS_DRY_RUN: true`, confirmed `Push to NuGet` did not run at all (not
-      just skipped-and-logged), confirmed the verification step printed a real, non-empty key length.
-      Re-verified again from `master` after merge, both the real tag-push path (`Publish to NuGet`
-      correctly skips on a plain branch push) and the dry-run path (`workflow_dispatch` on master:
-      green).
+      **The first fix for the underlying gap was itself broken, and running it caught that.** To stop
+      a future silent break in this path from going unnoticed until the next real release, a
+      standalone `nuget-trust-check.yml` was added to dry-run the login step every month. Dispatching
+      it immediately failed with a 401. `nuget.org`'s Trusted Publishing policy for this repo is
+      scoped to the exact workflow **filename** (`ci.yml`), so a separate file fails this check by
+      construction, no matter how healthy the real publish path is. It would have filed a false
+      "failure" issue every month, forever. It already had, as issue #53, closed with an explanation.
+      The fix moved the same dry-run logic into `ci.yml`'s own `publish` job, gated by an
+      `IS_DRY_RUN` env var: `true` for `schedule` or `workflow_dispatch`, `false` for an actual tag
+      push. That way it runs under the one workflow filename the policy trusts. This time it was
+      verified live before merging. `ci.yml` was already a registered workflow, so
+      `gh workflow run ci.yml --ref <branch>` could dispatch the fix directly. That run confirmed
+      `IS_DRY_RUN: true`, confirmed `Push to NuGet` did not run at all (not just skipped-and-logged),
+      and confirmed the verification step printed a real, non-empty key length. It was re-verified
+      again from `master` after merge: the real tag-push path correctly skips `Publish to NuGet` on a
+      plain branch push, and the dry-run path passed on `workflow_dispatch` from master.
 
-      **Live test results, against a confirmed billing-enabled key** (Tier 1, real spend visible in
-      the AI Studio dashboard — the first attempt had wrongly assumed free-tier from self-skipped
-      tests, before realizing the skip was gated on a `GeminiPaidTier=1` env var this session had
-      simply never set, not on the key's real status): all 36 tests in
-      `Junaid.GoogleGemini.Net.IntegrationTests` pass — the 28 free-tier-safe tests, the 3 image-
-      generation tests, context caching, and the full Batch API suite including a real job polled to
-      completion (`1m 28s`). Also ran the `.NET Framework` smoke sample live (real .NET Framework 4.8
-      process, real API call, `'pong'` back), which the `6.4.2` docs sweep had fixed but never
-      actually executed.
+      **Live test results, against a confirmed billing-enabled key.** Tier 1, with real spend visible
+      in the AI Studio dashboard. The first attempt had wrongly assumed the key was free-tier, based
+      on self-skipped tests. The real cause was a `GeminiPaidTier=1` env var this session had simply
+      never set, not the key's actual status. Once that was corrected, all 36 tests in
+      `Junaid.GoogleGemini.Net.IntegrationTests` passed: the 28 free-tier-safe tests, the 3
+      image-generation tests, context caching, and the full Batch API suite, including a real job
+      polled to completion in `1m 28s`. The `.NET Framework` smoke sample was also run live (a real
+      .NET Framework 4.8 process, a real API call, `'pong'` back). The `6.4.2` docs sweep had fixed
+      that sample's code but never actually run it.
 
       **A second doc-comment sweep caught two more "gemini-3.7-flash is the recommended model"
-      claims** the first `6.4.2` pass missed, in `GeminiRequestOptions.Factual()`/`.Code()`'s XML
-      docs — these ship in the package's IntelliSense, so a customer hovering over either method saw
-      a name that was wrong the moment `6.4.2` shipped. Fixed those plus the same models list in
-      `GenerationConfig.Temperature` and `ContentRequestBuilder.WithTemperature` for consistency (both
-      already said "and later," so not actually wrong, just less explicit).
+      claims** that the first `6.4.2` pass had missed, in `GeminiRequestOptions.Factual()`'s and
+      `.Code()`'s XML docs. These ship in the package's IntelliSense, so a customer hovering over
+      either method saw a name that was wrong the moment `6.4.2` shipped. Fixed those, plus the same
+      models list in `GenerationConfig.Temperature` and `ContentRequestBuilder.WithTemperature` for
+      consistency. Both of those already said "and later," so they were not actually wrong, just less
+      explicit than the rest of the codebase.
 
-      No functional changes in this entry — `6.4.3` is a same-day doc/CI-only follow-up to `6.4.2`,
-      not a new feature.
+      No functional changes in this entry. `6.4.3` is a same-day doc and CI-only follow-up to
+      `6.4.2`, not a new feature.
 
 ---
 

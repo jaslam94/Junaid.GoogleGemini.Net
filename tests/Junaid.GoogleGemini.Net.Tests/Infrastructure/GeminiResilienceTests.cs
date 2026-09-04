@@ -21,7 +21,7 @@ public class GeminiResilienceTests
     [Fact]
     public async Task PostAsync_RetriesTransientFailures_ThenSucceeds()
     {
-        // Returns 503, 503, then 200 — so success requires two retries of a POST with a body.
+        // Returns 503, 503, then 200. Success requires two retries of a POST with a body.
         var fake = FakeHttpMessageHandler.Sequence(
             FakeHttpMessageHandler.JsonResponse(HttpStatusCode.ServiceUnavailable, "{}"),
             FakeHttpMessageHandler.JsonResponse(HttpStatusCode.ServiceUnavailable, "{}"),

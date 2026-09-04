@@ -124,7 +124,7 @@ public class GeminiCostGovernorTests
         // At exactly the threshold: base rate (100/1e6 * 1.00).
         Assert.Equal(100m / 1_000_000m * 1.00m, atThreshold);
         // One token above: the high-volume rate applies to the WHOLE call (101/1e6 * 10.00), not just
-        // the excess — this mirrors how the plan's formula selects a single tier per call.
+        // the excess. This mirrors how the plan's formula selects a single tier per call.
         Assert.Equal(101m / 1_000_000m * 10.00m, aboveThreshold);
         Assert.True(aboveThreshold > atThreshold * 10, "crossing the threshold should jump to the high-volume rate");
     }
@@ -189,7 +189,7 @@ public class GeminiCostGovernorTests
         var now = new DateTime(2026, 8, 8, 23, 0, 0, DateTimeKind.Utc);
         var governor = CreateGovernor(pricing, maxCostPerDayUsd: 1.00m, clock: () => now);
 
-        // $2.00 of spend "yesterday" — well over the $1.00 ceiling, if it were to carry over.
+        // $2.00 of spend "yesterday", well over the $1.00 ceiling, if it were to carry over.
         governor.RecordSpend(TestModel, new UsageMetadata { PromptTokenCount = 200 });
 
         now = now.AddDays(1); // roll into a new UTC calendar day
@@ -225,7 +225,7 @@ public class GeminiCostGovernorTests
 
         Assert.Equal(0m, cost1);
         Assert.Equal(0m, cost2);
-        Assert.Empty(recorded); // never assumes $0 by recording it — just skips recording entirely
+        Assert.Empty(recorded); // never assumes $0 by recording it, just skips recording entirely
         Assert.Equal(1, logger.WarningCount); // warned once, not once per call
     }
 
@@ -248,7 +248,7 @@ public class GeminiCostGovernorTests
         var governor = CreateGovernor(pricing, maxCostPerRequestUsd: 5.00m);
 
         // Exactly at the ceiling ($5.00): must NOT throw (only strictly-above rejects, matching
-        // CheckBudget's ">=" being the daily-total's own boundary — here the estimate itself must
+        // CheckBudget's ">=" being the daily-total's own boundary. Here the estimate itself must
         // exceed, not merely equal, the ceiling).
         var atCeiling = Record.Exception(() => governor.CheckEstimatedRequestCost(TestModel, inputTokens: 500, maxOutputTokens: null));
         Assert.Null(atCeiling);
@@ -270,7 +270,7 @@ public class GeminiCostGovernorTests
         // token would cost $1,000,000). It must not.
         var estimate = governor.CheckEstimatedRequestCost(TestModel, inputTokens: 1_000_000, maxOutputTokens: null);
 
-        Assert.Equal(1.00m, estimate); // exactly the input cost — output side contributed nothing
+        Assert.Equal(1.00m, estimate); // exactly the input cost, output side contributed nothing
     }
 
     [Fact]
@@ -314,7 +314,7 @@ public class GeminiCostGovernorTests
 
         var estimate = governor.CheckEstimatedRequestCost(TestModel, inputTokens: 1_000_000_000, maxOutputTokens: null);
 
-        Assert.Equal(0m, estimate); // not even computed — nothing to compare against
+        Assert.Equal(0m, estimate); // not even computed, nothing to compare against
     }
 
     [Fact]

@@ -3,7 +3,7 @@
   <!--
     Live integration tests against the real Gemini API. These are OPT-IN: every test is marked
     [RequiresGeminiKey] and self-skips unless the GeminiApiKey environment variable is set. So this
-    project is safe to keep in the solution — normal `dotnet test` runs simply skip these.
+    project is safe to keep in the solution. Normal `dotnet test` runs simply skip these.
   -->
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>

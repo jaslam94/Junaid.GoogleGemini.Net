@@ -6,8 +6,8 @@ namespace Junaid.GoogleGemini.Net.Benchmarks;
 
 /// <summary>
 /// The full <c>AddGemini</c> pipeline (auth handler, retry/resilience handler, rate limiter, cost
-/// governor, telemetry) at its out-of-the-box defaults: no budget configured, and — realistically,
-/// since most apps don't wire one up — no OpenTelemetry listener attached. This is what a typical
+/// governor, telemetry) at its out-of-the-box defaults: no budget configured, and, realistically,
+/// since most apps don't wire one up, no OpenTelemetry listener attached. This is what a typical
 /// consumer's overhead actually looks like.
 /// </summary>
 /// <remarks>

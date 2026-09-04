@@ -11,7 +11,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
     {
         /// <summary>
         /// Controls randomness in generation (0.0 to 1.0). <b>Ignored on <c>gemini-3.8-flash</c>,
-        /// <c>gemini-3.7-flash</c>, <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c> and later</b> — Google deprecated all
+        /// <c>gemini-3.7-flash</c>, <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c> and later</b>. Google deprecated all
         /// sampling params on those models (July-August 2026) in favor of steering determinism via
         /// <see cref="SystemInstruction"/>.
         /// </summary>

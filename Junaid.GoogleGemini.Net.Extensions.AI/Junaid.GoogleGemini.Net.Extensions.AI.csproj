@@ -8,15 +8,15 @@
 		<TargetFrameworks>net8.0;net9.0</TargetFrameworks>
 
 		<Title>Junaid.GoogleGemini.Net.Extensions.AI</Title>
-		<Description>Microsoft.Extensions.AI adapters (IChatClient, IEmbeddingGenerator) for Junaid.GoogleGemini.Net — use Google Gemini anywhere the .NET AI abstractions are consumed. Built with AI: implemented end-to-end by Claude (Anthropic) — see the README.</Description>
+		<Description>Microsoft.Extensions.AI adapters (IChatClient, IEmbeddingGenerator) for Junaid.GoogleGemini.Net. Use Google Gemini anywhere the .NET AI abstractions are consumed. Built with AI: implemented end-to-end by Claude (Anthropic). See the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;Microsoft.Extensions.AI;IChatClient;AI;LLM;dotnet</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<Version>6.2.0</Version>
 		<PackageReleaseNotes>
-			6.2.0: version bump to track the core package (no functional changes here) — the core's
+			6.2.0: version bump to track the core package (no functional changes here). The core's
 			new cost-governance feature and CountTokensAsync model-overload fix don't affect this
 			adapter.
-			6.1.0: version bump to track the core package (no functional changes here) — neither the
+			6.1.0: version bump to track the core package (no functional changes here). Neither the
 			core's API-key-format fix nor its new image-generation surface affects this adapter.
 			6.0.1/6.0.0: no functional changes since initial release (IChatClient/IEmbeddingGenerator
 			adapters over Junaid.GoogleGemini.Net).

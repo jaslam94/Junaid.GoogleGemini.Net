@@ -149,7 +149,7 @@
 			affects the previous 6.0.1 release too; consider it the reason to upgrade even if you don't
 			need the feature below.
 			Also adds image generation. New GenerateImageAsync(prompt, options?, ct) on
-			IGeminiService — defaults to Models.RecommendedImage and TEXT+IMAGE response modalities,
+			IGeminiService. Defaults to Models.RecommendedImage and TEXT+IMAGE response modalities,
 			overridable via GeminiRequestOptions.Model/ResponseModalities. New response accessors
 			Images()/TryGetImages()/GetImagesOrThrow() on GenerateContentResponse, mirroring the
 			existing Text() trio, returning already-decoded GeneratedImage (MimeType + byte[] Data).
@@ -162,22 +162,22 @@
 			gemini-3.5-flash-lite constants; Models.Recommended/Defaults.Model now point to
 			gemini-3.6-flash and Models.Fastest to gemini-3.5-flash-lite. Note: Google deprecated
 			temperature/topP/topK on these two new models (ignored now, will 400 in a future
-			generation) — see the XML docs on GenerationConfig and GeminiRequestOptions for guidance
+			generation). See the XML docs on GenerationConfig and GeminiRequestOptions for guidance
 			(use SystemInstruction for determinism instead). No breaking changes.
-			6.0.0: a ground-up modernization of the v5 client — resilient (correct retry/backoff +
+			6.0.0: a ground-up modernization of the v5 client. Resilient (correct retry/backoff +
 			client-side rate limiting), observable (OpenTelemetry traces &amp; metrics), DI-native, with
 			generic structured output (GenerateAsync&lt;T&gt;), the full modern Gemini surface including
 			Gemini 3 (function calling with thoughtSignature replay, thinkingLevel, grounding, Files,
 			caching), Microsoft.Extensions.AI adapters (IChatClient/IEmbeddingGenerator), and a
 			netstandard2.0 build verified on .NET Framework 4.8. See the v5-to-v6 migration guide.
 			6.0.0-rc.1: release candidate for 6.0.0. The v6 surface is feature-complete and verified
-			live against the Gemini API — Gemini 3 function calling with thoughtSignature replay,
-			grounding, Files API, embeddings, structured output, streaming, and IChatClient — and the
+			live against the Gemini API: Gemini 3 function calling with thoughtSignature replay,
+			grounding, Files API, embeddings, structured output, streaming, and IChatClient. And the
 			netstandard2.0 build is verified running on .NET Framework 4.8. No further API changes are
 			planned before 6.0.0; please report any issues.
 			6.0 beta.4: fix netstandard2.0 usage on .NET Framework. AddGemini's options validation
 			needs System.ComponentModel.Annotations, which the .NET Framework GAC ships at an older
-			version than required — so it's now declared as a netstandard2.0 dependency and deployed
+			version than required, so it's now declared as a netstandard2.0 dependency and deployed
 			automatically (previously threw FileNotFoundException on first use). Verified live on
 			.NET Framework 4.8. .NET Framework consumers should also enable AutoGenerateBindingRedirects.
 			6.0 beta.3: default request timeout raised from 30s to 100s. Gemini 3 "thinking" models
@@ -203,9 +203,9 @@
 			- Microsoft.Extensions.AI adapters (IChatClient / IEmbeddingGenerator) via the
 			  companion package Junaid.GoogleGemini.Net.Extensions.AI.
 			- OpenTelemetry-native tracing + token/latency metrics (GenAI semantic conventions),
-			  with no OpenTelemetry dependency — opt in via AddSource/AddMeter("Junaid.GoogleGemini.Net").
+			  with no OpenTelemetry dependency. Opt in via AddSource/AddMeter("Junaid.GoogleGemini.Net").
 			Earlier 6.0 alphas delivered: correct retries/streaming/serialization/typed errors (Phase 1)
-			and the modern API — structured output GenerateAsync&lt;T&gt;, system instructions, thinking,
+			and the modern API: structured output GenerateAsync&lt;T&gt;, system instructions, thinking,
 			tools/grounding, Files API, context caching (Phase 2).
 		</PackageReleaseNotes>
 
@@ -247,7 +247,7 @@
 		<PackageReference Include="System.Threading.RateLimiting" Version="8.0.0" />
 	</ItemGroup>
 
-	<!-- Modern resilience (Polly v8 under the hood) on the HttpClient pipeline. Net8+ only — this
+	<!-- Modern resilience (Polly v8 under the hood) on the HttpClient pipeline. Net8+ only. This
 	     package has no netstandard2.0 asset, so the ns2.0 build uses GeminiRetryHandler instead. -->
 	<ItemGroup Condition="'$(TargetFramework)' != 'netstandard2.0'">
 		<PackageReference Include="Microsoft.Extensions.Http.Resilience" Version="8.10.0" />
@@ -258,7 +258,7 @@
 		- System.Text.Json: in-box on net8/9, a package here (brings the source generator too).
 		- Microsoft.Bcl.AsyncInterfaces: IAsyncEnumerable / IAsyncDisposable.
 		- System.ComponentModel.Annotations: in-box on net8/9, but on .NET Framework the GAC ships an
-		  older version than the options DataAnnotations validation binds against — declare it so it's
+		  older version than the options DataAnnotations validation binds against. Declare it so it's
 		  deployed to .NET Framework consumers (otherwise AddGemini throws FileNotFoundException).
 		- PolySharp: generates compiler-required shims (init/record, required members, nullable and
 		  [EnumeratorCancellation] attributes) so modern C# compiles on the old surface. Dev-only.

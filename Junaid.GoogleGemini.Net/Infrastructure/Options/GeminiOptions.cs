@@ -54,7 +54,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// </summary>
         public ProxyOptions? Proxy { get; set; }
 
-        /// <summary>Cost governance settings. Null (the default) disables the feature entirely — zero overhead.</summary>
+        /// <summary>Cost governance settings. Null (the default) disables the feature entirely, with zero overhead.</summary>
         public BudgetOptions? Budget { get; set; }
 
         /// <summary>
@@ -116,16 +116,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// <summary>
         /// Optional, best-effort single-request estimate ceiling, checked BEFORE the request is sent
         /// (throws <see cref="Junaid.GoogleGemini.Net.Exceptions.GeminiRequestCostExceededException"/>
-        /// if exceeded). Null (default) = not enforced, and — importantly — skipped entirely at zero
+        /// if exceeded). Null (default) means not enforced, and, importantly, skipped entirely at zero
         /// cost: when unset, no extra <c>CountTokensAsync</c> round-trip is made.
         /// </summary>
         /// <remarks>
-        /// This is a genuine estimate, not an exact figure — read this before relying on it:
+        /// This is a genuine estimate, not an exact figure. Read this before relying on it:
         /// <list type="bullet">
         /// <item><description>
         /// <b>Input cost is exact</b> (a real <c>CountTokensAsync(prompt, options, ct)</c> call happens
         /// first), except it does not include <c>SystemInstruction</c>/<c>Tools</c>/<c>CachedContent</c>
-        /// tokens — the token-counting endpoint's request shape omits them — so it can undercount input
+        /// tokens, since the token-counting endpoint's request shape omits them, so it can undercount input
         /// for calls that use those. It also always prices the full input at the standard (non-cached)
         /// rate, since it can't know ahead of time how much Gemini will actually serve from cache, which
         /// makes it conservative (an over-estimate, never an under-estimate) on that axis.
@@ -134,27 +134,27 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// <b>Output cost is only bounded when the request sets
         /// <see cref="Junaid.GoogleGemini.Net.Models.Requests.GeminiRequestOptions.MaxTokens"/></b> (widened
         /// by a positive <c>ThinkingBudget</c>, since thinking tokens bill as output too). Leave
-        /// <c>MaxTokens</c> unset and only the input side is bounded — the real call's output cost is
+        /// <c>MaxTokens</c> unset and only the input side is bounded. The real call's output cost is
         /// unknown until it completes. See the "why cumulative-first" design note in
         /// PLAN-cost-governance.md §4 for why an exact pre-flight bound isn't possible at all.
         /// </description></item>
         /// <item><description>
         /// <b>Enabling this doubles rate-limiter consumption per logical call</b> (the pre-flight
         /// <c>CountTokensAsync</c> call also goes through <c>GeminiClient.PostAsync</c>, so it consumes
-        /// its own rate-limit permit) — factor that into <see cref="RateLimitOptions.RequestsPerMinute"/>
+        /// its own rate-limit permit). Factor that into <see cref="RateLimitOptions.RequestsPerMinute"/>
         /// if you enable it.
         /// </description></item>
         /// </list>
         /// The always-correct, primary mechanism remains <see cref="MaxCostPerDayUsd"/>, built from real
-        /// billed usage after each call — use this alongside it, not instead of it.
+        /// billed usage after each call. Use this alongside it, not instead of it.
         /// </remarks>
         public decimal? MaxCostPerRequestUsd { get; set; }
 
         /// <summary>
         /// Per-model USD pricing. Falls back to
         /// <see cref="Junaid.GoogleGemini.Net.Infrastructure.GeminiCostGovernor.DefaultPricing"/>
-        /// (built-in, snapshot of Google's published rates at the time this library version shipped —
-        /// WILL go stale; override here for accuracy) for any model not present in this dictionary. Keyed
+        /// (built-in, a snapshot of Google's published rates at the time this library version shipped,
+        /// so it will go stale; override here for accuracy) for any model not present in this dictionary. Keyed
         /// by the exact model string (e.g. <c>"gemini-3.6-flash"</c>).
         /// </summary>
         public IDictionary<string, ModelPricing>? ModelPricingOverrides { get; set; }

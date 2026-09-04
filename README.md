@@ -138,9 +138,9 @@ Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`,
 > **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.8-flash`, `gemini-3.7-flash`,
 > `gemini-3.6-flash`, and `gemini-3.5-flash-lite` (July-September 2026). Those models ignore the
 > sampling params entirely, so `.Factual()`/`.Code()` won't have the effect you'd expect on the
-> default model. Use `SystemInstruction` with explicit rules instead. Also, `PresencePenalty`/
-> `FrequencyPenalty` aren't just ignored on these models — they're actively rejected with HTTP 400;
-> see the XML docs on `GenerationConfig` before setting either.
+> default model. Use `SystemInstruction` with explicit rules instead. Also, `PresencePenalty` and
+> `FrequencyPenalty` are not just ignored on these models. They are actively rejected with HTTP 400.
+> See the XML docs on `GenerationConfig` before setting either.
 
 > **Gemini 3 ready.** Model names aren't allow-listed, so any current/future model works without a
 > library update. `ThinkingLevel` and `MediaResolution` are supported, and the model's encrypted
@@ -278,13 +278,13 @@ Requires a paid-tier Gemini project; Google's target turnaround is 24 hours (no 
 
 ## Performance
 
-Auth, retries, rate limiting, cost governance, and telemetry are all real work, so what does the full pipeline cost per call versus a bare `HttpClient`? Measured with BenchmarkDotNet against an in-memory fake handler (no real network involved): a few microseconds and a handful of KB, all of it noise next to a real Gemini call (200ms+). The actual numbers, methodology, and caveats live in one place so they can't drift out of sync with a copy here — see [Performance benchmarks](docs/articles/benchmarks.md).
+Auth, retries, rate limiting, cost governance, and telemetry are all real work. So what does the full pipeline cost per call, versus a bare `HttpClient`? BenchmarkDotNet measured it against an in-memory fake handler, with no real network involved: a few microseconds and a handful of KB. That is noise next to a real Gemini call, which takes 200ms or more. The actual numbers, the methodology, and the caveats live in one place, so they cannot drift out of sync with a copy here. See [Performance benchmarks](docs/articles/benchmarks.md).
 
 ## Documentation & samples
 
 - **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, cost governance, batch API, performance benchmarks, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
 - **Runnable sample**: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample), a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
-- **Benchmarks**: [`benchmarks/Junaid.GoogleGemini.Net.Benchmarks`](benchmarks/Junaid.GoogleGemini.Net.Benchmarks), a BenchmarkDotNet project measuring the library's own overhead — see [Performance](#performance) above.
+- **Benchmarks**: [`benchmarks/Junaid.GoogleGemini.Net.Benchmarks`](benchmarks/Junaid.GoogleGemini.Net.Benchmarks), a BenchmarkDotNet project that measures the library's own overhead. See [Performance](#performance) above.
 
 ## Requirements
 

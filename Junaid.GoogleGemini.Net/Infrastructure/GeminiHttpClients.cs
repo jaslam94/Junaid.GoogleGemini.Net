@@ -16,8 +16,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         /// run every call through the interactive rate limiter and call
         /// <c>ICostGovernor.CheckBudget</c>, both of which are scoped to interactive per-minute-RPM and
         /// per-day-USD budgets. Batch jobs draw from a wholly separate quota pool at a different
-        /// (discounted) price, so routing them through the interactive gates would be actively wrong —
-        /// a user near their daily interactive budget would see batch job creation mysteriously
+        /// (discounted) price, so routing them through the interactive gates would be actively wrong.
+        /// A user near their daily interactive budget would see batch job creation mysteriously
         /// rejected by a budget it isn't even priced against. This client still gets the auth handler
         /// and retry/resilience handling, just not those two gates.
         /// </summary>

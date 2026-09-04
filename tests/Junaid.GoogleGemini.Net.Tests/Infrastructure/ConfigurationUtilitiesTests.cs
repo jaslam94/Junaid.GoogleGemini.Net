@@ -6,7 +6,7 @@ namespace Junaid.GoogleGemini.Net.Tests.Infrastructure;
 /// <summary>
 /// Regression coverage for <see cref="ConfigurationUtilities.IsValidApiKeyFormat"/>: it used to be
 /// locked to the legacy "AIza"/"BIza"/"CIza" prefixes, which rejected the newer "AQ." key format
-/// Google started issuing from AI Studio in 2026 — a real key, format-rejected client-side before it
+/// Google started issuing from AI Studio in 2026, a real key, format-rejected client-side before it
 /// ever reached the network. There was no test coverage for this method at all before this bug shipped.
 /// </summary>
 public class ConfigurationUtilitiesTests

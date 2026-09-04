@@ -7,13 +7,13 @@ using Xunit;
 namespace Junaid.GoogleGemini.Net.IntegrationTests;
 
 /// <summary>
-/// Live tests against the real Batch API. Deliberately fast/non-blocking — see
+/// Live tests against the real Batch API. Deliberately fast/non-blocking. See
 /// <c>PLAN-batch-api.md</c> §7: Google's own target turnaround is "24 hours, often faster," with no
 /// hard SLA and up to 48 hours before a job auto-expires, so no test here waits for a job to actually
 /// complete. What these tests exist to resolve is the stuff docs alone couldn't settle: the exact
 /// <c>state</c> string prefix (JOB_STATE_ vs BATCH_STATE_, see <see cref="BatchJob.State"/>'s remarks)
 /// and whether the create request body's shape (top-level "batch" wrapper, no model field) is actually
-/// accepted. Uses <see cref="RequiresPaidGeminiKeyAttribute"/>, not the plain key-only one — the Batch
+/// accepted. Uses <see cref="RequiresPaidGeminiKeyAttribute"/>, not the plain key-only one. The Batch
 /// API is documented as unavailable on the free tier.
 /// </summary>
 [Collection("Live")]
@@ -39,7 +39,7 @@ public class BatchLiveTests(GeminiFixture fixture)
             GeminiConstants.Models.Gemini35FlashLite, requests, "junaid-googlegemini-net-live-test");
 
         // If we got here at all, the create call succeeded: the request body (top-level "batch"
-        // wrapper, no model field — see CreateBatchRequest) was accepted by the real API.
+        // wrapper, no model field, see CreateBatchRequest) was accepted by the real API.
         Assert.False(string.IsNullOrWhiteSpace(created.Name));
 
         var fetched = await Batch.GetAsync(created.Name!);
@@ -74,7 +74,7 @@ public class BatchLiveTests(GeminiFixture fixture)
         await Batch.CancelAsync(created.Name!);
 
         // Cancellation is asynchronous on Google's side too (see IBatchService.CancelAsync's remarks),
-        // so this doesn't assert an exact terminal "CANCELLED" state immediately — only that the call
+        // so this doesn't assert an exact terminal "CANCELLED" state immediately. It only checks that the call
         // itself succeeded (no exception) and the job is still gettable afterward.
         var fetched = await Batch.GetAsync(created.Name!);
         Assert.False(string.IsNullOrWhiteSpace(fetched.State));

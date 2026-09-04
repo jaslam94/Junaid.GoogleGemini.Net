@@ -8,7 +8,7 @@ namespace Junaid.GoogleGemini.Net.Tests.Services;
 // Regression coverage for a real bug: IsContentSafe's "thresholds" parameter silently only accepted
 // GeminiConstants.SafetyProbabilities.* strings ("NEGLIGIBLE"/"LOW"/"MEDIUM"/"HIGH"), while every
 // other method on ISafetyService (CreateSafetySettings, CreateStrictSafetySettings, ...) takes/
-// produces GeminiConstants.SafetyThresholds.* strings ("BLOCK_LOW_AND_ABOVE", etc.) — the vocabulary
+// produces GeminiConstants.SafetyThresholds.* strings ("BLOCK_LOW_AND_ABOVE", etc.), the vocabulary
 // a caller would naturally reuse. Passing that natural vocabulary used to make every check report
 // "unsafe" regardless of actual content, because the unrecognized threshold string mapped to -1,
 // which any real (>=0) probability level compares greater than. This had zero prior test coverage.

@@ -56,7 +56,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
 
         /// <summary>
         /// Adds Gemini services to the service collection with options configuration, plus a hook to
-        /// customize the <see cref="GeminiClient"/> <see cref="HttpClient"/> pipeline directly — e.g. to
+        /// customize the <see cref="GeminiClient"/> <see cref="HttpClient"/> pipeline directly, for example to
         /// insert a test/replay handler (see <c>Junaid.GoogleGemini.Net.Testing</c>'s
         /// <c>AddCassette</c>/<c>AddGeminiWithCassette</c>).
         /// </summary>
@@ -64,7 +64,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
         /// <param name="configureOptions">Action to configure options</param>
         /// <param name="configurePipeline">
         /// Invoked with the <see cref="GeminiClient"/>'s <see cref="IHttpClientBuilder"/> after the
-        /// primary handler is configured but BEFORE <see cref="GeminiAuthHandler"/> is added — so any
+        /// primary handler is configured but BEFORE <see cref="GeminiAuthHandler"/> is added. So any
         /// handler added here becomes the OUTERMOST handler on the pipeline, running before
         /// authentication. Pass <c>null</c> to skip (equivalent to the single-parameter overload).
         /// </param>
@@ -90,7 +90,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
 
             // Register cost governor (cumulative daily budget enforcement + cost observability).
             // options.Budget == null (the default) is handled inside GeminiCostGovernor as a
-            // zero-overhead no-op — see its constructor docs.
+            // zero-overhead no-op. See its constructor docs.
             services.AddSingleton<ICostGovernor>(serviceProvider =>
             {
                 var options = serviceProvider.GetRequiredService<IOptions<GeminiOptions>>().Value;
@@ -173,7 +173,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             .AddHttpMessageHandler<GeminiAuthHandler>();
 
             // Dedicated client for the Batch API (versioned base address + auth + retry, but
-            // deliberately NOT routed through GeminiClient/IGeminiClient — see
+            // deliberately NOT routed through GeminiClient/IGeminiClient. See
             // GeminiHttpClients.Batches's doc comment for why: GeminiClient unconditionally runs every
             // call through the interactive rate limiter and cost governor, neither of which apply to
             // batch's separate quota pool and discounted pricing).

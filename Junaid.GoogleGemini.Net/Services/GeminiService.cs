@@ -34,8 +34,8 @@ namespace Junaid.GoogleGemini.Net.Services
 
         // Shared by GenerateAsync and GenerateImageAsync: identical request-building, only the
         // operation label differs (it shows up in error logs and in the "No content was generated
-        // for {operation}" exception — mislabeling it as "text generation" for an image call would
-        // be confusing when debugging a fully-blocked image prompt).
+        // for {operation}" exception). Mislabeling it as "text generation" for an image call would
+        // be confusing when debugging a fully-blocked image prompt.
         private async Task<GenerateContentResponse> GenerateInternalAsync(
             string prompt,
             GeminiRequestOptions? options,
@@ -115,8 +115,8 @@ namespace Junaid.GoogleGemini.Net.Services
             CancellationToken cancellationToken = default)
         {
             // A thin wrapper: fill in image-generation defaults the caller didn't set, then reuse the
-            // same request-building/validation/retry path as GenerateAsync (via GenerateInternalAsync)
-            // — no logic duplicated, just a distinct operation label for accurate logs/errors.
+            // same request-building/validation/retry path as GenerateAsync (via GenerateInternalAsync).
+            // No logic is duplicated, only a distinct operation label for accurate logs and errors.
             var imageOptions = options?.Clone() ?? new GeminiRequestOptions();
             imageOptions.Model ??= GeminiConstants.Models.RecommendedImage;
             imageOptions.ResponseModalities ??=
