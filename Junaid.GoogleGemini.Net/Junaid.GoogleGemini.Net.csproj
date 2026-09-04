@@ -19,8 +19,16 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.4.2</Version>
+		<Version>6.4.3</Version>
 		<PackageReleaseNotes>
+			6.4.3: same-day doc-only follow-up to 6.4.2. Two GeminiRequestOptions.Factual()/.Code() XML
+			doc comments still named gemini-3.7-flash as "the recommended model" -- these ship in the
+			package's IntelliSense, so this was wrong from the moment 6.4.2 shipped. Fixed those plus
+			the same models list in GenerationConfig.Temperature and ContentRequestBuilder.WithTemperature
+			for consistency. No functional changes; no behavior differs from 6.4.2. See ROADMAP.md for
+			the full story, including the NuGet Trusted Publishing CI outage found and fixed (twice) the
+			same day, and the full 36/36 live-test re-verification against a confirmed billing-enabled
+			key (image generation, context caching, and the full Batch API suite all confirmed working).
 			6.4.2: refreshes the model lineup for Google's September 2, 2026 gemini-3.8-flash release
 			and fixes a real, live-verified GenerationConfig gap found while doing so. No breaking
 			changes.

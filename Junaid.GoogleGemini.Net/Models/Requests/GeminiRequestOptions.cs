@@ -10,8 +10,8 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
     public class GeminiRequestOptions
     {
         /// <summary>
-        /// Controls randomness in generation (0.0 to 1.0). <b>Ignored on <c>gemini-3.7-flash</c>,
-        /// <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c> and later</b> — Google deprecated all
+        /// Controls randomness in generation (0.0 to 1.0). <b>Ignored on <c>gemini-3.8-flash</c>,
+        /// <c>gemini-3.7-flash</c>, <c>gemini-3.6-flash</c>, <c>gemini-3.5-flash-lite</c> and later</b> — Google deprecated all
         /// sampling params on those models (July-August 2026) in favor of steering determinism via
         /// <see cref="SystemInstruction"/>.
         /// </summary>
@@ -143,7 +143,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
 
         /// <summary>
         /// Creates options optimized for factual/precise tasks using the recommended model.
-        /// <b>Note:</b> the recommended model (<c>gemini-3.7-flash</c>) ignores these sampling params
+        /// <b>Note:</b> the recommended model (<c>gemini-3.8-flash</c>) ignores these sampling params
         /// (see the deprecation note on <see cref="Temperature"/>); set <see cref="SystemInstruction"/>
         /// with explicit determinism rules for that model instead.
         /// </summary>
@@ -157,7 +157,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
 
         /// <summary>
         /// Creates options optimized for code generation using the recommended model.
-        /// <b>Note:</b> the recommended model (<c>gemini-3.7-flash</c>) ignores these sampling params
+        /// <b>Note:</b> the recommended model (<c>gemini-3.8-flash</c>) ignores these sampling params
         /// (see the deprecation note on <see cref="Temperature"/>); set <see cref="SystemInstruction"/>
         /// with explicit determinism rules for that model instead.
         /// </summary>
