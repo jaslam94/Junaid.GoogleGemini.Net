@@ -118,12 +118,115 @@ public class GenerateContentResponse
             .Select(data => new GeneratedImage(data!.MimeType, Convert.FromBase64String(data.Data)))
             .ToList();
     }
+
+    /// <summary>
+    /// The generated audio in the first candidate (from TTS requests, see
+    /// <c>IGeminiService.GenerateAudioAsync</c>), or null when there is none. Singular, unlike the
+    /// plural <see cref="Images()"/>: nothing observed or documented suggests a TTS response ever
+    /// returns more than one audio clip per call.
+    /// </summary>
+    public GeneratedAudio? Audio() => GetAudioInternal();
+
+    /// <summary>
+    /// Gets the generated audio, returning <c>false</c> (and a null <paramref name="audio"/>) when
+    /// the response has none.
+    /// </summary>
+    public bool TryGetAudio([NotNullWhen(true)] out GeneratedAudio? audio)
+    {
+        audio = GetAudioInternal();
+        return audio is not null;
+    }
+
+    /// <summary>
+    /// Gets the generated audio, or throws <see cref="GeminiContentException"/> (with the
+    /// finish/block reason) when there is none. Use this when missing audio should be treated as an
+    /// error.
+    /// </summary>
+    public GeneratedAudio GetAudioOrThrow()
+    {
+        return GetAudioInternal()
+            ?? throw new GeminiContentException(
+                "The response contained no generated audio.", FinishReason, BlockReason);
+    }
+
+    private GeneratedAudio? GetAudioInternal()
+    {
+        if (Candidates is not { Length: > 0 }) return null;
+        if (Candidates[0].Content?.Parts is not { Count: > 0 } parts) return null;
+
+        var data = parts
+            .Select(p => p.InlineData)
+            .FirstOrDefault(d => d is not null && d.MimeType.StartsWith("audio/", StringComparison.OrdinalIgnoreCase));
+
+        return data is null ? null : new GeneratedAudio(data.MimeType, Convert.FromBase64String(data.Data));
+    }
 }
 
 /// <summary>A single generated image, decoded from a response <c>inlineData</c> part.</summary>
 /// <param name="MimeType">The image's MIME type (e.g. <c>"image/png"</c>).</param>
 /// <param name="Data">The raw, already-decoded image bytes.</param>
 public sealed record GeneratedImage(string MimeType, byte[] Data);
+
+/// <summary>A single generated audio clip, decoded from a response <c>inlineData</c> part.</summary>
+/// <param name="MimeType">
+/// The API's exact MIME type, e.g. <c>"audio/L16;codec=pcm;rate=24000"</c>, live-verified 2026-09-04
+/// (see <c>PLAN-tts.md</c>). This is raw linear PCM, not a WAV or MP3 file.
+/// </param>
+/// <param name="Data">
+/// The raw, already-decoded PCM audio bytes. NOT a playable file on its own; call
+/// <see cref="ToWav"/> for that.
+/// </param>
+public sealed record GeneratedAudio(string MimeType, byte[] Data)
+{
+    /// <summary>
+    /// Wraps <see cref="Data"/> in a minimal 44-byte WAV header, producing a file most players and
+    /// browsers can open directly. Parses the sample rate from <see cref="MimeType"/>; assumes
+    /// 16-bit mono PCM, matching every Gemini TTS response confirmed to date (see <c>PLAN-tts.md</c>).
+    /// </summary>
+    /// <exception cref="FormatException">
+    /// <see cref="MimeType"/> is not the expected <c>"audio/L16;codec=pcm;rate=NNNN"</c> shape, for
+    /// example a future model returning a different codec.
+    /// </exception>
+    public byte[] ToWav()
+    {
+        var rateMatch = System.Text.RegularExpressions.Regex.Match(MimeType, @"^audio/L16;codec=pcm;rate=(\d+)$");
+        if (!rateMatch.Success)
+        {
+            throw new FormatException(
+                $"GeneratedAudio.ToWav() only understands \"audio/L16;codec=pcm;rate=NNNN\", but got \"{MimeType}\". " +
+                "This model may return a different audio codec than every Gemini TTS model confirmed so far.");
+        }
+
+        var sampleRate = int.Parse(rateMatch.Groups[1].Value);
+        const int channels = 1;
+        const int bitsPerSample = 16;
+        var byteRate = sampleRate * channels * bitsPerSample / 8;
+        var blockAlign = (short)(channels * bitsPerSample / 8);
+
+        // Plain byte[]/BinaryWriter.Write(byte[]) throughout, not "..."u8 + Write(ReadOnlySpan<byte>):
+        // that overload isn't in netstandard2.0's BCL, which this library still targets.
+        using var stream = new MemoryStream(44 + Data.Length);
+        using (var writer = new BinaryWriter(stream))
+        {
+            writer.Write(System.Text.Encoding.ASCII.GetBytes("RIFF"));
+            writer.Write(36 + Data.Length);
+            writer.Write(System.Text.Encoding.ASCII.GetBytes("WAVE"));
+            writer.Write(System.Text.Encoding.ASCII.GetBytes("fmt "));
+            writer.Write(16); // Subchunk1Size for PCM
+            writer.Write((short)1); // AudioFormat: 1 = PCM
+            writer.Write((short)channels);
+            writer.Write(sampleRate);
+            writer.Write(byteRate);
+            writer.Write(blockAlign);
+            writer.Write((short)bitsPerSample);
+            writer.Write(System.Text.Encoding.ASCII.GetBytes("data"));
+            writer.Write(Data.Length);
+            writer.Write(Data);
+        }
+
+        return stream.ToArray();
+    }
+}
 
 /// <summary>Feedback about the prompt that was sent to the model.</summary>
 public class PromptFeedback

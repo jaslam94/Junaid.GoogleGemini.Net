@@ -85,6 +85,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// </summary>
             public const string Gemini31FlashLiteImage = "gemini-3.1-flash-lite-image";
 
+            // Text-to-speech. All three are "-preview" models as of 2026-09-04; live-verified
+            // request/response shape, see PLAN-tts.md. This library does not enumerate voice names
+            // (e.g. "Kore") as constants: see PLAN-tts.md for why, and Google's TTS voice list for
+            // the current full set.
+            public const string Gemini25FlashTts = "gemini-2.5-flash-preview-tts";
+            public const string Gemini25ProTts = "gemini-2.5-pro-preview-tts";
+            public const string Gemini31FlashTts = "gemini-3.1-flash-tts-preview";
+
             // Gemini 2.x (still available).
             public const string Gemini25Pro = "gemini-2.5-pro";
             public const string Gemini25Flash = "gemini-2.5-flash";
@@ -138,6 +146,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <see cref="Gemini31FlashLiteImage"/> for the fastest/cheapest option.
             /// </summary>
             public static string RecommendedImage => Gemini31FlashImage;
+
+            /// <summary>
+            /// The recommended model for text-to-speech: free tier available, per Google's pricing
+            /// page (re-verify before relying on this for a free-tier deployment; see PLAN-tts.md).
+            /// Pass <see cref="Gemini25ProTts"/> explicitly for higher quality (paid tier only), or
+            /// <see cref="Gemini31FlashTts"/> for the newer Gemini 3 generation.
+            /// </summary>
+            public static string RecommendedTts => Gemini25FlashTts;
         }
 
         #endregion Model Information
@@ -369,12 +385,15 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <summary>
         /// Output modalities for <c>generationConfig.responseModalities</c>. Set <c>[Text, Image]</c>
         /// (or just <c>[Image]</c> on models that allow image-only output) to get generated images back
-        /// as <c>inlineData</c> parts. See <c>GenerateContentResponse.Images()</c>.
+        /// as <c>inlineData</c> parts, see <c>GenerateContentResponse.Images()</c>. Set <c>[Audio]</c>
+        /// on a TTS model to get generated speech back the same way, see
+        /// <c>GenerateContentResponse.Audio()</c>.
         /// </summary>
         public static class ResponseModalities
         {
             public const string Text = "TEXT";
             public const string Image = "IMAGE";
+            public const string Audio = "AUDIO";
         }
 
         /// <summary>

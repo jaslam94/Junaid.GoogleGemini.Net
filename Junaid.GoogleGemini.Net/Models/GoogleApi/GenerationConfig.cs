@@ -100,6 +100,14 @@ public class GenerationConfig
     /// </summary>
     [JsonPropertyName("imageConfig")]
     public ImageConfig? ImageConfig { get; set; }
+
+    /// <summary>
+    /// Voice settings for TTS models. Only meaningful alongside <see cref="ResponseModalities"/>
+    /// including <c>AUDIO</c>. Set exactly one of <see cref="SpeechConfig.VoiceConfig"/> (single
+    /// speaker) or <see cref="SpeechConfig.MultiSpeakerVoiceConfig"/> (a script with named speakers).
+    /// </summary>
+    [JsonPropertyName("speechConfig")]
+    public SpeechConfig? SpeechConfig { get; set; }
 }
 
 /// <summary>Image generation settings for Gemini 3+ image models (<c>generationConfig.imageConfig</c>).</summary>
@@ -112,6 +120,55 @@ public class ImageConfig
     /// <summary>One of the <c>GeminiConstants.ImageSizes</c> values (e.g. <c>"2K"</c>).</summary>
     [JsonPropertyName("imageSize")]
     public string? ImageSize { get; set; }
+}
+
+/// <summary>Voice settings for TTS models (<c>generationConfig.speechConfig</c>). Live-verified
+/// against the real API on 2026-09-04, see <c>PLAN-tts.md</c>.</summary>
+public class SpeechConfig
+{
+    /// <summary>Single-speaker voice. Set this for a plain text-to-speech request.</summary>
+    [JsonPropertyName("voiceConfig")]
+    public VoiceConfig? VoiceConfig { get; set; }
+
+    /// <summary>Speaker-to-voice map for a multi-speaker script. Set this instead of
+    /// <see cref="VoiceConfig"/> when the input text names more than one speaker.</summary>
+    [JsonPropertyName("multiSpeakerVoiceConfig")]
+    public MultiSpeakerVoiceConfig? MultiSpeakerVoiceConfig { get; set; }
+}
+
+/// <summary>Wraps a single named voice. See <c>GeminiConstants</c>'s remarks on TTS voice names for
+/// why this library does not enumerate them as constants.</summary>
+public class VoiceConfig
+{
+    [JsonPropertyName("prebuiltVoiceConfig")]
+    public PrebuiltVoiceConfig? PrebuiltVoiceConfig { get; set; }
+}
+
+/// <summary>Names one of Google's built-in TTS voices, e.g. <c>"Kore"</c>. See Google's TTS voice
+/// list for the current full set; this library does not duplicate it as constants (see
+/// <c>PLAN-tts.md</c> for why).</summary>
+public class PrebuiltVoiceConfig
+{
+    [JsonPropertyName("voiceName")]
+    public string? VoiceName { get; set; }
+}
+
+/// <summary>The voice assignment for a multi-speaker TTS script.</summary>
+public class MultiSpeakerVoiceConfig
+{
+    [JsonPropertyName("speakerVoiceConfigs")]
+    public List<SpeakerVoiceConfig>? SpeakerVoiceConfigs { get; set; }
+}
+
+/// <summary>One speaker's voice assignment within a multi-speaker script. <see cref="Speaker"/> must
+/// match a speaker name as it appears in the input text.</summary>
+public class SpeakerVoiceConfig
+{
+    [JsonPropertyName("speaker")]
+    public string? Speaker { get; set; }
+
+    [JsonPropertyName("voiceConfig")]
+    public VoiceConfig? VoiceConfig { get; set; }
 }
 
 /// <summary>Configures the model's internal reasoning budget (Gemini 2.5+ "thinking").</summary>

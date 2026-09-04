@@ -19,8 +19,22 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.4.4</Version>
+		<Version>6.5.0</Version>
 		<PackageReleaseNotes>
+			6.5.0: adds text-to-speech (TTS). New GenerateAudioAsync/StreamAudioAsync on IGeminiService
+			generate spoken audio from text using Gemini's native TTS models, the same
+			responseModalities pattern GenerateImageAsync already uses for images. Single-speaker
+			(VoiceName) and multi-speaker (SpeakerVoices, a named-speaker script) are both supported.
+			New GenerateContentResponse.Audio()/TryGetAudio()/GetAudioOrThrow() accessors return a
+			GeneratedAudio with a ToWav() helper, since Gemini returns raw 16-bit PCM, not a playable
+			file, and wrapping it correctly needs the sample rate parsed from the response's own
+			mimeType. Adds the three current TTS model constants (all "-preview" as of this release)
+			and cost-governance pricing entries; audio output tokens already arrive tagged AUDIO in the
+			existing per-modality UsageMetadata breakdown, so no new telemetry or cost-governance
+			plumbing was needed, only pricing data. Live-verified against the real API before any code
+			was written (see PLAN-tts.md): single-speaker, multi-speaker, and streaming all confirmed
+			working, including the exact response mimeType ("audio/L16;codec=pcm;rate=24000") that
+			ToWav() depends on. No breaking changes.
 			6.4.4: doc-comment cleanup only, no functional changes. All XML doc comments in this
 			package's public surface had every em dash removed and were lightly rewritten in short,
 			plain sentences (this repo's new CLAUDE.md style rule, applied retroactively). This changes

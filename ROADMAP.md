@@ -381,6 +381,36 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       `Total: 36, Passed: 36`).
 
       No functional changes anywhere in this entry. Comments, doc comments, and prose only.
+- [x] **Text-to-speech (TTS)** (`6.5.0`): new `GenerateAudioAsync`/`StreamAudioAsync` on
+      `IGeminiService`, using the same `responseModalities` pattern `GenerateImageAsync` already
+      established for images. Single speaker (`VoiceName`) and multi speaker (`SpeakerVoices`, a
+      named-speaker script) are both supported. New `GenerateContentResponse.Audio()`/
+      `TryGetAudio()`/`GetAudioOrThrow()` return a `GeneratedAudio` with a `ToWav()` helper, since
+      Gemini's raw PCM output is not a playable file on its own.
+
+      Designed the way `PLAN-batch-api.md` was: a full plan document (`PLAN-tts.md`) written before
+      any code, live-verified against the real API first. A first web search described a different,
+      newer "Interactions API" shape entirely (`input`, `response_format`,
+      `interaction.output_audio.data`) that does not match this library's `generateContent`
+      architecture at all; that shape was discarded before writing any code, in favor of raw REST
+      calls that confirmed the real `generationConfig.speechConfig` shape this library actually uses.
+      Those live calls also pinned down the exact response `mimeType`
+      (`"audio/L16;codec=pcm;rate=24000"`), which `ToWav()` depends on to build a correct WAV header,
+      and confirmed audio output tokens already arrive tagged `AUDIO` in the existing per-modality
+      `UsageMetadata` breakdown (added in `6.4.1`), so cost governance needed only new pricing data
+      for the three TTS models, no new plumbing.
+
+      Deliberately does not enumerate Google's 30 named voices as C# constants, matching this
+      library's existing policy of not allow-listing model names: a caller passes a plain string, and
+      a typo is the API's problem to reject.
+
+      Verified: full solution build 0 warnings on all three targets; 11 new unit tests (request
+      shape, response decoding, and a byte-level check of `ToWav()`'s WAV header against a known
+      input); 3 new live tests against a real key (single speaker, multi speaker, and streaming with
+      a real `AUDIO`-tagged `UsageMetadata` entry), all passing. TTS model pricing and free-tier
+      availability came from a single fetch of Google's pricing page, not a live billing check;
+      re-verify before relying on either for a cost-sensitive or free-tier deployment (see
+      `PLAN-tts.md` §2).
 
 ---
 

@@ -77,6 +77,15 @@ app.MapGet("/image", async (IGeminiService gemini, string prompt) =>
         : Results.Problem("The model returned no image.", statusCode: 502);
 });
 
+// Text-to-speech: GET /speak?text=Have%20a%20great%20day  -> a playable WAV file
+app.MapGet("/speak", async (IGeminiService gemini, string text) =>
+{
+    var response = await gemini.GenerateAudioAsync(text);
+    return response.TryGetAudio(out var audio)
+        ? Results.File(audio.ToWav(), "audio/wav")
+        : Results.Problem("The model returned no audio.", statusCode: 502);
+});
+
 // Chat via Microsoft.Extensions.AI: POST /chat  { "message": "Hello" }
 app.MapPost("/chat", async (IChatClient chat, ChatRequest request) =>
     Results.Ok((await chat.GetResponseAsync([new ChatMessage(ChatRole.User, request.Message)])).Text));

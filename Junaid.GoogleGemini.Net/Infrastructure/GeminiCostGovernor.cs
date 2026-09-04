@@ -191,6 +191,34 @@ public sealed class GeminiCostGovernor : ICostGovernor
                 OutputPerMillionTokensUsd = 30.00m,
                 CachedInputPerMillionTokensUsd = 0.25m,
             },
+
+            // Text-to-speech models. Confirmed live (2026-09-04, see PLAN-tts.md) that audio output
+            // tokens arrive as a plain CandidatesTokenCount, tagged AUDIO in CandidatesTokensDetails,
+            // the same UsageMetadata shape every other model uses. That means 100% of output here is
+            // priced at the audio rate below, which is correct for TTS (unlike the image models
+            // above, a TTS response has no separate text output to under-or-over-count). None of the
+            // three publish a cached-input rate, so all three fall back to the standard input rate
+            // (assume no discount) rather than 0, matching the same-situation image models above.
+            // Pricing numbers themselves came from a single fetch of the pricing page, not a live
+            // billing check; re-verify before relying on them, same as every entry in this table.
+            ["gemini-2.5-flash-preview-tts"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 0.50m,
+                OutputPerMillionTokensUsd = 10.00m,
+                CachedInputPerMillionTokensUsd = 0.50m,
+            },
+            ["gemini-2.5-pro-preview-tts"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 1.00m,
+                OutputPerMillionTokensUsd = 20.00m,
+                CachedInputPerMillionTokensUsd = 1.00m,
+            },
+            ["gemini-3.1-flash-tts-preview"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 1.00m,
+                OutputPerMillionTokensUsd = 20.00m,
+                CachedInputPerMillionTokensUsd = 1.00m,
+            },
         };
 
     // Keyed by the UTC calendar day, normalized to midnight (DateTime.Date), NOT System.DateOnly:

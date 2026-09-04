@@ -129,6 +129,23 @@ namespace Junaid.GoogleGemini.Net.Services
         }
 
         /// <inheritdoc/>
+        public Task<GenerateContentResponse> GenerateAudioAsync(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default) =>
+            GenerateInternalAsync(prompt, BuildAudioOptions(options), "audio generation", cancellationToken);
+
+        // Shared by GenerateAudioAsync and StreamAudioAsync: fills in TTS defaults the caller didn't
+        // set, the same way GenerateImageAsync does for image generation.
+        private static GeminiRequestOptions BuildAudioOptions(GeminiRequestOptions? options)
+        {
+            var audioOptions = options?.Clone() ?? new GeminiRequestOptions();
+            audioOptions.Model ??= GeminiConstants.Models.RecommendedTts;
+            audioOptions.ResponseModalities ??= [GeminiConstants.ResponseModalities.Audio];
+            return audioOptions;
+        }
+
+        /// <inheritdoc/>
         public async Task<GenerateContentResponse> ChatAsync(
             MessageObject[] messages,
             GeminiRequestOptions? options = null,
@@ -223,6 +240,25 @@ namespace Junaid.GoogleGemini.Net.Services
 
             var request = CreateVisionRequest(prompt, image, options);
             var endpoint = GetStreamEndpoint(options?.Model);
+
+            await foreach (var chunk in StreamRequestAsync(endpoint, request, cancellationToken))
+            {
+                yield return chunk;
+            }
+        }
+
+        /// <inheritdoc/>
+        public async IAsyncEnumerable<GenerateContentResponse> StreamAudioAsync(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            var audioOptions = BuildAudioOptions(options);
+            ValidationUtilities.ValidateTextInput(prompt, nameof(prompt), GeminiConstants.Limits.MaxTextLength);
+            await CheckPerRequestBudgetForTextAsync(prompt, audioOptions, cancellationToken);
+
+            var request = CreateTextRequest(prompt, audioOptions);
+            var endpoint = GetStreamEndpoint(audioOptions.Model);
 
             await foreach (var chunk in StreamRequestAsync(endpoint, request, cancellationToken))
             {

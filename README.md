@@ -161,6 +161,17 @@ Defaults to the efficient flash image model; pass `Model = GeminiConstants.Model
 higher quality, or `ImageAspectRatio`/`ImageSize` (Gemini 3+ image models) for finer control. See
 [docs/articles/image-generation.md](docs/articles/image-generation.md).
 
+### Text-to-speech
+
+```csharp
+var response = await gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!");
+var audio = response.GetAudioOrThrow();
+await File.WriteAllBytesAsync("greeting.wav", audio.ToWav()); // adds a real WAV header to the raw PCM
+```
+
+Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (each speaker named
+in the prompt text, mapped to a voice). See [docs/articles/tts.md](docs/articles/tts.md).
+
 ### Embeddings
 
 ```csharp
@@ -282,7 +293,7 @@ Auth, retries, rate limiting, cost governance, and telemetry are all real work. 
 
 ## Documentation & samples
 
-- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, cost governance, batch API, performance benchmarks, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
+- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, image generation, TTS, cost governance, batch API, performance benchmarks, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
 - **Runnable sample**: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample), a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
 - **Benchmarks**: [`benchmarks/Junaid.GoogleGemini.Net.Benchmarks`](benchmarks/Junaid.GoogleGemini.Net.Benchmarks), a BenchmarkDotNet project that measures the library's own overhead. See [Performance](#performance) above.
 

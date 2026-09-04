@@ -66,6 +66,28 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Generates spoken audio from text (Gemini TTS models). Get the result via
+        /// <see cref="GenerateContentResponse.Audio"/>/<see cref="GenerateContentResponse.TryGetAudio"/>/
+        /// <see cref="GenerateContentResponse.GetAudioOrThrow"/> on the response, then
+        /// <see cref="GeneratedAudio.ToWav"/> to get a playable file.
+        /// </summary>
+        /// <param name="prompt">
+        /// The text to speak. For multi-speaker audio (see <see cref="GeminiRequestOptions.SpeakerVoices"/>),
+        /// this should name each speaker as they appear in the text, e.g. "Joe: Hi! Jane: Hello!".
+        /// </param>
+        /// <param name="options">
+        /// Optional generation options. If <see cref="GeminiRequestOptions.Model"/> is unset, defaults
+        /// to <c>GeminiConstants.Models.RecommendedTts</c>; if <see cref="GeminiRequestOptions.ResponseModalities"/>
+        /// is unset, defaults to <c>[AUDIO]</c>. Set <see cref="GeminiRequestOptions.VoiceName"/> for a
+        /// single voice, or <see cref="GeminiRequestOptions.SpeakerVoices"/> for a multi-speaker script.
+        /// </param>
+        /// <param name="cancellationToken">Cancellation token</param>
+        Task<GenerateContentResponse> GenerateAudioAsync(
+            string prompt,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// Generates content based on chat history
         /// </summary>
         /// <param name="messages">Array of chat messages</param>
@@ -119,6 +141,16 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         IAsyncEnumerable<GenerateContentResponse> StreamWithImageAsync(
             string prompt,
             FileObject image,
+            GeminiRequestOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Streams audio generation for a text prompt (Gemini TTS models), yielding each response
+        /// chunk as it arrives. Same defaults as <see cref="GenerateAudioAsync"/>. A short clip may
+        /// arrive as a single chunk; only the final chunk is guaranteed to carry <see cref="GenerateContentResponse.Usage"/>.
+        /// </summary>
+        IAsyncEnumerable<GenerateContentResponse> StreamAudioAsync(
+            string prompt,
             GeminiRequestOptions? options = null,
             CancellationToken cancellationToken = default);
 
