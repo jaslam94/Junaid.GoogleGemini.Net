@@ -22,14 +22,14 @@ live testing corrected (state prefix, results-file field name, the operation-env
 library's own types, plus the actual library code, run against real jobs taken to real completion).
 
 **Post-implementation addendum (pre-live-verification, still accurate):**
-`CancelAsync` ended up simpler than §4.7 specified — rather than deserializing into the
+`CancelAsync` ended up simpler than §4.7 specified. Rather than deserializing into the
 `EmptyBatchResponse` type this plan describes, the actual implementation discards the cancel response
 body entirely (success/failure is determined purely by the HTTP status code), so `EmptyBatchResponse`
 was never added to the codebase. The reasoning in §4.7 for *why* the response shape can't be trusted
 still holds; it just turned out there was no need to model it at all once the implementation didn't try
 to read it. A second, unplanned addition: `GetResultsAsync` throws (rather than returning an empty
 list) when a job's `Output` object exists but has neither inline responses nor a results file name,
-found during a second-pass review after implementation — an empty list there would look identical to a
+found during a second-pass review after implementation. An empty list there would look identical to a
 legitimately empty result set and could silently mask the exact field-name risk §2.3 flags. Everything
 else below matches what shipped. **Audience:** an AI coding agent (Cursor) implementing this directly against
 the current `master` branch (post-6.3.1). **Author's confidence:** every file path, method signature,
@@ -37,7 +37,7 @@ and integration point below was verified by reading the actual current source on
 Gemini Batch API's own shape was researched from Google's live docs on the same date (see §2), and
 **this plan has already been through one self-review pass** that caught several wrong or unverifiable
 claims from the first draft (a fabricated citation, a wire-format field-name error, a self-contradiction
-about the state field's type) — all are corrected below and marked with what evidence actually supports
+about the state field's type). All are corrected below and marked with what evidence actually supports
 them. Two material facts (§2.4's state-string values, §2.3's destination-file field name) could not be
 resolved with full confidence from docs alone and **must be confirmed against a real API response**
 before those specific details are finalized in code. Do not guess; §2.4 and §7 say exactly how to
@@ -47,7 +47,7 @@ resolve both cheaply, in the same live test.
 (`ai.google.dev/api/batch-mode`) was fetched twice, independently, and both times produced at least
 one detail that direct evidence from other sources (the guide's own worked examples, the official
 cookbook notebook's actual printed API output) contradicts. Treat any fact below sourced *only* from
-that page, with no corroboration, as the weakest-confidence tier — those are called out individually
+that page, with no corroboration, as the weakest-confidence tier. Those are called out individually
 below rather than presented with the same confidence as corroborated facts.
 
 ---
@@ -81,7 +81,7 @@ explicitly rather than silently picking one.
 | Delete | `DELETE` | `batches/{batchId}` |
 
 All relative to the same versioned base address `IGeminiClient` already targets (i.e. **do not**
-prefix these with `v1beta/` in code — `CachingService`'s `"cachedContents"` endpoint is the pattern to
+prefix these with `v1beta/` in code. `CachingService`'s `"cachedContents"` endpoint is the pattern to
 copy verbatim, since `GeminiClient`'s `HttpClient.BaseAddress` already includes the version segment).
 
 Downloading a **file-based** result is a *different* path, rooted at the host authority rather than
@@ -92,16 +92,16 @@ GET /download/v1beta/{fileName}:download?alt=media
 ```
 
 This is the same shape `FileService` already uses for uploads (`upload/v1beta/files`), which is why
-it uses a separate root-relative `HttpClient` (`GeminiHttpClients.Files`). See §4.5 — this plan adds a
+it uses a separate root-relative `HttpClient` (`GeminiHttpClients.Files`). See §4.5. This plan adds a
 `DownloadFileAsync` method to `IFileService`, not `IBatchService`, since it's a Files API capability
 that batch happens to depend on (and is independently useful for any large file, not just batch
 output).
 
 ### 2.2 Submitting a batch: two mutually exclusive modes
 
-1. **Inline requests** — a list of `GenerateContentRequest` objects embedded directly in the create
+1. **Inline requests**: a list of `GenerateContentRequest` objects embedded directly in the create
    call. Google's documented ceiling: **under 20MB** total request size.
-2. **File input (JSONL)** — upload a JSON Lines file first via the existing Files API
+2. **File input (JSONL)**: upload a JSON Lines file first via the existing Files API
    (`IFileService.UploadFileAsync`, MIME type `"jsonl"`), then reference it by name. Ceiling: **2GB**
    per file. This is the recommended path for anything non-trivial.
 
@@ -111,15 +111,15 @@ JSONL input line shape (one `GenerateContentRequest` per line, optionally keyed)
 {"key": "request-1", "request": {"contents": [{"parts": [{"text": "..."}]}]}}
 ```
 
-The `key` is caller-supplied and echoed back on the matching output line — this is the only way to
+The `key` is caller-supplied and echoed back on the matching output line. This is the only way to
 correlate an output line back to its input when using **file** mode, since output order is not
-documented as guaranteed to match input order. This is a JSONL-only concept (see §2.3's correction —
+documented as guaranteed to match input order. This is a JSONL-only concept (see §2.3's correction:
 inline mode's per-item field is `metadata`, not `key`; the two modes are not interchangeable here).
 
 **Gap this creates, closed in §4.2:** the stated Goal (§1) is that callers shouldn't have to hand-roll
 the JSONL protocol themselves. But if `IBatchService` only offers `CreateFromFileAsync(model, fileName,
 ...)` for an *already-uploaded* file, a caller with an in-memory list of requests still has to
-hand-write JSONL lines and call `IFileService.UploadFileAsync` themselves before they can use it — the
+hand-write JSONL lines and call `IFileService.UploadFileAsync` themselves before they can use it. This is the
 exact thing the Goal says this feature should spare them. §4.2 adds a convenience method that writes
 the JSONL and uploads it internally, so this promise is actually kept for both submission modes.
 
@@ -130,52 +130,52 @@ name              string   "batches/123456789"                  (output only)
 displayName       string
 model             string   "models/gemini-3.6-flash"             (echoed back on Get/List; see below)
 inputConfig       object   oneof: fileName (string) | requests (InlinedRequest[])
-output / dest     object   oneof: fileName (string) | inlinedResponses (InlinedResponse[])  — see note
+output / dest     object   oneof: fileName (string) | inlinedResponses (InlinedResponse[])  (see note
 createTime        string   RFC 3339
 updateTime        string   RFC 3339
 endTime           string   RFC 3339                              (set once terminal)
 batchStats        object   requestCount, successfulRequestCount, failedRequestCount, pendingRequestCount
-priority          int64    optional, create-time only (documented but not used by v1 — see §3)
+priority          int64    optional, create-time only (documented but not used by v1, see §3)
 state             string   see §2.4
 ```
 
 **On `model` and the create request body:** the guide's own cURL example for creating a file-based
-batch job sends `{"batch": {"display_name": ..., "input_config": {"file_name": ...}}}` — **no
+batch job sends `{"batch": {"display_name": ..., "input_config": {"file_name": ...}}}`, with **no
 `model`/`display_model` field in the body at all.** The model is expressed only in the URL
 (`models/{model}:batchGenerateContent`), matching how every other endpoint in this codebase already
 builds request URLs (`GenerateContentRequest` has no `Model` field either, for the same reason). So
 `CreateBatchRequest`'s body must **not** include a model field; `model` only shows up as a field when
 *reading back* a `BatchJob` via Get/List, populated server-side from what the URL was at creation.
 Building the create request with a `Model` property (an earlier draft of this plan did) would be
-wrong — remove it from `CreateBatchRequest` entirely.
+wrong. Remove it from `CreateBatchRequest` entirely.
 
-**The create request body has a top-level `"batch"` wrapper** — confirmed directly from both the
+**The create request body has a top-level `"batch"` wrapper**, confirmed directly from both the
 guide's cURL example and the REST reference's method signature
 (`{batch.model=models/*}:batchGenerateContent`). `CreateBatchRequest` must serialize as
 `{ "batch": { "displayName": ..., "inputConfig": {...} } }`, not a bare `{ "displayName": ..., ... }`.
 This is easy to miss and would silently produce a request Google's API rejects or ignores.
 
-**Field-name discrepancy, unresolved — `fileName` vs `responsesFile` for the output/destination
+**Field-name discrepancy, unresolved: `fileName` vs `responsesFile` for the output/destination
 file field:** the guide's own worked JSON sketch (`"dest": {"fileName": "files/output123", ...}`) and
 the *Python SDK's actual code sample* (`batch_job.dest.file_name`, which only makes sense if the
 underlying JSON field is `fileName`) both point to **`fileName`**. Only the REST reference page (the
-source already shown unreliable once, on the state enum — see §2.4) says `responsesFile`. Given that
+source already shown unreliable once, on the state enum, see §2.4) says `responsesFile`. Given that
 source's track record here, prefer `fileName` as the working assumption, but **do not ship this
-without confirming it against a real response** — same live test that resolves §2.4 (§7) should assert
+without confirming it against a real response**. The same live test that resolves §2.4 (§7) should assert
 which key is actually present in a real `output`/`dest` object once a job completes, or at minimum log
 the raw JSON once during manual verification.
 
-`InlinedRequest`: `{ request: GenerateContentRequest, metadata?: object }` — **`metadata`**, not
+`InlinedRequest`: `{ request: GenerateContentRequest, metadata?: object }`. **`metadata`**, not
 `key`, is the documented wrapper field name for **inline** mode. `key` is a JSONL-line-only concept
-for **file** mode (see §2.2) — these are two different envelopes around the same `request` payload,
+for **file** mode (see §2.2). These are two different envelopes around the same `request` payload,
 not the same field under two names. Don't reuse one type for both without accounting for that;
 `InlinedBatchRequest` (§4.1) models the inline shape only.
 
-`InlinedResponse`: `{ metadata?: object, response?: GenerateContentResponse, error?: Status }` — a
+`InlinedResponse`: `{ metadata?: object, response?: GenerateContentResponse, error?: Status }`. A
 oneof between `response` and `error`, exactly like the per-line JSONL output (`{"response": ...}` or
 `{"error": {"code": ..., "message": ...}}`).
 
-### 2.4 State enum — UNRESOLVED, resolve before finalizing
+### 2.4 State enum: UNRESOLVED, resolve before finalizing
 
 Two different naming schemes turned up depending on the source:
 
@@ -196,7 +196,7 @@ in `state` from a real `batches.get` response and that observed value is what go
 enum/constants. If both prefixes are somehow accepted by the API (i.e. it's case/alias-tolerant),
 prefer whichever the guide documents (`JOB_STATE_*`), since that's the user-facing contract. Model
 `state` as a `string` on the wire type (not a C# `enum`), with `GeminiConstants` string constants for
-the known values — exactly the existing pattern for `FileResource.State` (`"ACTIVE"`, `"FAILED"`,
+the known values. This is exactly the existing pattern for `FileResource.State` (`"ACTIVE"`, `"FAILED"`,
 etc. are plain strings, matched via `string.Equals(..., StringComparison.OrdinalIgnoreCase)` in
 `FileService.WaitUntilActiveAsync`). This sidesteps the naming ambiguity entirely: whichever prefix
 the live API actually returns, a string-typed field round-trips it correctly, and callers doing
@@ -207,9 +207,9 @@ ordinal-insensitive comparison (as the `WaitUntilCompleteAsync` helper below wil
 - Terminal states: `SUCCEEDED`, `FAILED`, `CANCELLED`, `EXPIRED` (whatever the resolved prefix, these
   four suffixes are consistent across every source).
 - A job auto-expires (`EXPIRED`) if it's still `PENDING`/`RUNNING` after **48 hours**.
-- Target turnaround is "24 hours, often faster" — **not a hard SLA**, no documented minimum.
+- Target turnaround is "24 hours, often faster." **Not a hard SLA**, no documented minimum.
 - Results (both inline and file-based) are retrievable for **6 weeks** after completion, then deleted.
-- Job creation is explicitly documented as **not idempotent** — calling create twice with the same
+- Job creation is explicitly documented as **not idempotent**. Calling create twice with the same
   logical content produces two separate jobs. No dedup/upsert-by-displayName exists.
 
 ### 2.6 Pricing
@@ -217,20 +217,20 @@ ordinal-insensitive comparison (as the `WaitUntilCompleteAsync` helper below wil
 Flat **50% discount** vs. the standard (interactive) rate, confirmed to hold proportionally across
 every pricing tier checked (including the >200k-token long-context tiers for `gemini-2.5-pro` /
 `gemini-3.1-pro-preview`), per the live pricing page fetched the same day as this research.
-**Cost-governance integration is explicitly out of scope for this plan** — see §3's exclusions and §9
+**Cost-governance integration is explicitly out of scope for this plan.** See §3's exclusions and §9
 for why, and what a follow-up would need.
 
 ### 2.7 Access requirements and limits
 
 - Batch API requires a **paid-tier** project; it is not available on the free tier.
 - Batch jobs draw from a **separate quota pool** from interactive requests (own concurrent-job, file,
-  storage, and enqueued-token limits) — this library's existing `IRateLimiter`/`ICostGovernor`, both
+  storage, and enqueued-token limits). This library's existing `IRateLimiter`/`ICostGovernor`, both
   scoped to interactive calls, are correctly left untouched by this feature (see §3).
 - Documented ceiling: **100 concurrent batch jobs** per project (as of the source checked; treat as
-  informational only — this library does not enforce it, the API will reject over-limit creates).
+  informational only, this library does not enforce it, the API will reject over-limit creates).
 - Batch API currently supports `generateContent` only (this plan's scope). Cookbook examples also show
   a separate `create_embeddings` batch surface and image-generation-in-batch (same endpoint, just
-  `responseModalities` in the per-request config) — see §3 for what's in/out.
+  `responseModalities` in the per-request config). See §3 for what's in/out.
 
 ## 3. Explicit scope
 
@@ -238,30 +238,30 @@ for why, and what a follow-up would need.
 - `IBatchService` covering create (inline and file-input), get, list, cancel, delete.
 - Both submission modes for `generateContent`-shaped requests, including requests that themselves use
   system instructions, tools, and generation config (i.e. `GenerateContentRequest`, the existing wire
-  model — no new request-shaping logic needed, only a new envelope around it).
+  model. No new request-shaping logic needed, only a new envelope around it).
 - A `WaitUntilCompleteAsync` polling helper, mirroring `IFileService.WaitUntilActiveAsync`'s exact
   shape (`pollInterval`, `timeout`, cancellation).
 - Result retrieval for both inline (`dest.inlinedResponses`, already in the Get response) and
-  file-based (the destination file field, name TBD per §2.3 — requires the new
+  file-based (the destination file field, name TBD per §2.3, requires the new
   `IFileService.DownloadFileAsync` + JSONL parsing) outcomes.
 - A new `IFileService.DownloadFileAsync(string name, CancellationToken ct)` method (returns raw
   `byte[]` or a `string`; see §4.5), since retrieving file-based batch output requires it and no
   existing method covers "download arbitrary file bytes by name."
 - A JSONL-writing convenience method (§4.2's `CreateFromRequestsFileAsync`) that builds the JSONL
   payload from an in-memory list of requests and uploads it via `IFileService`, so file-mode submission
-  doesn't require the caller to hand-write the JSONL protocol either — see §2.2's gap note for why this
+  doesn't require the caller to hand-write the JSONL protocol either. See §2.2's gap note for why this
   was added on this review pass and isn't optional polish.
 
 **Explicitly out of scope for this change (do not implement):**
 - **Cost governance integration.** `ICostGovernor` prices interactive calls in real time from a single
   response's `UsageMetadata`. Batch responses carry `usageMetadata` too (confirmed in the cookbook's
-  output JSONL example), so a batch job's cost *could* be computed after the fact — but at the batch
+  output JSONL example), so a batch job's cost *could* be computed after the fact, but at the batch
   (discounted) rate, which today's `ModelPricing` has no concept of (it's a flat rate per model, not
   rate-plus-batch-multiplier). Bolting this on half-finished would be worse than not touching it. Note
   it as a real, sized follow-up in the ROADMAP entry this plan produces (§10), don't attempt it here.
 - **Batch embeddings** (`create_embeddings`). Different request/response shape, different model
   (`gemini-embedding-*`), and this library's `EmbedContentResponse` already has no usage/token field
-  (the same gap that excluded embeddings from cost governance) — separate design work.
+  (the same gap that excluded embeddings from cost governance). Separate design work.
 - **Webhooks** (`client.webhooks.create(...)` as an alternative to polling). Found in the cookbook but
   not in the primary guide; looks newer/less battle-tested, and this library has no existing
   webhook-receiving story to hang it on (it's a client library, not a hosted service). Polling via
@@ -272,7 +272,7 @@ for why, and what a follow-up would need.
 - **Enforcing the 100-concurrent-job or 20MB/2GB limits client-side.** Let the API reject over-limit
   requests with its normal error response; this library surfaces that via the existing
   `GeminiApiException` path, same as every other endpoint. Client-side pre-validation of size limits
-  is a nice-to-have, not required for v1 — flag as a possible follow-up, don't build it now.
+  is a nice-to-have, not required for v1. Flag it as a possible follow-up, don't build it now.
 - **A sample endpoint in `AspNetCoreSample`.** Worth doing once the feature ships and is live-verified,
   but is a separate, smaller follow-up (same reasoning as why the cost-governance sample work was done
   as its own pass after 6.2.0 shipped, not bundled into it).
@@ -289,20 +289,20 @@ Junaid.GoogleGemini.Net/Models/GoogleApi/BatchJobList.cs       (list response)
 Junaid.GoogleGemini.Net/Models/Requests/CreateBatchRequest.cs  (create request envelope)
 ```
 
-**Naming note — read before naming anything:** `Models/GoogleApi/BatchEmbedContentResponse.cs`
+**Naming note, read before naming anything:** `Models/GoogleApi/BatchEmbedContentResponse.cs`
 already exists, for the unrelated *synchronous* multi-embedding call (`EmbedContentAsync`'s batch
 variant, a single request/response pair, nothing to do with this feature). Do **not** name any new
-type `Batch...ContentRequest`/`Response` — it will collide in meaning even if not in compiler symbol.
+type `Batch...ContentRequest`/`Response`. It will collide in meaning even if not in compiler symbol.
 Suggested names: `BatchJob` (the resource itself, avoiding the bare `Batch` collision risk with the
 `GeminiOptions.Budget`-adjacent `BudgetOptions` vocabulary too), `BatchJobSource` (the `inputConfig`
 oneof), `BatchJobDestination` (the `output`/`dest` oneof), `InlinedBatchRequest` (the **inline**-mode
 per-item envelope: `Request` + `Metadata`, no `Key`), `InlinedBatchResponse`, `BatchStats`,
 `BatchJobList`, and `BatchRequestLine` (a small type used **only** by
-`CreateFromRequestsFileAsync`/JSONL writing: `Key` + `Request` — do not merge this with
+`CreateFromRequestsFileAsync`/JSONL writing: `Key` + `Request`. Do not merge this with
 `InlinedBatchRequest`, they serialize to different wire shapes per §2.3's correction).
 
 `CreateBatchRequest` (the create-call body) wraps its payload in a top-level `"batch"` property and
-has **no `Model` property at all** — see §2.3's correction. Its shape is effectively
+has **no `Model` property at all**. See §2.3's correction. Its shape is effectively
 `{ Batch: { DisplayName, InputConfig } }`.
 
 ### 4.2 `IBatchService`
@@ -327,8 +327,8 @@ public interface IBatchService
     /// <summary>
     /// Convenience wrapper: writes <paramref name="requests"/> as JSONL, uploads it via
     /// IFileService.UploadFileAsync(..., mimeType: "jsonl"), then calls CreateFromFileAsync. Exists so
-    /// a caller with an in-memory list never has to hand-write the JSONL protocol themselves (see §2.2)
-    /// — the same reason CreateAsync exists for the inline path.
+    /// a caller with an in-memory list never has to hand-write the JSONL protocol themselves (see §2.2).
+    /// This is the same reason CreateAsync exists for the inline path.
     /// </summary>
     Task<BatchJob> CreateFromRequestsFileAsync(
         string model,
@@ -384,10 +384,10 @@ services.AddTransient<IBatchService, BatchService>();
 `BatchService` should take a constructor dependency on `IGeminiClient` (for the versioned-base-address
 create/get/list/cancel/delete calls) **and** `IFileService` (needed three ways now: uploading the
 JSONL file inside `CreateFromRequestsFileAsync`, and downloading + parsing it inside
-`GetResultsAsync`) — inject `IFileService`, don't reach around it. This mirrors `CachingService`'s
+`GetResultsAsync`). Inject `IFileService`, don't reach around it. This mirrors `CachingService`'s
 single-dependency-on-IGeminiClient pattern, extended with the genuine cross-service need this feature
 has. Also add a small private `Normalize(string name)` helper on `BatchService` that prefixes
-`"batches/"` when missing, mirroring `FileService.Normalize`'s `"files/"` prefixing exactly — every
+`"batches/"` when missing, mirroring `FileService.Normalize`'s `"files/"` prefixing exactly. Every
 `name`-taking method (`GetAsync`, `CancelAsync`, `DeleteAsync`, `WaitUntilCompleteAsync`) should run
 its input through it, same as `FileService` already does for every file-name-taking method.
 
@@ -397,7 +397,7 @@ Add every new root type to `GeminiJsonContext.cs`'s `[JsonSerializable(...)]` li
 convention (nested types inside `BatchJob` don't need separate entries, same as `Content`/`Part`
 today). Do not forget this: a type used in serialization but missing from the source-gen context
 either falls back silently to reflection (defeating the AOT/trim goal) or throws at runtime depending
-on how `GeminiJson.Default` is configured — check `Infrastructure/Serialization/GeminiJson.cs` for
+on how `GeminiJson.Default` is configured. Check `Infrastructure/Serialization/GeminiJson.cs` for
 which failure mode applies and confirm the new types work before considering this done.
 
 ### 4.5 `IFileService.DownloadFileAsync` (new method on an existing interface)
@@ -408,7 +408,7 @@ Task<byte[]> DownloadFileAsync(string name, CancellationToken cancellationToken 
 ```
 
 Implementation in `FileService`, using the existing `_httpClient` (already the root-relative
-`GeminiHttpClients.Files` client — see `Services/FileService.cs`):
+`GeminiHttpClients.Files` client. See `Services/FileService.cs`):
 
 ```csharp
 public async Task<byte[]> DownloadFileAsync(string name, CancellationToken cancellationToken = default)
@@ -419,12 +419,12 @@ public async Task<byte[]> DownloadFileAsync(string name, CancellationToken cance
 }
 ```
 
-(`Version` and `Normalize` are the existing private members already in `FileService` — reuse them, do
+(`Version` and `Normalize` are the existing private members already in `FileService`. Reuse them, do
 not duplicate.)
 
 ### 4.6 JSONL parsing
 
-Output files are **not** a single JSON document — they're newline-delimited JSON, one
+Output files are **not** a single JSON document. They're newline-delimited JSON, one
 `InlinedBatchResponse`-shaped object per line, which `System.Text.Json`'s source-generated context
 cannot deserialize as a unit. Parse manually:
 
@@ -447,26 +447,26 @@ this codebase (see `FileService.Deserialize<T>`).
 
 Copy `FileService`'s `EnsureSuccessAsync` pattern for any raw-`HttpClient` calls (the download path).
 For calls that go through `IGeminiClient.PostAsync`/`GetAsync`/`DeleteAsync`, error mapping to
-`GeminiApiException` already happens inside `GeminiClient` — no separate error handling needed there,
+`GeminiApiException` already happens inside `GeminiClient`. No separate error handling needed there,
 same as `CachingService` today.
 
 `CancelAsync` posts to `batches/{id}:cancel` with an empty body. What it returns is genuinely uncertain
 (the REST reference says an empty object; Google Cloud APIs conventionally return either
-`google.protobuf.Empty` — literally `{}` — or the updated resource for `:cancel`-style methods, and
-this wasn't resolved by any corroborated source). Don't guess which and build around it — define a
+`google.protobuf.Empty`, literally `{}`, or the updated resource for `:cancel`-style methods, and
+this wasn't resolved by any corroborated source). Don't guess which and build around it. Define a
 minimal `internal sealed class EmptyBatchResponse { }` (zero properties, all-permissive) as the
 `TResponse` for this one call: `await _client.PostAsync<object, EmptyBatchResponse>($"{Normalize(name)}:cancel", new { }, cancellationToken)`,
 discard the result, and have `CancelAsync` return `Task` (not `Task<BatchJob>`). This deserializes
 successfully whether Google returns `{}` or a full resource with extra fields: `System.Text.Json`
 skips unmapped JSON members by default (`UnmappedMemberHandling.Skip`, the framework default, distinct
-from the `PropertyNameCaseInsensitive` setting `GeminiJsonContext` already sets for a different reason
-— don't conflate the two), so a zero-property target type never throws just because the payload has
+from the `PropertyNameCaseInsensitive` setting `GeminiJsonContext` already sets for a different reason,
+don't conflate the two), so a zero-property target type never throws just because the payload has
 more fields than it declares. Remember to register `EmptyBatchResponse` in `GeminiJsonContext.cs`
-(§4.4) — it's a root type like everything else.
+(§4.4). It's a root type like everything else.
 
 ## 5. Model constants
 
-Add batch-relevant model name references only if none already fit — check
+Add batch-relevant model name references only if none already fit. Check
 `Junaid.GoogleGemini.Net/Infrastructure/Utilities/GeminiConstants.cs`'s `Models` class first; batch
 uses the exact same model identifiers as interactive calls (`gemini-3.6-flash`, etc.), so no new
 constants should be needed unless a batch-only model shows up in testing.
@@ -477,7 +477,7 @@ Do **not** wire `GeminiTelemetry.RecordUsage`/`RecordCost` into batch calls. Tho
 a single request/response round-trip; a batch job is create-then-poll-then-fetch, and its "usage" only
 exists per-line, after the fact, in the results. Emitting a *count* metric for batch job creation
 (e.g. `gemini.client.batch.jobs_created`) would be a reasonable small addition but is not required for
-v1 — note as a possible follow-up in the ROADMAP entry, don't build it speculatively.
+v1. Note it as a possible follow-up in the ROADMAP entry, don't build it speculatively.
 
 ## 7. Testing strategy
 
@@ -492,7 +492,7 @@ timing: target 24h turnaround, no SLA, up to 48h before expiry. A live test that
 completion is not something CI (or an interactive session) can reasonably wait on.
 
 - Add `tests/Junaid.GoogleGemini.Net.IntegrationTests/BatchLiveTests.cs`, `[Collection("Live")]`,
-  `[RequiresGeminiKey]` — same skip-without-a-key convention as every other live test.
+  `[RequiresGeminiKey]`, the same skip-without-a-key convention as every other live test.
 - **The state-enum-resolving test (§2.4) does not need to wait for completion.** Create a tiny
   (1-request) inline batch job, immediately `GetAsync` it, and assert on the raw `state` string
   observed. This resolves §2.4 in seconds, not hours, and is the one live assertion that actually
@@ -500,20 +500,20 @@ completion is not something CI (or an interactive session) can reasonably wait o
   the raw response body, e.g. via a temporary breakpoint/log, not by asserting yet) two other things
   flagged uncertain in §2.3: that the create request body without a `Model` field and with a `"batch"`
   wrapper is actually accepted (a 200 response with the job created is sufficient proof), and, once
-  convenient (doesn't require waiting for completion — `CancelAsync` a job and inspect what came back
+  convenient (doesn't require waiting for completion: `CancelAsync` a job and inspect what came back
   through `EmptyBatchResponse`'s underlying raw body once, manually, is enough) note whether Google
   really does return an empty object there.
 - A second live test may create a job and immediately `CancelAsync` + `GetAsync` it, asserting the
-  state transitions to the cancelled terminal value — also fast, no 24h wait.
+  state transitions to the cancelled terminal value. Also fast, no 24h wait.
 - The `fileName`-vs-`responsesFile` question (§2.3) can only be resolved once a real file-mode job
   reaches a terminal state with results, which does mean waiting for real completion. Don't build a
-  blocking automated test for this — do it once, manually, the same way image generation's aspect
+  blocking automated test for this. Do it once, manually, the same way image generation's aspect
   ratio was manually verified (ROADMAP's Phase 4 entry for `6.1.0`), and hardcode whichever field name
   is actually observed. If both fields somehow appear, prefer the one with a non-empty value.
 - Do **not** write a live test that calls `WaitUntilCompleteAsync` with a multi-hour timeout expecting
   real completion. If end-to-end result retrieval needs live verification, do it manually, once,
   outside the automated suite (same as how the image-generation feature was "live-verified end-to-end"
-  per the ROADMAP but that verification isn't a standing CI test) — document what was checked in the
+  per the ROADMAP but that verification isn't a standing CI test). Document what was checked in the
   ROADMAP entry (§10), same convention already established.
 
 ## 8. Documentation
@@ -521,13 +521,13 @@ completion is not something CI (or an interactive session) can reasonably wait o
 - New `docs/articles/batch-api.md`, following the structure of `docs/articles/cost-governance.md`
   (mechanisms, code example, limitations section, scope section). Must include: the two submission
   modes with examples, the polling helper, the result-retrieval split (inline vs file), the discount,
-  the 48-hour expiry / 6-week retention facts, and explicitly the paid-tier requirement (§2.7) — a
+  the 48-hour expiry / 6-week retention facts, and explicitly the paid-tier requirement (§2.7). A
   free-tier user hitting `PERMISSION_DENIED` with no explanation is a bad first experience.
-- Add the article to **both** `docs/articles/toc.yml` and `docs/index.md`'s Guides list — the sample
+- Add the article to **both** `docs/articles/toc.yml` and `docs/index.md`'s Guides list. The sample
   publish pass found and fixed exactly this kind of omission for the Image generation article; don't
   reintroduce the same gap for this one.
 - `README.md`: one line in the feature list/comparison table, no full section duplication (the
-  cleanup pass just removed a duplicated Cost governance section — don't recreate the pattern).
+  cleanup pass just removed a duplicated Cost governance section, don't recreate the pattern).
 - No em dashes or decorative unicode in any of the above (standing style rule).
 
 ## 9. Follow-up work this plan deliberately does not do
@@ -549,7 +549,7 @@ work":
 - [ ] `IFileService.DownloadFileAsync` + `FileService` implementation.
 - [ ] New model types, named to avoid collision with existing `BatchEmbedContent*` types (§4.1);
       `InlinedBatchRequest` (inline, `Metadata`) kept distinct from `BatchRequestLine` (JSONL, `Key`).
-- [ ] `state` modeled as `string` (not enum), per §2.4 — confirmed against a real API response before
+- [ ] `state` modeled as `string` (not enum), per §2.4. Confirmed against a real API response before
       merging, not assumed from docs.
 - [ ] `BatchJobDestination`'s file field named per whichever of `fileName`/`responsesFile` the manual
       live check (§7) actually observed.
