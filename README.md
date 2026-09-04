@@ -310,4 +310,4 @@ What that means for you:
 
 ## Contributing & support
 
-Issues and PRs welcome on [GitHub](https://github.com/jaslam94/Junaid.GoogleGemini.Net). Licensed under MIT.
+Issues and PRs welcome on [GitHub](https://github.com/jaslam94/Junaid.GoogleGemini.Net). Licensed under MIT. Cutting a release? See [RELEASE-RUNBOOK.md](RELEASE-RUNBOOK.md).
