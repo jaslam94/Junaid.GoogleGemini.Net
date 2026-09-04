@@ -363,7 +363,7 @@ MigrationBackup/
 FodyWeavers.xsd
 /.editorconfig
 
-# HTTP cassette record/replay work-in-progress — parked locally, not part of this release.
+# HTTP cassette record/replay work-in-progress has been parked locally, not part of this release.
 # Re-add these paths (and the AddGemini configurePipeline overload) when it's ready to ship.
 /Junaid.GoogleGemini.Net.Testing/
 /tests/Junaid.GoogleGemini.Net.Testing.Tests/

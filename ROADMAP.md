@@ -355,6 +355,32 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 
       No functional changes in this entry. `6.4.3` is a same-day doc and CI-only follow-up to
       `6.4.2`, not a new feature.
+- [x] **Repo-wide writing style cleanup** (`6.4.4`): adds `CLAUDE.md`, a standing rule for this repo
+      that all documentation and releases are written in ASD STE-100 style, with a human tone, and no
+      em dashes. Also adds `RELEASE-RUNBOOK.md`, a step-by-step checklist for cutting a release,
+      written directly from the `6.4.2`/`6.4.3` cycle's two CI failures. Its most important step is
+      checking the actual NuGet push log for a real `Created` line, not trusting a green checkmark.
+
+      The style rule was then applied everywhere, in stages, each checked with the user before
+      going further: `README.md` and `ROADMAP.md` first, then every em dash in the C# codebase (130
+      spots across 50 files: the core library, both companion packages, samples, benchmarks, and all
+      four test projects), then the two `PLAN-*.md` historical design documents (133 more), then a
+      second, broader pass with no file-extension restriction at all, which caught `Directory.Build.props`
+      (missed by the first pass's narrower glob patterns) and an uncommitted local fix to `.gitignore`.
+      Also applied to the two published GitHub Releases for `6.4.2`/`6.4.3`.
+
+      Fixing over 260 spots by hand risks breaking a sentence where a multi-line comment's
+      continuation lands on a line that was not touched. That happened three times
+      (`GeminiHttpClients.cs`, `GeminiOptions.cs`, `integration.yml`) and was caught only by
+      re-reading every edited region afterward, not by assuming the edit was correct. Verified by:
+      a full solution rebuild (0 warnings, so no XML doc comment was left malformed), the unit suite
+      (144/144), `Testing.Tests` (6/6), a clean `NetFrameworkSmoke` build and live run, and the
+      complete live `IntegrationTests` suite against a real, billing-enabled key (36/36, including
+      an isolated re-confirmation of all 3 `BatchLiveTests` after the first full run's captured log
+      was truncated and did not visibly show them, even though its own summary line already said
+      `Total: 36, Passed: 36`).
+
+      No functional changes anywhere in this entry. Comments, doc comments, and prose only.
 
 ---
 

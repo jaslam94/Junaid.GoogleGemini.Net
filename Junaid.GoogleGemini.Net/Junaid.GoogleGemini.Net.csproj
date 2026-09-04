@@ -19,8 +19,13 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.4.3</Version>
+		<Version>6.4.4</Version>
 		<PackageReleaseNotes>
+			6.4.4: doc-comment cleanup only, no functional changes. All XML doc comments in this
+			package's public surface had every em dash removed and were lightly rewritten in short,
+			plain sentences (this repo's new CLAUDE.md style rule, applied retroactively). This changes
+			only the text of the XML docs shipped alongside the DLL for IntelliSense; no code, no
+			behavior, no API surface changed.
 			6.4.3: same-day doc-only follow-up to 6.4.2. Two GeminiRequestOptions.Factual()/.Code() XML
 			doc comments still named gemini-3.7-flash as "the recommended model" -- these ship in the
 			package's IntelliSense, so this was wrong from the moment 6.4.2 shipped. Fixed those plus
