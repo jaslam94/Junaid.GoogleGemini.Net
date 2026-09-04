@@ -75,10 +75,17 @@ jobs:
         # Exchanges this job's OIDC token for a short-lived NuGet API key via the Trusted
         # Publishing policy configured at nuget.org/account/trustedpublishing for this repo +
         # workflow file. No stored secret, nothing to rotate or expire.
+        # Pinned to an exact tag (not the floating v1) because this step's own output name is
+        # exactly the kind of thing that breaks silently across an unpinned upgrade -- see the
+        # v6.4.2 release notes for the real instance of that happening.
         id: nuget-login
-        uses: NuGet/login@v1
+        uses: NuGet/login@v1.2.0
         with:
           user: junaidaslam
 
       - name: Push to NuGet
-        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --api-key "${{ steps.nuget-login.outputs.api-key }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
+        # NuGet/login's actual output key is NUGET_API_KEY, not "api-key" (verified against the
+        # action's own action.yml after v6.4.2's tag push failed with an empty key / 401 -- this
+        # line was never exercised live before then; v6.4.1 and earlier still used a stored secret,
+        # and Trusted Publishing landed after that tag was pushed).
+        run: dotnet nuget push "${{ github.workspace }}/artifacts/*.nupkg" --api-key "${{ steps.nuget-login.outputs.NUGET_API_KEY }}" --source https://api.nuget.org/v3/index.json --skip-duplicate
