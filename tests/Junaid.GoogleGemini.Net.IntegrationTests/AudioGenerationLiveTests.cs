@@ -37,7 +37,7 @@ public class AudioGenerationLiveTests(GeminiFixture fixture)
         Assert.StartsWith("audio/", audio.MimeType);
         Assert.NotEmpty(audio.Data);
 
-        AssertLooksLikeAWavFile(audio.ToWav());
+        AssertHasRealAudioSignal(audio.ToWav());
     }
 
     [RequiresGeminiKey]
@@ -54,7 +54,52 @@ public class AudioGenerationLiveTests(GeminiFixture fixture)
             options);
 
         var audio = response.GetAudioOrThrow();
-        AssertLooksLikeAWavFile(audio.ToWav());
+        AssertHasRealAudioSignal(audio.ToWav());
+    }
+
+    // gemini-2.5-flash-preview-tts is the only model exercised above. These two cover the other
+    // constants this library ships (Gemini25ProTts, Gemini31FlashTts): neither had ever been called
+    // through the actual library code before, only assumed to share the same shape per Google's docs
+    // (see PLAN-tts.md §2). gemini-2.5-pro-preview-tts is documented as paid-tier only; this uses the
+    // plain RequiresGeminiKey rather than RequiresPaidGeminiKey for the same reason as the class-level
+    // remarks above, this session only ever had a paid key to test with, so a pass here does not
+    // independently confirm the paid-tier restriction either way.
+    [RequiresGeminiKey]
+    public async Task GenerateAudioAsync_Gemini25ProTts_ReturnsPlayableWav()
+    {
+        var options = new GeminiRequestOptions
+        {
+            Model = GeminiConstants.Models.Gemini25ProTts,
+            VoiceName = "Kore",
+        };
+
+        var response = await Gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!", options);
+
+        var audio = response.GetAudioOrThrow();
+        Assert.Equal("audio/L16;codec=pcm;rate=24000", audio.MimeType);
+        AssertHasRealAudioSignal(audio.ToWav());
+    }
+
+    [RequiresGeminiKey]
+    public async Task GenerateAudioAsync_Gemini31FlashTts_ReturnsPlayableWav()
+    {
+        // Confirmed live: this model returns a genuinely different mimeType shape than the 2.5-era
+        // models above (lowercase "l16", spaced parameters, "channels=" instead of "codec=pcm"). A
+        // first version of this test asserted the 2.5-era string here and failed against this
+        // model's real response; GeneratedAudio.ToWav() was fixed to parse both shapes (see
+        // PLAN-tts.md §2), and this assertion now checks the format actually confirmed, not an
+        // assumption carried over from the other model.
+        var options = new GeminiRequestOptions
+        {
+            Model = GeminiConstants.Models.Gemini31FlashTts,
+            VoiceName = "Kore",
+        };
+
+        var response = await Gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!", options);
+
+        var audio = response.GetAudioOrThrow();
+        Assert.Equal("audio/l16; rate=24000; channels=1", audio.MimeType);
+        AssertHasRealAudioSignal(audio.ToWav());
     }
 
     [RequiresGeminiKey]
@@ -84,11 +129,39 @@ public class AudioGenerationLiveTests(GeminiFixture fixture)
             d => string.Equals(d.Modality, "AUDIO", StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>Confirms the bytes are a well-formed RIFF/WAVE file, not just any non-empty array.</summary>
-    private static void AssertLooksLikeAWavFile(byte[] wav)
+    /// <summary>
+    /// Confirms the bytes are a well-formed RIFF/WAVE file AND that the PCM payload is real audio,
+    /// not silence or garbage behind a valid-looking header. A header-only check would pass for 1,000
+    /// zero bytes; this reads the actual 16-bit samples and requires real variance across them, the
+    /// way genuine speech has and pure silence or a corrupt/constant buffer does not.
+    /// </summary>
+    private static void AssertHasRealAudioSignal(byte[] wav)
     {
         Assert.True(wav.Length > 44, "Expected more than just the WAV header.");
         Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(wav, 0, 4));
         Assert.Equal("WAVE", System.Text.Encoding.ASCII.GetString(wav, 8, 4));
+        Assert.Equal("fmt ", System.Text.Encoding.ASCII.GetString(wav, 12, 4));
+        Assert.Equal(1, BitConverter.ToInt16(wav, 20)); // AudioFormat: PCM
+        Assert.Equal(16, BitConverter.ToInt16(wav, 34)); // BitsPerSample
+
+        var sampleCount = (wav.Length - 44) / 2;
+        Assert.True(sampleCount > 100, $"Expected a real clip's worth of samples, got {sampleCount}.");
+
+        short min = short.MaxValue, max = short.MinValue;
+        long sumOfSquares = 0;
+        for (var i = 0; i < sampleCount; i++)
+        {
+            var sample = BitConverter.ToInt16(wav, 44 + i * 2);
+            if (sample < min) min = sample;
+            if (sample > max) max = sample;
+            sumOfSquares += (long)sample * sample;
+        }
+
+        // Silence, a corrupt all-zero buffer, or a stuck constant value would all have a range of 0
+        // and an RMS of 0. Genuine speech does not. Neither threshold is tuned to anything precise;
+        // both exist purely to fail loudly on "this isn't real audio," not to validate audio quality.
+        Assert.True(max - min > 50, $"Sample range too small to be real audio (min={min}, max={max}).");
+        var rms = Math.Sqrt(sumOfSquares / (double)sampleCount);
+        Assert.True(rms > 10, $"RMS too low to be real audio (rms={rms:F2}).");
     }
 }

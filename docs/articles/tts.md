@@ -25,14 +25,18 @@ GeneratedAudio guaranteed = response.GetAudioOrThrow();  // throws GeminiContent
 
 ## Making the audio playable
 
-Gemini returns raw 16-bit linear PCM audio (`"audio/L16;codec=pcm;rate=24000"`), not a `.wav` or
-`.mp3` file. Writing `GeneratedAudio.Data` straight to disk produces a file most players cannot open.
-Call `ToWav()` to get a real, playable WAV file instead:
+Gemini returns raw 16-bit linear PCM audio, not a `.wav` or `.mp3` file. Writing
+`GeneratedAudio.Data` straight to disk produces a file most players cannot open. Call `ToWav()` to
+get a real, playable WAV file instead:
 
 ```csharp
 byte[] wavBytes = audio.ToWav(); // adds a correct 44-byte WAV header; parses the sample rate
                                   // from MimeType, so this works whichever TTS model you used
 ```
+
+Two real response `mimeType` formats have been confirmed: `"audio/L16;codec=pcm;rate=24000"` from
+the 2.5-era TTS models, and `"audio/l16; rate=24000; channels=1"` from
+`gemini-3.1-flash-tts-preview`. `ToWav()` handles both.
 
 `ToWav()` throws `FormatException` if a future model ever returns a different audio codec than every
 Gemini TTS model does today.

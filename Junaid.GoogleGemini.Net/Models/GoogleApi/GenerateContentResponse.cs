@@ -169,8 +169,10 @@ public sealed record GeneratedImage(string MimeType, byte[] Data);
 
 /// <summary>A single generated audio clip, decoded from a response <c>inlineData</c> part.</summary>
 /// <param name="MimeType">
-/// The API's exact MIME type, e.g. <c>"audio/L16;codec=pcm;rate=24000"</c>, live-verified 2026-09-04
-/// (see <c>PLAN-tts.md</c>). This is raw linear PCM, not a WAV or MP3 file.
+/// The API's exact MIME type. Two real formats are live-confirmed (see <c>PLAN-tts.md</c> §2):
+/// <c>"audio/L16;codec=pcm;rate=24000"</c> from 2.5-era TTS models, and
+/// <c>"audio/l16; rate=24000; channels=1"</c> from <c>gemini-3.1-flash-tts-preview</c>. Either way
+/// this is raw linear PCM, not a WAV or MP3 file.
 /// </param>
 /// <param name="Data">
 /// The raw, already-decoded PCM audio bytes. NOT a playable file on its own; call
@@ -180,25 +182,45 @@ public sealed record GeneratedAudio(string MimeType, byte[] Data)
 {
     /// <summary>
     /// Wraps <see cref="Data"/> in a minimal 44-byte WAV header, producing a file most players and
-    /// browsers can open directly. Parses the sample rate from <see cref="MimeType"/>; assumes
-    /// 16-bit mono PCM, matching every Gemini TTS response confirmed to date (see <c>PLAN-tts.md</c>).
+    /// browsers can open directly. Parses the sample rate (and channel count, when stated) from
+    /// <see cref="MimeType"/>, since two real, live-confirmed formats exist: 2.5-era TTS models
+    /// return <c>"audio/L16;codec=pcm;rate=24000"</c>, while <c>gemini-3.1-flash-tts-preview</c>
+    /// returns <c>"audio/l16; rate=24000; channels=1"</c> instead (see <c>PLAN-tts.md</c> §2). Assumes
+    /// mono when no channel count is stated, matching every model that predates the newer format.
     /// </summary>
     /// <exception cref="FormatException">
-    /// <see cref="MimeType"/> is not the expected <c>"audio/L16;codec=pcm;rate=NNNN"</c> shape, for
-    /// example a future model returning a different codec.
+    /// <see cref="MimeType"/> does not start with <c>"audio/L16"</c> (case-insensitive) or has no
+    /// parseable sample rate, for example a future model returning a different codec.
     /// </exception>
     public byte[] ToWav()
     {
-        var rateMatch = System.Text.RegularExpressions.Regex.Match(MimeType, @"^audio/L16;codec=pcm;rate=(\d+)$");
-        if (!rateMatch.Success)
+        // Two real, live-confirmed mimeType shapes exist, not one (see PLAN-tts.md §2): the 2.5-era
+        // TTS models return "audio/L16;codec=pcm;rate=24000" (capital L, no spaces, explicit codec),
+        // while gemini-3.1-flash-tts-preview returns "audio/l16; rate=24000; channels=1" (lowercase,
+        // spaced, no codec segment, an explicit channel count instead). A rigid single-format regex
+        // built only from the first model tested threw FormatException on the second one actually
+        // tried; this parses each piece independently so a third format variant with the same pieces
+        // in a different order or spacing still works.
+        if (!System.Text.RegularExpressions.Regex.IsMatch(MimeType, @"^audio/l16\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
         {
             throw new FormatException(
-                $"GeneratedAudio.ToWav() only understands \"audio/L16;codec=pcm;rate=NNNN\", but got \"{MimeType}\". " +
+                $"GeneratedAudio.ToWav() only understands \"audio/L16\" (16-bit linear PCM), but got \"{MimeType}\". " +
                 "This model may return a different audio codec than every Gemini TTS model confirmed so far.");
         }
 
+        var rateMatch = System.Text.RegularExpressions.Regex.Match(MimeType, @"rate=(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        if (!rateMatch.Success)
+        {
+            throw new FormatException(
+                $"GeneratedAudio.ToWav() could not find a \"rate=NNNN\" sample rate in \"{MimeType}\".");
+        }
+
         var sampleRate = int.Parse(rateMatch.Groups[1].Value);
-        const int channels = 1;
+
+        // Defaults to 1 (mono) when the mimeType doesn't say, matching every Gemini TTS model
+        // confirmed before gemini-3.1-flash-tts-preview started stating it explicitly.
+        var channelsMatch = System.Text.RegularExpressions.Regex.Match(MimeType, @"channels=(\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+        var channels = channelsMatch.Success ? int.Parse(channelsMatch.Groups[1].Value) : 1;
         const int bitsPerSample = 16;
         var byteRate = sampleRate * channels * bitsPerSample / 8;
         var blockAlign = (short)(channels * bitsPerSample / 8);

@@ -160,13 +160,35 @@ public class AudioGenerationTests
     }
 
     [Fact]
-    public void GeneratedAudio_ToWav_ProducesACorrectHeaderForKnownInput()
+    public void GeneratedAudio_ToWav_ProducesACorrectHeader_ForThe25EraMimeTypeFormat()
     {
         var pcm = new byte[] { 1, 2, 3, 4 };
         var audio = new Junaid.GoogleGemini.Net.Models.GoogleApi.GeneratedAudio(
             "audio/L16;codec=pcm;rate=24000", pcm);
 
-        var wav = audio.ToWav();
+        AssertCorrectWavHeader(audio.ToWav(), pcm, sampleRate: 24000, channels: 1);
+    }
+
+    [Fact]
+    public void GeneratedAudio_ToWav_ProducesACorrectHeader_ForTheGemini31MimeTypeFormat()
+    {
+        // gemini-3.1-flash-tts-preview returns a genuinely different mimeType shape than every
+        // 2.5-era TTS model: lowercase "l16", spaced parameters, no "codec=pcm" segment, and an
+        // explicit "channels=" instead. Found live, the hard way: a first version of ToWav() that
+        // only handled the 2.5-era shape threw FormatException on this real response. See
+        // PLAN-tts.md §2.
+        var pcm = new byte[] { 5, 6, 7, 8 };
+        var audio = new Junaid.GoogleGemini.Net.Models.GoogleApi.GeneratedAudio(
+            "audio/l16; rate=48000; channels=2", pcm);
+
+        AssertCorrectWavHeader(audio.ToWav(), pcm, sampleRate: 48000, channels: 2);
+    }
+
+    private static void AssertCorrectWavHeader(byte[] wav, byte[] pcm, int sampleRate, int channels)
+    {
+        const int bitsPerSample = 16;
+        var blockAlign = channels * bitsPerSample / 8;
+        var byteRate = sampleRate * blockAlign;
 
         Assert.Equal(44 + pcm.Length, wav.Length);
         Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(wav, 0, 4));
@@ -175,11 +197,11 @@ public class AudioGenerationTests
         Assert.Equal("fmt ", System.Text.Encoding.ASCII.GetString(wav, 12, 4));
         Assert.Equal(16, BitConverter.ToInt32(wav, 16)); // Subchunk1Size
         Assert.Equal(1, BitConverter.ToInt16(wav, 20)); // AudioFormat: PCM
-        Assert.Equal(1, BitConverter.ToInt16(wav, 22)); // NumChannels: mono
-        Assert.Equal(24000, BitConverter.ToInt32(wav, 24)); // SampleRate, parsed from mimeType
-        Assert.Equal(24000 * 1 * 2, BitConverter.ToInt32(wav, 28)); // ByteRate
-        Assert.Equal(2, BitConverter.ToInt16(wav, 32)); // BlockAlign
-        Assert.Equal(16, BitConverter.ToInt16(wav, 34)); // BitsPerSample
+        Assert.Equal(channels, BitConverter.ToInt16(wav, 22));
+        Assert.Equal(sampleRate, BitConverter.ToInt32(wav, 24)); // parsed from mimeType
+        Assert.Equal(byteRate, BitConverter.ToInt32(wav, 28));
+        Assert.Equal(blockAlign, BitConverter.ToInt16(wav, 32));
+        Assert.Equal(bitsPerSample, BitConverter.ToInt16(wav, 34));
         Assert.Equal("data", System.Text.Encoding.ASCII.GetString(wav, 36, 4));
         Assert.Equal(pcm.Length, BitConverter.ToInt32(wav, 40));
         Assert.Equal(pcm, wav[44..]);

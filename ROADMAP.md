@@ -404,13 +404,37 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       library's existing policy of not allow-listing model names: a caller passes a plain string, and
       a typo is the API's problem to reject.
 
-      Verified: full solution build 0 warnings on all three targets; 11 new unit tests (request
-      shape, response decoding, and a byte-level check of `ToWav()`'s WAV header against a known
-      input); 3 new live tests against a real key (single speaker, multi speaker, and streaming with
-      a real `AUDIO`-tagged `UsageMetadata` entry), all passing. TTS model pricing and free-tier
-      availability came from a single fetch of Google's pricing page, not a live billing check;
-      re-verify before relying on either for a cost-sensitive or free-tier deployment (see
-      `PLAN-tts.md` §2).
+      Verified: full solution build 0 warnings on all three targets; 12 unit tests (request shape,
+      response decoding, and byte-level checks of `ToWav()`'s WAV header against known input, for
+      both real mimeType shapes below); 5 live tests against a real key, all passing. TTS model
+      pricing and free-tier availability came from a single fetch of Google's pricing page, not a
+      live billing check; re-verify before relying on either for a cost-sensitive or free-tier
+      deployment (see `PLAN-tts.md` §2).
+
+      **Asked directly whether this was actually tested properly, the honest first answer was no.**
+      The PR description understated real gaps: only 1 of the 3 model constants had ever been called,
+      `ToWav()`'s output was only checked for a valid-looking header, never for real audio content,
+      and the new sample endpoint had never actually been run. Closing those gaps live, immediately
+      after being asked, found a real bug: `gemini-3.1-flash-tts-preview` returns a genuinely
+      different response `mimeType` than the 2.5-era models
+      (`"audio/l16; rate=24000; channels=1"`, lowercase, spaced, no `codec=pcm`, an explicit channel
+      count) instead of `"audio/L16;codec=pcm;rate=24000"`. The first `ToWav()` was built from only
+      the first model tested and threw `FormatException` on this model's real response the first time
+      it was actually called. Fixed to parse the sample rate and channel count independently from
+      wherever they appear, rather than matching one rigid whole-string shape (see `PLAN-tts.md` §2's
+      2026-09-06 update). All three model constants are now live-tested, not assumed, and the audio
+      check reads the actual PCM samples for real amplitude variance instead of trusting a header
+      that merely parses.
+
+      Separately, mid-verification, the API key's account hit Google's mandatory monthly spend cap
+      (`RESOURCE_EXHAUSTED`, blocking every model including the ones that had worked all day), which
+      stopped all live testing until the user raised it. Worth recording as a real operational fact
+      about developing against this API at any volume, not a bug in this library.
+
+      The `/speak` endpoint added to the ASP.NET Core sample was actually started and hit with a real
+      request, not just compiled; its output was independently identified by the Unix `file` command
+      as `RIFF ... WAVE audio, Microsoft PCM, 16 bit, mono 24000 Hz`, confirmation from a tool with no
+      knowledge of this library's own assumptions about what it had built.
 
 ---
 

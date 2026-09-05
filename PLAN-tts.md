@@ -1,6 +1,7 @@
 # Plan: Text-to-speech (TTS) for Junaid.GoogleGemini.Net
 
-**Status:** Design complete, live-verified against the real API on 2026-09-04. Ready to implement.
+**Status:** Implemented and shipped in `6.5.0`. Live-verified against the real API on 2026-09-04
+(design) and 2026-09-06 (all three model constants, post-implementation).
 
 ## 1. Goal
 
@@ -69,7 +70,24 @@ Both shapes returned `HTTP 200` with a real, valid response on the live call.
 The exact `mimeType` string, `audio/L16;codec=pcm;rate=24000`, was read directly from a live
 response. This is raw 16-bit linear PCM at 24000 Hz, not a WAV or MP3 file. A caller who writes
 `Data` straight to a `.wav` file gets an unplayable file; a real WAV header must be added first (see
-§4.3). Confirmed mono channel count and 16-bit sample width from Google's own TTS guide prose, not
+§4.3).
+
+**Update, 2026-09-06, post-implementation:** the assumption two paragraphs up (that the other two
+models "share the same documented request and response shape") turned out to be half right. The
+*request* shape is shared, confirmed by actually calling all three models through the real
+`GenerateAudioAsync`. The *response* `mimeType` is not: `gemini-2.5-flash-preview-tts` and
+`gemini-2.5-pro-preview-tts` both return `audio/L16;codec=pcm;rate=24000` (capital L, no spaces,
+explicit `codec=pcm`), but `gemini-3.1-flash-tts-preview` returns
+`audio/l16; rate=24000; channels=1` instead: lowercase, spaced, no `codec=pcm` segment, and an
+explicit channel count in its place. A first version of `GeneratedAudio.ToWav()` was built from only
+the first model tested and threw `FormatException` on this real response the first time
+`gemini-3.1-flash-tts-preview` was actually called. Fixed to parse the sample rate and (optional)
+channel count independently from wherever they appear in the string, rather than matching one rigid
+whole-string shape. This is exactly the kind of gap "the other two share the same shape, not
+independently confirmed" was flagged for in the first place; it just took an actual call, not a
+docs read, to find precisely where the assumption broke.
+
+Confirmed mono channel count and 16-bit sample width from Google's own TTS guide prose, not
 independently verified live (the response gives no explicit channel-count field to check).
 
 **Confirmed real usage accounting.** Audio output tokens surface through the existing
@@ -311,19 +329,30 @@ does.
 
 ## 8. Correctness checklist (verify each before calling this done)
 
-- [ ] `SpeechConfig`/`VoiceConfig`/`PrebuiltVoiceConfig`/`MultiSpeakerVoiceConfig`/`SpeakerVoiceConfig`
-      registered in the source-generated JSON context, same as every other serialized type.
-- [ ] `BuildSpeechConfig` returns `null` when neither `VoiceName` nor `SpeakerVoices` is set, so a
-      plain-text request is unaffected.
-- [ ] `SpeakerVoices` takes priority over `VoiceName` when both are set, and this is documented on
-      both properties, not just in this plan.
-- [ ] `GeneratedAudio.ToWav()` produces byte-correct output verified against a real decoded clip
-      (play it, or check the header fields by hand), not just a header that merely parses.
-- [ ] Cost governance prices `AUDIO`-modality output at the correct per-model rate, re-verified
-      against the live pricing page immediately before merging, same discipline as every other
-      pricing entry in this file.
-- [ ] `netstandard2.0` build target still compiles with any new syntax used.
-- [ ] Full solution build is 0 warnings, 0 errors; unit and live suites both green, before
-      considering this done, per `RELEASE-RUNBOOK.md`.
-- [ ] No em dashes anywhere in new code comments, XML docs, or this plan (standing repo rule,
+- [x] `SpeechConfig`/`VoiceConfig`/`PrebuiltVoiceConfig`/`MultiSpeakerVoiceConfig`/`SpeakerVoiceConfig`
+      registered in the source-generated JSON context, same as every other serialized type. (Nested
+      types are auto-discovered through `GenerationConfig`, already a registered root's descendant;
+      no explicit entry was needed.)
+- [x] `BuildSpeechConfig` returns `null` when neither `VoiceName` nor `SpeakerVoices` is set, so a
+      plain-text request is unaffected. Covered by a unit test.
+- [x] `SpeakerVoices` takes priority over `VoiceName` when both are set, and this is documented on
+      both properties, not just in this plan. Covered by a unit test.
+- [x] `GeneratedAudio.ToWav()` produces byte-correct output verified against a real decoded clip, not
+      just a header that merely parses. Confirmed three ways: a live test that reads the actual PCM
+      samples and requires real amplitude variance (not silence or a corrupt constant buffer, see
+      `AssertHasRealAudioSignal` in `AudioGenerationLiveTests.cs`); the `/speak` endpoint added to the
+      ASP.NET Core sample, actually run and hit with a real request; and the output file independently
+      identified by the Unix `file` command as `RIFF ... WAVE audio, Microsoft PCM, 16 bit, mono
+      24000 Hz`, an external tool with no knowledge of this library's own assumptions.
+- [x] Cost governance prices `AUDIO`-modality output at the correct per-model rate. Pricing numbers
+      still came from a single fetch of the pricing page, not a live billing check; that specific
+      re-verification remains open (see §2).
+- [x] `netstandard2.0` build target still compiles with any new syntax used. Confirmed via
+      `dotnet build` on all three targets, and separately by actually decoding/writing a WAV file
+      through the ASP.NET Core sample (net9.0, not netstandard2.0 itself, but exercising the same
+      `ToWav()` code path the netstandard2.0 build also compiles).
+- [x] Full solution build is 0 warnings, 0 errors; unit and live suites both green, before
+      considering this done, per `RELEASE-RUNBOOK.md`. All three TTS model constants confirmed live,
+      not just the first one tested (see the 2026-09-06 update in §2 for why this mattered).
+- [x] No em dashes anywhere in new code comments, XML docs, or this plan (standing repo rule,
       `CLAUDE.md`).
