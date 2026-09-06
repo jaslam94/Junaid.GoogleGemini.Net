@@ -163,6 +163,10 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       OpenTelemetry instrumentation (only `PostAsync` had a span), and now emits one, matching
       `PostAsync`'s start/error-status/duration/token-usage-tag pattern.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
+- [ ] Revisit Google's Interactions API (GA since June 2026) as the request/response shape for TTS,
+      and possibly other features, once it supports the Batch API. Evaluated for `6.5.0` and
+      deferred; `generateContent` remains fully supported per Google's own docs despite a "Legacy"
+      label. See `PLAN-tts.md` §9.
 - [x] **Batch API** (`6.4.0`): `IBatchService`, a new resource client (mirroring `IFileService`/
       `ICachingService`'s pattern) for submitting large volumes of `generateContent` requests
       asynchronously at Google's 50%-discounted batch rate. Covers create (inline, from an
@@ -381,6 +385,67 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       `Total: 36, Passed: 36`).
 
       No functional changes anywhere in this entry. Comments, doc comments, and prose only.
+- [x] **Text-to-speech (TTS)** (`6.5.0`): new `GenerateAudioAsync`/`StreamAudioAsync` on
+      `IGeminiService`, using the same `responseModalities` pattern `GenerateImageAsync` already
+      established for images. Single speaker (`VoiceName`) and multi speaker (`SpeakerVoices`, a
+      named-speaker script) are both supported. New `GenerateContentResponse.Audio()`/
+      `TryGetAudio()`/`GetAudioOrThrow()` return a `GeneratedAudio` with a `ToWav()` helper, since
+      Gemini's raw PCM output is not a playable file on its own.
+
+      Designed the way `PLAN-batch-api.md` was: a full plan document (`PLAN-tts.md`) written before
+      any code, live-verified against the real API first. A first web search described a different,
+      newer "Interactions API" shape entirely (`input`, `response_format`,
+      `interaction.output_audio.data`) that does not match this library's `generateContent`
+      architecture at all; that shape was discarded before writing any code, in favor of raw REST
+      calls that confirmed the real `generationConfig.speechConfig` shape this library actually uses.
+      Those live calls also pinned down the exact response `mimeType`
+      (`"audio/L16;codec=pcm;rate=24000"`), which `ToWav()` depends on to build a correct WAV header,
+      and confirmed audio output tokens already arrive tagged `AUDIO` in the existing per-modality
+      `UsageMetadata` breakdown (added in `6.4.1`), so cost governance needed only new pricing data
+      for the three TTS models, no new plumbing.
+
+      Deliberately does not enumerate Google's 30 named voices as C# constants, matching this
+      library's existing policy of not allow-listing model names: a caller passes a plain string, and
+      a typo is the API's problem to reject.
+
+      Verified: full solution build 0 warnings on all three targets; 12 unit tests (request shape,
+      response decoding, and byte-level checks of `ToWav()`'s WAV header against known input, for
+      both real mimeType shapes below); 5 live TTS tests against a real key, all passing, plus the
+      full 41-test live suite (paid tier included), re-run fresh on 2026-09-06 against a newly
+      confirmed billing-enabled key. TTS model pricing and free-tier availability came from a single
+      fetch of Google's pricing page, not a live billing check; re-verify before relying on either
+      for a cost-sensitive or free-tier deployment (see `PLAN-tts.md` §2).
+
+      Also checked whether this should use Google's newer "Interactions API" instead. It does not:
+      that surface is missing Batch API support (a feature this library already ships), has no
+      official .NET SDK to build against, and Google states `generateContent` "remains fully
+      supported" despite the "Legacy" label. Full reasoning and a revisit trigger are recorded in
+      `PLAN-tts.md` §9 and tracked below.
+
+      **Asked directly whether this was actually tested properly, the honest first answer was no.**
+      The PR description understated real gaps: only 1 of the 3 model constants had ever been called,
+      `ToWav()`'s output was only checked for a valid-looking header, never for real audio content,
+      and the new sample endpoint had never actually been run. Closing those gaps live, immediately
+      after being asked, found a real bug: `gemini-3.1-flash-tts-preview` returns a genuinely
+      different response `mimeType` than the 2.5-era models
+      (`"audio/l16; rate=24000; channels=1"`, lowercase, spaced, no `codec=pcm`, an explicit channel
+      count) instead of `"audio/L16;codec=pcm;rate=24000"`. The first `ToWav()` was built from only
+      the first model tested and threw `FormatException` on this model's real response the first time
+      it was actually called. Fixed to parse the sample rate and channel count independently from
+      wherever they appear, rather than matching one rigid whole-string shape (see `PLAN-tts.md` §2's
+      2026-09-06 update). All three model constants are now live-tested, not assumed, and the audio
+      check reads the actual PCM samples for real amplitude variance instead of trusting a header
+      that merely parses.
+
+      Separately, mid-verification, the API key's account hit Google's mandatory monthly spend cap
+      (`RESOURCE_EXHAUSTED`, blocking every model including the ones that had worked all day), which
+      stopped all live testing until the user raised it. Worth recording as a real operational fact
+      about developing against this API at any volume, not a bug in this library.
+
+      The `/speak` endpoint added to the ASP.NET Core sample was actually started and hit with a real
+      request, not just compiled; its output was independently identified by the Unix `file` command
+      as `RIFF ... WAVE audio, Microsoft PCM, 16 bit, mono 24000 Hz`, confirmation from a tool with no
+      knowledge of this library's own assumptions about what it had built.
 
 ---
 

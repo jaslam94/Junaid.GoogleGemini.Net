@@ -124,6 +124,21 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public string? ImageSize { get; set; }
 
         /// <summary>
+        /// Voice for single-speaker TTS, e.g. <c>"Kore"</c>. See Google's TTS voice list for the
+        /// current full set; this library does not enumerate voice names as constants (see
+        /// <c>PLAN-tts.md</c> for why). Ignored if <see cref="SpeakerVoices"/> is also set.
+        /// </summary>
+        public string? VoiceName { get; set; }
+
+        /// <summary>
+        /// Speaker-to-voice assignments for multi-speaker TTS, e.g.
+        /// <c>[("Joe", "Kore"), ("Jane", "Puck")]</c>. Each <c>Speaker</c> must match a speaker name
+        /// as it appears in the input text. Takes priority over <see cref="VoiceName"/> when both
+        /// are set.
+        /// </summary>
+        public IReadOnlyList<(string Speaker, string VoiceName)>? SpeakerVoices { get; set; }
+
+        /// <summary>
         /// Creates options optimized for creative tasks using the recommended model
         /// </summary>
         public static GeminiRequestOptions Creative(string? model = null) => new()
@@ -237,7 +252,9 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             CachedContent = CachedContent,
             ResponseModalities = ResponseModalities,
             ImageAspectRatio = ImageAspectRatio,
-            ImageSize = ImageSize
+            ImageSize = ImageSize,
+            VoiceName = VoiceName,
+            SpeakerVoices = SpeakerVoices
         };
     }
 }

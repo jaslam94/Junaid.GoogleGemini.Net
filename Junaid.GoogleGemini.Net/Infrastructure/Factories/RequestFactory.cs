@@ -142,7 +142,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 MediaResolution = options.MediaResolution,
                 ThinkingConfig = BuildThinkingConfig(options),
                 ResponseModalities = options.ResponseModalities,
-                ImageConfig = BuildImageConfig(options)
+                ImageConfig = BuildImageConfig(options),
+                SpeechConfig = BuildSpeechConfig(options)
             };
         }
 
@@ -159,6 +160,48 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 AspectRatio = options.ImageAspectRatio,
                 ImageSize = options.ImageSize
             };
+        }
+
+        /// <summary>
+        /// Builds a speech config from options, or null when neither field is set.
+        /// <see cref="GeminiRequestOptions.SpeakerVoices"/> takes priority over
+        /// <see cref="GeminiRequestOptions.VoiceName"/> when both are set, since a script naming
+        /// multiple speakers cannot sensibly also use one global voice.
+        /// </summary>
+        private static SpeechConfig? BuildSpeechConfig(GeminiRequestOptions options)
+        {
+            if (options.SpeakerVoices is { Count: > 0 })
+            {
+                return new SpeechConfig
+                {
+                    MultiSpeakerVoiceConfig = new MultiSpeakerVoiceConfig
+                    {
+                        SpeakerVoiceConfigs = options.SpeakerVoices
+                            .Select(sv => new SpeakerVoiceConfig
+                            {
+                                Speaker = sv.Speaker,
+                                VoiceConfig = new VoiceConfig
+                                {
+                                    PrebuiltVoiceConfig = new PrebuiltVoiceConfig { VoiceName = sv.VoiceName }
+                                }
+                            })
+                            .ToList()
+                    }
+                };
+            }
+
+            if (options.VoiceName is not null)
+            {
+                return new SpeechConfig
+                {
+                    VoiceConfig = new VoiceConfig
+                    {
+                        PrebuiltVoiceConfig = new PrebuiltVoiceConfig { VoiceName = options.VoiceName }
+                    }
+                };
+            }
+
+            return null;
         }
 
         /// <summary>Builds a system-instruction content block from options, or null when none is set.</summary>
