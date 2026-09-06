@@ -163,6 +163,10 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       OpenTelemetry instrumentation (only `PostAsync` had a span), and now emits one, matching
       `PostAsync`'s start/error-status/duration/token-usage-tag pattern.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
+- [ ] Revisit Google's Interactions API (GA since June 2026) as the request/response shape for TTS,
+      and possibly other features, once it supports the Batch API. Evaluated for `6.5.0` and
+      deferred; `generateContent` remains fully supported per Google's own docs despite a "Legacy"
+      label. See `PLAN-tts.md` §9.
 - [x] **Batch API** (`6.4.0`): `IBatchService`, a new resource client (mirroring `IFileService`/
       `ICachingService`'s pattern) for submitting large volumes of `generateContent` requests
       asynchronously at Google's 50%-discounted batch rate. Covers create (inline, from an
@@ -406,10 +410,17 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
 
       Verified: full solution build 0 warnings on all three targets; 12 unit tests (request shape,
       response decoding, and byte-level checks of `ToWav()`'s WAV header against known input, for
-      both real mimeType shapes below); 5 live tests against a real key, all passing. TTS model
-      pricing and free-tier availability came from a single fetch of Google's pricing page, not a
-      live billing check; re-verify before relying on either for a cost-sensitive or free-tier
-      deployment (see `PLAN-tts.md` §2).
+      both real mimeType shapes below); 5 live TTS tests against a real key, all passing, plus the
+      full 41-test live suite (paid tier included), re-run fresh on 2026-09-06 against a newly
+      confirmed billing-enabled key. TTS model pricing and free-tier availability came from a single
+      fetch of Google's pricing page, not a live billing check; re-verify before relying on either
+      for a cost-sensitive or free-tier deployment (see `PLAN-tts.md` §2).
+
+      Also checked whether this should use Google's newer "Interactions API" instead. It does not:
+      that surface is missing Batch API support (a feature this library already ships), has no
+      official .NET SDK to build against, and Google states `generateContent` "remains fully
+      supported" despite the "Legacy" label. Full reasoning and a revisit trigger are recorded in
+      `PLAN-tts.md` §9 and tracked below.
 
       **Asked directly whether this was actually tested properly, the honest first answer was no.**
       The PR description understated real gaps: only 1 of the 3 model constants had ever been called,

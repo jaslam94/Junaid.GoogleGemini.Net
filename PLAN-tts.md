@@ -1,7 +1,10 @@
 # Plan: Text-to-speech (TTS) for Junaid.GoogleGemini.Net
 
 **Status:** Implemented and shipped in `6.5.0`. Live-verified against the real API on 2026-09-04
-(design) and 2026-09-06 (all three model constants, post-implementation).
+(design), 2026-09-06 (all three model constants, post-implementation), and again on 2026-09-06
+against a fresh billing-enabled key (all 5 live tests plus the full 41-test live suite). Also
+evaluated and deliberately deferred a newer "Interactions API" surface Google now documents
+alongside `generateContent`; see §9.
 
 ## 1. Goal
 
@@ -356,3 +359,32 @@ does.
       not just the first one tested (see the 2026-09-06 update in §2 for why this mattered).
 - [x] No em dashes anywhere in new code comments, XML docs, or this plan (standing repo rule,
       `CLAUDE.md`).
+
+## 9. Interactions API: evaluated and deferred
+
+Google's docs describe a second way to call TTS: the Interactions API (`client.interactions.create()`,
+`POST /v1beta/interactions`). This library does not use it. This section records why, so a future
+maintainer does not have to re-derive the reasoning from scratch.
+
+**What it is.** A newer API, GA since June 2026, meant to unify chat, tool calls, and agent turns
+behind one `Interaction` resource. Its TTS page shows a different request shape entirely: `model`,
+`input`, `response_format`, and `generation_config.speech_config` as an array of `{speaker, voice}`
+objects. The response carries audio in `interaction.output_audio.data`, not
+`candidates[].content.parts[].inlineData`. It is not a drop-in swap for the shape this library uses.
+
+**Why this library still uses `generateContent`.** Three reasons, checked live on 2026-09-06:
+
+1. Google's own docs call `generateContent` "Legacy" but state it "remains fully supported," with no
+   deprecation date given. It is not being removed.
+2. The Interactions API does not yet support the Batch API, a feature this library already ships and
+   markets as a differentiator. Forking TTS onto Interactions now would leave two incompatible client
+   shapes in this library, one for every other feature and one just for speech, for a label with no
+   removal date behind it.
+3. The Interactions API has no official .NET SDK to check a wire format against (Python and JS only
+   as of this writing). Building on it now means reverse-engineering the shape from docs alone, on a
+   surface still filling in gaps post-GA, the same risk that produced this file's `mimeType` bug, but
+   on less stable ground.
+
+**When to revisit.** Once the Interactions API reaches feature parity with `generateContent` (Batch
+API support, in particular), or once Google sets an actual deprecation date for `generateContent`.
+Tracked as a non-urgent backlog item in `ROADMAP.md`, not a same-release pivot.

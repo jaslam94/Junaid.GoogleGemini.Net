@@ -12,6 +12,12 @@ await File.WriteAllBytesAsync("greeting.wav", audio.ToWav());
 > **Note:** all three TTS models are `-preview` model IDs as of this writing. Google may change or
 > replace them; pin a version you have tested if that matters for your deployment.
 
+> **Note:** Google's docs also describe a newer "Interactions API" for TTS, with a different request
+> shape. This library intentionally uses `generateContent` instead, the same request shape every
+> other feature here already uses. Google states `generateContent` "remains fully supported," and the
+> Interactions API does not yet support the Batch API, a feature this library ships. See `PLAN-tts.md`
+> in the repo for the full reasoning.
+
 ## Reading the result
 
 Mirrors the `Text()`/`Images()` accessor trios on `GenerateContentResponse`, but singular: nothing

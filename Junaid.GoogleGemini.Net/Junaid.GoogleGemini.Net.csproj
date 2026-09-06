@@ -39,7 +39,10 @@
 			("audio/l16; rate=24000; channels=1" instead of "audio/L16;codec=pcm;rate=24000"), which a
 			first version of ToWav() did not handle and threw on. ToWav() now parses the sample rate
 			and channel count independently, not as one rigid whole-string shape, and works correctly
-			against both confirmed formats. No breaking changes.
+			against both confirmed formats. Uses the same generateContent request shape as every other
+			feature in this library; Google's newer Interactions API was evaluated and deferred until it
+			supports the Batch API (see PLAN-tts.md and ROADMAP.md for the full reasoning). No breaking
+			changes.
 			6.4.4: doc-comment cleanup only, no functional changes. All XML doc comments in this
 			package's public surface had every em dash removed and were lightly rewritten in short,
 			plain sentences (this repo's new CLAUDE.md style rule, applied retroactively). This changes
