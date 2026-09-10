@@ -467,4 +467,410 @@ public class GeminiClient : IGeminiClient
             return null; // Skip malformed events rather than failing the whole stream.
         }
     }
+
+    // ---- Interactions API (speech-to-text; see PLAN-stt.md) ----
+    //
+    // Not a reuse of PostAsync/StreamAsync above: the Interactions API's error body has a string
+    // `code` (PostAsync's HandleResponse expects a numeric one and throws a JsonException on the
+    // mismatch, discarding the real error message), its model name lives in the request body rather
+    // than the URL (GeminiTelemetry.Parse has nothing to extract it from), and its streaming protocol
+    // sends named events with different payload shapes per name rather than one response-shaped
+    // `data:` line per chunk. See PLAN-stt.md §3.2-§3.4/§5.3 for the live verification behind this.
+
+    /// <summary>Sends a request to the Interactions API.</summary>
+    public async Task<Interaction> PostInteractionAsync(InteractionRequest request, CancellationToken cancellationToken = default)
+    {
+        if (request is null) throw new ArgumentNullException(nameof(request));
+
+        var correlationId = Guid.NewGuid().ToString();
+        const string operation = "interactions";
+        var model = request.Model;
+        using var activity = GeminiTelemetry.StartOperation(operation, model);
+        var stopwatch = Stopwatch.StartNew();
+
+        try
+        {
+            using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+            if (!lease.IsAcquired)
+            {
+                throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
+            }
+
+            _costGovernor.CheckBudget();
+
+            var json = JsonSerializer.Serialize(request, typeof(InteractionRequest), _jsonOptions);
+
+            using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "interactions")
+            {
+                Content = new StringContent(json, Encoding.UTF8, "application/json")
+            };
+            httpRequest.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
+
+            using var response = await _httpClient.SendAsync(httpRequest, cancellationToken);
+            var result = await HandleInteractionResponse(response, correlationId, cancellationToken);
+
+            var mappedUsage = MapUsage(result.Usage);
+            GeminiTelemetry.RecordUsage(operation, model, mappedUsage, result.Status, activity);
+            if (mappedUsage is not null)
+            {
+                _costGovernor.RecordSpend(model, mappedUsage);
+            }
+
+            return result;
+        }
+        catch (GeminiException)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error);
+            throw;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, "timeout");
+            throw new GeminiTimeoutException("The POST request to 'interactions' timed out.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+            _logger.LogError(ex, "POST request to interactions failed [ID: {CorrelationId}]", correlationId);
+            throw new GeminiException("Failed to make POST request to the Interactions API", ex);
+        }
+        finally
+        {
+            GeminiTelemetry.RecordDuration(operation, model, stopwatch.Elapsed.TotalSeconds);
+        }
+    }
+
+    /// <summary>Retrieves a previously created interaction by ID.</summary>
+    public async Task<Interaction> GetInteractionAsync(string id, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            throw new ArgumentException("Interaction ID is required.", nameof(id));
+        }
+
+        var correlationId = Guid.NewGuid().ToString();
+
+        try
+        {
+            using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+            if (!lease.IsAcquired)
+            {
+                throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
+            }
+
+            using var request = new HttpRequestMessage(HttpMethod.Get, $"interactions/{id}");
+            request.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
+
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
+            return await HandleInteractionResponse(response, correlationId, cancellationToken);
+        }
+        catch (GeminiException)
+        {
+            throw;
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new GeminiTimeoutException($"The GET request to 'interactions/{id}' timed out.");
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "GET request to interactions/{Id} failed [ID: {CorrelationId}]", id, correlationId);
+            throw new GeminiException("Failed to make GET request to the Interactions API", ex);
+        }
+    }
+
+    /// <summary>Streams a request to the Interactions API, yielding each named SSE event.</summary>
+    public async IAsyncEnumerable<InteractionStreamEvent> StreamInteractionAsync(
+        InteractionRequest request,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    {
+        if (request is null) throw new ArgumentNullException(nameof(request));
+        request.Stream = true;
+
+        var correlationId = Guid.NewGuid().ToString();
+        const string operation = "interactions";
+        var model = request.Model;
+        using var activity = GeminiTelemetry.StartOperation(operation, model);
+        var stopwatch = Stopwatch.StartNew();
+
+        // Same "yield return can't sit inside a try/catch" split as StreamAsync above: the actual SSE
+        // read loop lives in StreamInteractionCoreAsync, driven manually here so this wrapper can add
+        // exception mapping and span/duration telemetry around it.
+        var core = StreamInteractionCoreAsync(request, correlationId, cancellationToken);
+        await using var enumerator = core.GetAsyncEnumerator(cancellationToken);
+
+        Interaction? finalInteraction = null;
+
+        try
+        {
+            while (true)
+            {
+                InteractionStreamEvent evt;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync())
+                    {
+                        break;
+                    }
+                    evt = enumerator.Current;
+                }
+                catch (GeminiException)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error);
+                    throw;
+                }
+                catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, "timeout");
+                    throw new GeminiTimeoutException("The stream request to 'interactions' timed out.");
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    activity?.SetStatus(ActivityStatusCode.Error, ex.Message);
+                    _logger.LogError(ex, "Stream request to interactions failed [ID: {CorrelationId}]", correlationId);
+                    throw new GeminiException("Failed to stream from the Interactions API", ex);
+                }
+
+                finalInteraction = evt.Interaction ?? finalInteraction;
+                yield return evt;
+            }
+        }
+        finally
+        {
+            GeminiTelemetry.RecordUsage(operation, model, MapUsage(finalInteraction?.Usage), finalInteraction?.Status, activity);
+            GeminiTelemetry.RecordDuration(operation, model, stopwatch.Elapsed.TotalSeconds);
+        }
+    }
+
+    /// <summary>The actual SSE streaming logic for the Interactions API, driven by <see cref="StreamInteractionAsync"/>.</summary>
+    private async IAsyncEnumerable<InteractionStreamEvent> StreamInteractionCoreAsync(
+        InteractionRequest request,
+        string correlationId,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        var model = request.Model;
+
+        using var lease = await _rateLimiter.AcquireAsync(cancellationToken);
+        if (!lease.IsAcquired)
+        {
+            throw new GeminiRateLimitException("Rate limit exceeded. Please try again later.");
+        }
+
+        _costGovernor.CheckBudget();
+
+        var json = JsonSerializer.Serialize(request, typeof(InteractionRequest), _jsonOptions);
+
+        using var httpRequest = new HttpRequestMessage(HttpMethod.Post, "interactions?alt=sse")
+        {
+            Content = new StringContent(json, Encoding.UTF8, "application/json")
+        };
+        httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
+        httpRequest.Headers.TryAddWithoutValidation("X-Correlation-ID", correlationId);
+
+        using var response = await _httpClient.SendAsync(httpRequest, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+
+        if (!response.IsSuccessStatusCode)
+        {
+            var errorContent = await response.Content.ReadStringAsync(cancellationToken);
+            _logger.LogError("Interactions stream request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
+                response.StatusCode, errorContent, correlationId);
+
+            InteractionsApiErrorResponse? interactionsError;
+            try
+            {
+                interactionsError = JsonSerializer.Deserialize<InteractionsApiErrorResponse>(errorContent, _jsonOptions);
+            }
+            catch (JsonException)
+            {
+                interactionsError = null;
+            }
+
+            throw new GeminiApiException(
+                interactionsError?.Error?.Message ?? $"Request failed with status {(int)response.StatusCode}",
+                response.StatusCode,
+                interactionsError?.Error?.Code);
+        }
+
+        var responseStream = await response.Content.ReadStreamAsync(cancellationToken);
+        using var reader = new StreamReader(responseStream);
+        var eventCount = 0;
+        string? currentEventType = null;
+        var dataBuffer = new StringBuilder();
+        Interaction? finalInteraction = null;
+
+        try
+        {
+            while (true)
+            {
+                var line = await reader.ReadLineCancelableAsync(cancellationToken);
+                if (line is null) break; // end of stream
+
+                if (line.Length == 0)
+                {
+                    // A blank line terminates an SSE event; parse whatever we accumulated for it.
+                    var evt = ParseInteractionEvent(currentEventType, dataBuffer, correlationId);
+                    currentEventType = null;
+                    dataBuffer.Clear();
+                    if (evt is not null)
+                    {
+                        eventCount++;
+                        finalInteraction = evt.Interaction ?? finalInteraction;
+                        yield return evt;
+                    }
+                    continue;
+                }
+
+                // Unlike StreamCoreAsync above, we DO care about "event:" here: the payload shape on
+                // "data:" differs by event name (interaction.created/completed carry a full
+                // Interaction; step.delta carries incremental text; others carry neither).
+                if (line.StartsWith("event:", StringComparison.Ordinal))
+                {
+                    currentEventType = line.Substring(6).Trim();
+                }
+                else if (line.StartsWith("data:", StringComparison.Ordinal))
+                {
+                    dataBuffer.Append(line.Substring(5).TrimStart());
+                }
+            }
+
+            // Flush a trailing event that had no terminating blank line.
+            var lastEvt = ParseInteractionEvent(currentEventType, dataBuffer, correlationId);
+            if (lastEvt is not null)
+            {
+                eventCount++;
+                finalInteraction = lastEvt.Interaction ?? finalInteraction;
+                yield return lastEvt;
+            }
+
+            // Same "only record real, confirmed usage; never a guessed partial cost on a
+            // cancelled/failed stream" reasoning as StreamCoreAsync above.
+            var mappedUsage = MapUsage(finalInteraction?.Usage);
+            if (mappedUsage is not null)
+            {
+                _costGovernor.RecordSpend(model, mappedUsage);
+            }
+        }
+        finally
+        {
+            reader.Dispose();
+#if NET8_0_OR_GREATER
+            await responseStream.DisposeAsync();
+#else
+            responseStream.Dispose();
+#endif
+            _logger.LogDebug("Interactions stream completed with {EventCount} events [ID: {CorrelationId}]", eventCount, correlationId);
+        }
+    }
+
+    /// <summary>Parses one Interactions API SSE event; returns null for a "done" sentinel or malformed data.</summary>
+    private InteractionStreamEvent? ParseInteractionEvent(string? eventType, StringBuilder dataBuffer, string correlationId)
+    {
+        if (dataBuffer.Length == 0) return null;
+
+        var payload = dataBuffer.ToString();
+        if (payload == "[DONE]") return null; // The literal "done" event's data, not a JSON object.
+
+        try
+        {
+            using var doc = JsonDocument.Parse(payload);
+            var root = doc.RootElement;
+            var evt = new InteractionStreamEvent { EventType = eventType };
+
+            if (root.TryGetProperty("interaction", out var interactionElement))
+            {
+                evt.Interaction = JsonSerializer.Deserialize<Interaction>(interactionElement.GetRawText(), _jsonOptions);
+            }
+
+            if (root.TryGetProperty("delta", out var deltaElement)
+                && deltaElement.TryGetProperty("type", out var deltaTypeElement)
+                && deltaTypeElement.ValueEquals("text")
+                && deltaElement.TryGetProperty("text", out var deltaTextElement))
+            {
+                evt.DeltaText = deltaTextElement.GetString();
+            }
+
+            return evt;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse Interactions stream event: {Payload} [ID: {CorrelationId}]", payload, correlationId);
+            return null; // Skip malformed events rather than failing the whole stream.
+        }
+    }
+
+    /// <summary>Deserializes a success response or maps an Interactions API error to a typed exception.</summary>
+    private async Task<Interaction> HandleInteractionResponse(HttpResponseMessage response, string correlationId, CancellationToken cancellationToken)
+    {
+        var content = await response.Content.ReadStringAsync(cancellationToken);
+
+        try
+        {
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<Interaction>(content, _jsonOptions);
+                if (result == null)
+                {
+                    _logger.LogError("Response deserialization returned null for type Interaction [ID: {CorrelationId}]", correlationId);
+                    throw new GeminiSerializationException("Failed to deserialize response to type Interaction");
+                }
+                return result;
+            }
+
+            _logger.LogError("Interactions API request failed - Status: {StatusCode}, Response: {ResponseContent} [ID: {CorrelationId}]",
+                response.StatusCode, content, correlationId);
+
+            var interactionsError = JsonSerializer.Deserialize<InteractionsApiErrorResponse>(content, _jsonOptions);
+            if (interactionsError?.Error == null)
+            {
+                throw new GeminiApiException(
+                    $"Request failed with status {(int)response.StatusCode} and an unexpected error format.",
+                    response.StatusCode,
+                    (string?)null);
+            }
+
+            throw new GeminiApiException(
+                interactionsError.Error.Message ?? $"Request failed with status {(int)response.StatusCode}",
+                response.StatusCode,
+                interactionsError.Error.Code);
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Failed to parse Interactions API response: {Content} [ID: {CorrelationId}]", content, correlationId);
+            throw new GeminiSerializationException("Failed to parse Interactions API response", ex);
+        }
+    }
+
+    /// <summary>
+    /// Maps an <see cref="Interaction"/>'s usage to generateContent's <see cref="UsageMetadata"/>
+    /// shape, so the existing cost-governance (<see cref="ICostGovernor.RecordSpend"/>) and telemetry
+    /// (<see cref="GeminiTelemetry.RecordUsage"/>) machinery can be reused unchanged. CONFIRMED LIVE
+    /// (PLAN-stt.md §3.3): <see cref="InteractionUsage.TotalOutputTokens"/> reads 0 even when real
+    /// output text was produced; <see cref="UsageMetadata.CandidatesTokenCount"/> below is summed from
+    /// <see cref="InteractionUsage.ModelInvocationTokenCounts"/> instead, which is where the real
+    /// count lives.
+    /// </summary>
+    private static UsageMetadata? MapUsage(InteractionUsage? usage)
+    {
+        if (usage is null) return null;
+
+        var candidatesDetails = usage.ModelInvocationTokenCounts?
+            .SelectMany(m => m.CandidatesTokensDetails ?? new List<InteractionModalityTokenCount>())
+            .ToList();
+        var candidatesTokenCount = candidatesDetails?.Sum(d => d.Tokens) ?? 0;
+
+        return new UsageMetadata
+        {
+            PromptTokenCount = usage.TotalInputTokens,
+            CandidatesTokenCount = candidatesTokenCount,
+            TotalTokenCount = usage.TotalInputTokens + candidatesTokenCount,
+            ThoughtsTokenCount = usage.TotalThoughtTokens,
+            CachedContentTokenCount = usage.TotalCachedTokens,
+            PromptTokensDetails = usage.InputTokensByModality?
+                .Select(m => new ModalityTokenCount { Modality = m.Modality, TokenCount = m.Tokens })
+                .ToList(),
+            CandidatesTokensDetails = candidatesDetails?
+                .Select(d => new ModalityTokenCount { Modality = d.Modality, TokenCount = d.Tokens })
+                .ToList(),
+        };
+    }
 }

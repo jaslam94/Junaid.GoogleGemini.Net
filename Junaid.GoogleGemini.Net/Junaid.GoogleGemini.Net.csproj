@@ -19,8 +19,34 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.5.0</Version>
+		<Version>6.6.0</Version>
 		<PackageReleaseNotes>
+			6.6.0: adds speech-to-text (STT). New ITranscriptionService (TranscribeAsync/
+			TranscribeFileAsync/StreamTranscribeAsync/GetInteractionAsync), registered by AddGemini like
+			every other service, wraps Gemini's dedicated gemini-3.5-transcribe model: diarization,
+			word-level timestamps, and custom vocabulary biasing, on top of a plain transcript.
+			This is the direct mirror of 6.5.0's TTS: TTS turns text into audio, this turns audio into
+			text. Unlike every other feature in this library, the dedicated transcription model is NOT
+			reachable through generateContent. It lives behind a different endpoint, the Interactions
+			API, with its own request shape, response shape, error shape, and SSE streaming protocol
+			(named events, not one response-shaped chunk per line). Building this required a new
+			InteractionRequest/Interaction/InteractionUsage/InteractionsApiErrorResponse model family
+			and new IGeminiClient.PostInteractionAsync/GetInteractionAsync/StreamInteractionAsync
+			methods, not a reuse of the existing generateContent client path (see PLAN-stt.md for why
+			reusing it unmodified would have silently discarded real API error messages).
+			Live-verified against the real API before any code was written, and again after
+			implementation through the actual typed client, not raw REST calls (see PLAN-stt.md):
+			inline audio, file-based audio via the existing Files API, diarization with real distinct
+			speaker labels ("spk:0"/"spk:1", zero-indexed and colon-separated, not the "spk_1" format
+			some docs describe), word timestamps, and streaming all confirmed working end to end.
+			Also caught and fixed, before shipping, a real usage-accounting quirk: the API's own
+			total_output_tokens field reads 0 in every call observed, even ones that produced real
+			output text; the actual output token count has to be read from a nested
+			model_invocation_token_counts field instead, or cost governance would silently price every
+			transcription's output at $0 forever. Adds the gemini-3.5-transcribe model constant and a
+			cost-governance pricing entry. CustomVocabulary is rejected by the API when combined with
+			DiarizationMode/TimestampGranularities; TranscriptionOptions validates this client-side
+			before any network call, confirmed against the real API's rejection. No breaking changes.
 			6.5.0: adds text-to-speech (TTS). New GenerateAudioAsync/StreamAudioAsync on IGeminiService
 			generate spoken audio from text using Gemini's native TTS models, the same
 			responseModalities pattern GenerateImageAsync already uses for images. Single-speaker

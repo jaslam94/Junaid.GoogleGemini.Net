@@ -28,6 +28,7 @@ app.MapGet("/", async (IGeminiService gemini) =>
 - [Files & context caching](articles/files-and-caching.md)
 - [Image generation](articles/image-generation.md)
 - [Text-to-speech](articles/tts.md)
+- [Speech-to-text](articles/transcription.md)
 - [Cost governance](articles/cost-governance.md)
 - [Batch API](articles/batch-api.md)
 - [Migrating from v5 to v6](articles/migration-v5-to-v6.md)

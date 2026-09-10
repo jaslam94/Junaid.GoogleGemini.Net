@@ -164,9 +164,11 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       `PostAsync`'s start/error-status/duration/token-usage-tag pattern.
 - [ ] Live API (bidirectional WebSocket) as a separate `*.Live` package.
 - [ ] Revisit Google's Interactions API (GA since June 2026) as the request/response shape for TTS,
-      and possibly other features, once it supports the Batch API. Evaluated for `6.5.0` and
-      deferred; `generateContent` remains fully supported per Google's own docs despite a "Legacy"
-      label. See `PLAN-tts.md` §9.
+      once it supports the Batch API. Evaluated for `6.5.0` and deferred; `generateContent` remains
+      fully supported per Google's own docs despite a "Legacy" label. See `PLAN-tts.md` §9. Note:
+      `6.6.0` (speech-to-text) DOES use the Interactions API, for a different reason: it is the only
+      way to reach `gemini-3.5-transcribe` at all, not a choice between two shapes for the same model.
+      See `PLAN-stt.md` §2 for why that decision went the other way from TTS's.
 - [x] **Batch API** (`6.4.0`): `IBatchService`, a new resource client (mirroring `IFileService`/
       `ICachingService`'s pattern) for submitting large volumes of `generateContent` requests
       asynchronously at Google's 50%-discounted batch rate. Covers create (inline, from an
@@ -446,6 +448,62 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       request, not just compiled; its output was independently identified by the Unix `file` command
       as `RIFF ... WAVE audio, Microsoft PCM, 16 bit, mono 24000 Hz`, confirmation from a tool with no
       knowledge of this library's own assumptions about what it had built.
+- [x] **Speech-to-text (STT)** (`6.6.0`): new `ITranscriptionService`
+      (`TranscribeAsync`/`TranscribeFileAsync`/`StreamTranscribeAsync`/`GetInteractionAsync`),
+      registered by `AddGemini` alongside every other service, wraps Gemini's dedicated
+      `gemini-3.5-transcribe` model: speaker diarization, word-level timestamps, and custom vocabulary
+      biasing. The direct mirror of `6.5.0`'s TTS, same rigor: a full plan document (`PLAN-stt.md`)
+      written before any code, live-verified against the real API first, then live-verified again
+      after implementation through the actual typed client.
+
+      Unlike every other feature in this library, the dedicated transcription model is not reachable
+      through `generateContent` at all. It lives behind a different endpoint, the Interactions API
+      (`POST /v1beta/interactions`), with its own request shape, response shape, error shape, and SSE
+      streaming protocol (named events like `step.delta`/`interaction.completed`, not one
+      response-shaped chunk per line). A plain chat model can still transcribe audio through ordinary
+      `generateContent` (confirmed live, see `PLAN-stt.md` §3.1), but that path has no diarization or
+      timestamps, the actual differentiators of the dedicated model, so this library built the
+      Interactions path instead. This is the opposite choice from `6.5.0`'s TTS, which deliberately
+      avoided the Interactions API; see `PLAN-stt.md` §2 for why the same "should we use the newer
+      API" question got a different answer for STT.
+
+      New `InteractionRequest`/`Interaction`/`InteractionUsage`/`InteractionsApiErrorResponse` model
+      family and new `IGeminiClient.PostInteractionAsync`/`GetInteractionAsync`/
+      `StreamInteractionAsync`, not a reuse of the existing `generateContent` client path. Reusing it
+      unmodified would have been a real bug: the Interactions API's error body has a string `code`
+      (e.g. `"invalid_request"`), where the existing error type expects a numeric one, so a real 400
+      would have come back as an opaque `GeminiSerializationException` instead of the API's actual
+      message. `GeminiApiException` gained a new `InteractionErrorCode` property to carry it.
+
+      Also caught, live, before shipping: the API's own `usage.total_output_tokens` field reads `0` in
+      every one of nine separate live calls made while researching this feature, even ones that
+      clearly produced real output text (`usage.total_tokens` also excludes output entirely). The real
+      output token count is nested in `usage.model_invocation_token_counts[].candidates_tokens_details`
+      instead. `GeminiClient` maps `InteractionUsage` into the existing `UsageMetadata` shape reading
+      from the correct field, so the existing cost-governance and OpenTelemetry machinery is reused
+      unchanged; reading the obvious top-level field instead would have silently priced every
+      transcription's output at $0 forever. Also live-confirmed real diarization speaker labels are
+      `"spk:0"`/`"spk:1"` (zero-indexed, colon-separated), not the `"spk_1"` format some docs describe.
+
+      `CustomVocabulary` is rejected by the real API (`HTTP 400`) when combined with
+      `DiarizationMode`/`TimestampGranularities`; `TranscriptionOptions.Validate()` catches this
+      client-side before any network call, and a live test confirms the client-side guard matches the
+      real API's rejection exactly (not merely assumed from the client-side check alone).
+
+      Verified: full solution build 0 warnings across all three targets; 11 new unit tests (request
+      shape, `Interaction.Text()`/`Words()` step-filtering, the error-shape regression, and the
+      output-token usage-mapping quirk above) plus the full 167-test unit suite, all green; 5 new live
+      tests against a real key (inline transcription, diarization with real distinct speaker labels,
+      file-based transcription via the existing Files API, streaming, and the live rejection test
+      above), plus the full 39-passing/7-paid-tier-skipped live suite, all green, confirming no
+      regression to any existing feature.
+
+      Long audio (Google's docs claim up to an hour per request) was not tested; every live call in
+      this session used a clip a few seconds long and returned `"completed"` synchronously. Whether
+      long audio behaves differently (an `"in_progress"` status requiring a poll loop) is an open item
+      for whoever picks this up next; see `PLAN-stt.md` §7. Pricing (`$2.00`/`$12.00` per 1M tokens)
+      came from a single fetch of Google's pricing page, not a live billing check; re-verify before
+      relying on it for a cost-sensitive deployment, same standing caveat as every other pricing entry.
 
 ---
 
