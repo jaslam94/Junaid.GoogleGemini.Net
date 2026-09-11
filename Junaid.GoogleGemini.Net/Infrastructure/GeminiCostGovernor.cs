@@ -219,6 +219,23 @@ public sealed class GeminiCostGovernor : ICostGovernor
                 OutputPerMillionTokensUsd = 20.00m,
                 CachedInputPerMillionTokensUsd = 1.00m,
             },
+
+            // Speech-to-text. Called through the Interactions API, not generateContent (see
+            // PLAN-stt.md), so its usage shape (InteractionUsage) differs from UsageMetadata above:
+            // GeminiClient.PostInteractionAsync/StreamInteractionAsync map it before calling
+            // RecordSpend, and that mapping is where a real, confirmed quirk lives (PLAN-stt.md §3.3):
+            // InteractionUsage.TotalOutputTokens reads 0 even when real output text was produced, in
+            // every live call made while building this feature, so the mapper sums the real count
+            // from ModelInvocationTokenCounts instead. No cached-input rate is published, so this
+            // falls back to the standard input rate, matching the same-situation TTS/image models
+            // above. Pricing numbers came from a single fetch of the pricing page, not a live billing
+            // check; re-verify before relying on them, same as every entry in this table.
+            ["gemini-3.5-transcribe"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 2.00m,
+                OutputPerMillionTokensUsd = 12.00m,
+                CachedInputPerMillionTokensUsd = 2.00m,
+            },
         };
 
     // Keyed by the UTC calendar day, normalized to midnight (DateTime.Date), NOT System.DateOnly:

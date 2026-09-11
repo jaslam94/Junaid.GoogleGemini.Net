@@ -93,6 +93,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string Gemini25ProTts = "gemini-2.5-pro-preview-tts";
             public const string Gemini31FlashTts = "gemini-3.1-flash-tts-preview";
 
+            // Speech-to-text. This is NOT a generateContent model: it is called through the
+            // Interactions API (see PLAN-stt.md), a different endpoint with its own request/response
+            // shape. Do not pass this to GenerateAsync or any other generateContent-based method; use
+            // ITranscriptionService instead. GA (August 26, 2026), live-verified request/response
+            // shape, see PLAN-stt.md. Not listed in ContentGenerationModels for that reason.
+            public const string Gemini35Transcribe = "gemini-3.5-transcribe";
+
             // Gemini 2.x (still available).
             public const string Gemini25Pro = "gemini-2.5-pro";
             public const string Gemini25Flash = "gemini-2.5-flash";
@@ -154,6 +161,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <see cref="Gemini31FlashTts"/> for the newer Gemini 3 generation.
             /// </summary>
             public static string RecommendedTts => Gemini25FlashTts;
+
+            /// <summary>
+            /// The recommended model for speech-to-text (only one option exists today, see
+            /// <see cref="Gemini35Transcribe"/>). Called through the Interactions API, not
+            /// <c>generateContent</c>; use <see cref="Junaid.GoogleGemini.Net.Services.Interfaces.ITranscriptionService"/>.
+            /// </summary>
+            public static string RecommendedTranscription => Gemini35Transcribe;
         }
 
         #endregion Model Information

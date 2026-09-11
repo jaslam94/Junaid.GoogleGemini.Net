@@ -172,6 +172,18 @@ await File.WriteAllBytesAsync("greeting.wav", audio.ToWav()); // adds a real WAV
 Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (each speaker named
 in the prompt text, mapped to a voice). See [docs/articles/tts.md](docs/articles/tts.md).
 
+### Speech-to-text
+
+```csharp
+var interaction = await transcription.TranscribeAsync(audioBytes, "audio/wav");
+Console.WriteLine(interaction.GetTextOrThrow());
+```
+
+Set `DiarizationMode = "speaker"` and/or `TimestampGranularities = ["word"]` on `TranscriptionOptions`
+for per-word speaker labels and timestamps. Called through Google's Interactions API, not
+`generateContent`, since that is the only way to reach the dedicated `gemini-3.5-transcribe` model.
+See [docs/articles/transcription.md](docs/articles/transcription.md).
+
 ### Embeddings
 
 ```csharp

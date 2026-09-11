@@ -86,6 +86,23 @@ app.MapGet("/speak", async (IGeminiService gemini, string text) =>
         : Results.Problem("The model returned no audio.", statusCode: 502);
 });
 
+// Speech-to-text: GET /transcribe?text=Have%20a%20great%20day -> the transcript
+// Round-trips through both new audio features for a self-contained demo: speaks the text via TTS,
+// then transcribes the resulting clip back via the dedicated gemini-3.5-transcribe model (called
+// through the Interactions API, not generateContent, see docs/articles/transcription.md). A real app
+// would call transcription.TranscribeAsync with bytes read from an uploaded audio file instead.
+app.MapGet("/transcribe", async (IGeminiService gemini, ITranscriptionService transcription, string text) =>
+{
+    var spoken = await gemini.GenerateAudioAsync(text);
+    if (!spoken.TryGetAudio(out var audio))
+    {
+        return Results.Problem("The model returned no audio to transcribe.", statusCode: 502);
+    }
+
+    var interaction = await transcription.TranscribeAsync(audio.ToWav(), "audio/wav");
+    return Results.Ok(interaction.GetTextOrThrow());
+});
+
 // Chat via Microsoft.Extensions.AI: POST /chat  { "message": "Hello" }
 app.MapPost("/chat", async (IChatClient chat, ChatRequest request) =>
     Results.Ok((await chat.GetResponseAsync([new ChatMessage(ChatRole.User, request.Message)])).Text));

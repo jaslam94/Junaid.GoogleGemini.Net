@@ -46,6 +46,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 [JsonSerializable(typeof(BatchJobList))]
 [JsonSerializable(typeof(BatchRequestLine))]
 [JsonSerializable(typeof(InlinedBatchResponse))]
+[JsonSerializable(typeof(InteractionRequest))]
+[JsonSerializable(typeof(Interaction))]
+[JsonSerializable(typeof(InteractionsApiErrorResponse))]
 internal partial class GeminiJsonContext : JsonSerializerContext
 {
 }

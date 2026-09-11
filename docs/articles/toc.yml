@@ -16,6 +16,8 @@
   href: image-generation.md
 - name: Text-to-speech
   href: tts.md
+- name: Speech-to-text
+  href: transcription.md
 - name: Cost governance
   href: cost-governance.md
 - name: Batch API

@@ -223,6 +223,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             services.AddTransient<IBatchService, BatchService>();
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
+            services.AddTransient<ITranscriptionService, TranscriptionService>();
 
             return services;
         }
