@@ -18,6 +18,8 @@
   href: tts.md
 - name: Speech-to-text
   href: transcription.md
+- name: Multimodal embeddings
+  href: multimodal-embeddings.md
 - name: Cost governance
   href: cost-governance.md
 - name: Batch API

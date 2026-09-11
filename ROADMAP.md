@@ -534,6 +534,44 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       through TTS and STT together, actually run against a live key (`curl` returned the correct
       transcript, `HTTP 200`), not merely compiled. Full solution build still 0 warnings on all three
       targets after the fixes. See `PLAN-stt.md` §10 for the complete account.
+- [x] **Multimodal embeddings input** (`6.7.0`): `gemini-embedding-2` has accepted image, video,
+      audio, and PDF input since GA (April 2026), mapping all of them into one shared vector space
+      alongside text, but `IEmbeddingService` was still text-only, a gap flagged in this file since
+      the August 2026 audit. Closed with the same rigor as TTS/STT: `PLAN-embeddings-multimodal.md`
+      written and live-verified before any code, then live-verified again after implementation
+      through the actual typed client.
+
+      New `EmbedContentAsync(model, mediaBytes, mimeType, text)` for inline media,
+      `EmbedFileAsync(model, fileUri, mimeType, text)` reusing the existing Files API unchanged, and
+      a `BatchEmbedContentAsync` overload taking a new `EmbeddingInput` list so a batch can mix
+      text-only and multimodal entries. The smallest of the three additions this session: no new
+      endpoint, no new model types, no new client method. `EmbedContentRequest`'s `Content` field was
+      already the same `Content`/`Part` type used everywhere else in this library (`inlineData`,
+      `fileData`); the gap was purely that `EmbeddingService` always built a text-only `Part`.
+
+      Live-confirmed the image/audio/PDF/file-based/mixed-batch paths all work, including a real
+      cosine-similarity check (text-only vs. text+image embedding of the same prompt: `0.528`, not
+      `1.0`, not near-zero) proving the media genuinely changes the embedding rather than being
+      accepted and silently ignored. Video input was not live-tested: three different public sources
+      for a small real video file all failed to connect from this session's sandbox, a network
+      restriction, not a doubt about the mechanism, which is identical to the confirmed image/audio
+      path. Documented as an explicit open item rather than assumed.
+
+      Also caught and fixed, before shipping, a real footgun: `EmbeddingOptions.TaskType` is silently
+      accepted and has zero effect on `gemini-embedding-2`, confirmed live twice (raw REST during
+      research, then again through the actual `IEmbeddingService` after implementation) with an
+      identical-request A/B test that returned byte-for-byte identical embeddings with and without
+      the field set. Not an error, just silently ignored, worse for DX than a hard rejection would
+      have been. `EmbeddingService` now logs a one-time warning (not per-call) the first time this
+      combination is used, and `EmbeddingOptions.TaskType`'s own doc comment carries the finding.
+
+      Verified: full solution build 0 warnings across all three targets; 13 new unit tests (request
+      shape for every new overload, validation guards, and the one-time-warning behavior, including a
+      test proving older embedding models don't trigger the warning) plus the full 185-test unit
+      suite, all green; 6 new live tests against a real key (image with a cosine-similarity assertion,
+      audio without text, file-based, a hand-built PDF, mixed-batch, and the `TaskType` no-effect
+      confirmation through the typed client) plus the broader 43-passing non-Batch live suite,
+      confirming no regression to any existing feature. No breaking changes.
 
 ---
 

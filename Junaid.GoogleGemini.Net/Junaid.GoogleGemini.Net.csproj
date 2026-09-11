@@ -19,8 +19,32 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.6.0</Version>
+		<Version>6.7.0</Version>
 		<PackageReleaseNotes>
+			6.7.0: adds multimodal embeddings input. gemini-embedding-2 has accepted image, video,
+			audio, and PDF input since GA (April 2026), mapping all of them into one shared vector
+			space alongside text, but IEmbeddingService was still text-only. New overloads:
+			EmbedContentAsync(model, mediaBytes, mimeType, text) for inline media,
+			EmbedFileAsync(model, fileUri, mimeType, text) reusing the existing Files API unchanged,
+			and a BatchEmbedContentAsync overload taking a new EmbeddingInput list so a batch can mix
+			text-only and multimodal entries. Smaller in scope than TTS or STT: no new endpoint, no
+			new model types, no new client method. The existing Content/Part wire types already
+			supported this everywhere else in the library; the gap was purely that EmbeddingService
+			always built a text-only Part.
+			Live-verified against the real API before any code was written, and again after
+			implementation through the actual typed client (see PLAN-embeddings-multimodal.md):
+			image, audio, file-based, PDF, and mixed-batch input all confirmed working, including a
+			cosine-similarity check proving an image genuinely changes the embedding rather than being
+			accepted and ignored. Video input specifically was not live-tested (this session's sandbox
+			could not reach any external source to fetch real video content); documented as an open
+			item rather than assumed, since it uses the identical mechanism already confirmed for two
+			other modalities.
+			Also caught and fixed, before shipping, a real footgun: EmbeddingOptions.TaskType is
+			silently accepted and has zero effect on gemini-embedding-2, confirmed live with an
+			identical-request A/B test that returned byte-for-byte identical embeddings with and
+			without the field set. Not an error, just silently ignored, worse for DX than a hard
+			rejection. EmbeddingService now logs a one-time warning when this combination is used.
+			No breaking changes.
 			6.6.0: adds speech-to-text (STT). New ITranscriptionService (TranscribeAsync/
 			TranscribeFileAsync/StreamTranscribeAsync/GetInteractionAsync), registered by AddGemini like
 			every other service, wraps Gemini's dedicated gemini-3.5-transcribe model: diarization,
