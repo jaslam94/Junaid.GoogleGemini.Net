@@ -194,6 +194,16 @@ var embedding = await embeddings.EmbedContentAsync(
 var batch = await embeddings.BatchEmbedContentAsync("gemini-embedding-001", texts);
 ```
 
+`gemini-embedding-2` also embeds images, audio, video, and PDFs into the same vector space as text:
+
+```csharp
+var embedding = await embeddings.EmbedContentAsync("gemini-embedding-2", imageBytes, "image/jpeg", "A red circle");
+```
+
+`EmbeddingOptions.TaskType` has no effect on `gemini-embedding-2` (confirmed live: silently ignored,
+not an error); put the task instruction in the prompt text instead for that model. See
+[docs/articles/multimodal-embeddings.md](docs/articles/multimodal-embeddings.md).
+
 ### Files API & context caching
 
 ```csharp

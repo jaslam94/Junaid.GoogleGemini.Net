@@ -398,5 +398,56 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 Parts = new List<Part> { new() { Text = text } }
             };
         }
+
+        /// <summary>
+        /// Creates embedding content from an optional text instruction plus optional inline media
+        /// and/or a Files API reference, for multimodal embedding models (e.g. gemini-embedding-2;
+        /// see PLAN-embeddings-multimodal.md). At least one of <paramref name="text"/>,
+        /// <paramref name="mediaBytes"/>, or <paramref name="fileUri"/> should be set; an all-null
+        /// call produces an empty <see cref="Content"/> the API will reject.
+        /// </summary>
+        /// <remarks>
+        /// A separate method, not an overload of <see cref="CreateEmbeddingContent(string)"/>: a
+        /// second overload with an all-optional signature would be ambiguous with the existing
+        /// single-string one for a plain <c>CreateEmbeddingContent("text")</c> call.
+        /// </remarks>
+        public static Content CreateMultimodalEmbeddingContent(
+            string? text, byte[]? mediaBytes = null, string? mimeType = null, string? fileUri = null)
+        {
+            var parts = new List<Part>();
+            if (!string.IsNullOrEmpty(text))
+            {
+                parts.Add(new Part { Text = text });
+            }
+            if (mediaBytes is not null)
+            {
+                parts.Add(new Part
+                {
+                    InlineData = new InlineData { MimeType = mimeType ?? string.Empty, Data = Convert.ToBase64String(mediaBytes) }
+                });
+            }
+            if (fileUri is not null)
+            {
+                parts.Add(new Part { FileData = new FileData { MimeType = mimeType, FileUri = fileUri } });
+            }
+
+            return new Content { Role = "user", Parts = parts };
+        }
+
+        /// <summary>
+        /// Creates an embedding request from a pre-built <see cref="Content"/> (e.g. from
+        /// <see cref="CreateMultimodalEmbeddingContent"/>), the multimodal counterpart to
+        /// <see cref="CreateEmbeddingRequest(string, EmbeddingOptions?)"/>.
+        /// </summary>
+        public static SingleEmbedContentRequest CreateEmbeddingRequest(Content content, EmbeddingOptions? options = null)
+        {
+            return new SingleEmbedContentRequest
+            {
+                Content = content,
+                TaskType = options?.TaskType,
+                Title = options?.Title,
+                OutputDimensionality = options?.OutputDimensionality
+            };
+        }
     }
 }

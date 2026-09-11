@@ -37,5 +37,63 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
             string[] texts,
             EmbeddingOptions? options = null,
             CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Generates an embedding for inline media (image, audio, video, or PDF bytes), optionally
+        /// combined with a text instruction, using a multimodal-capable embedding model (e.g.
+        /// <c>gemini-embedding-2</c>; older models like <c>gemini-embedding-001</c> are text-only and
+        /// will reject non-text parts). See <c>PLAN-embeddings-multimodal.md</c> and
+        /// <c>docs/articles/multimodal-embeddings.md</c>.
+        /// </summary>
+        /// <param name="model">The embedding model to use (e.g. "gemini-embedding-2").</param>
+        /// <param name="mediaBytes">The raw media bytes.</param>
+        /// <param name="mimeType">The media's MIME type, e.g. "image/jpeg", "audio/wav".</param>
+        /// <param name="text">Optional text instruction/content, combined with the media into one
+        /// aggregated embedding (confirmed live: two parts in one request produce one embedding, not two).</param>
+        /// <param name="options">Optional embedding settings. <see cref="EmbeddingOptions.TaskType"/>
+        /// has no effect on <c>gemini-embedding-2</c>; see that property's own doc comment.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        Task<EmbedContentResponse> EmbedContentAsync(
+            string model,
+            byte[] mediaBytes,
+            string mimeType,
+            string? text = null,
+            EmbeddingOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Generates an embedding for media already uploaded via
+        /// <see cref="IFileService.UploadFileAsync"/>, optionally combined with a text instruction.
+        /// Prefer this over the inline-bytes overload for large media.
+        /// </summary>
+        /// <param name="model">The embedding model to use (e.g. "gemini-embedding-2").</param>
+        /// <param name="fileUri">The uploaded file's URI (<see cref="FileResource.Uri"/>).</param>
+        /// <param name="mimeType">The media's MIME type, e.g. "image/jpeg", "audio/wav".</param>
+        /// <param name="text">Optional text instruction/content, combined with the media into one aggregated embedding.</param>
+        /// <param name="options">Optional embedding settings.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        Task<EmbedContentResponse> EmbedFileAsync(
+            string model,
+            string fileUri,
+            string mimeType,
+            string? text = null,
+            EmbeddingOptions? options = null,
+            CancellationToken cancellationToken = default);
+
+        /// <summary>
+        /// Generates embeddings for multiple inputs in one batch call, each of which can mix text and
+        /// media (unlike the text-only <see cref="BatchEmbedContentAsync(string, string[], EmbeddingOptions?, CancellationToken)"/>
+        /// overload). Confirmed live: the batch endpoint already returns one separate embedding per
+        /// input, in order, whether or not each input carries media.
+        /// </summary>
+        /// <param name="model">The embedding model to use (e.g. "gemini-embedding-2").</param>
+        /// <param name="inputs">The inputs to embed, one embedding returned per entry, in order.</param>
+        /// <param name="options">Optional embedding settings, applied to every input in the batch.</param>
+        /// <param name="cancellationToken">Cancellation token.</param>
+        Task<BatchEmbedContentResponse> BatchEmbedContentAsync(
+            string model,
+            IReadOnlyList<EmbeddingInput> inputs,
+            EmbeddingOptions? options = null,
+            CancellationToken cancellationToken = default);
     }
 }
