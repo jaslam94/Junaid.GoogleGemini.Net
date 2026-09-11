@@ -347,6 +347,119 @@ public class GeminiClientTests
         Assert.Empty(governor.RecordSpendCalls);
     }
 
+    // PLAN-stt.md §3.3: InteractionUsage.TotalOutputTokens reads 0 in every live call observed, even
+    // with real output text; the real count lives in ModelInvocationTokenCounts instead. This is the
+    // client-level regression test for MapUsage (TranscriptionTests.cs has an end-to-end version of
+    // this through TranscriptionService; this one asserts the mapped UsageMetadata's exact values).
+    [Fact]
+    public async Task PostInteractionAsync_MapsUsage_ReadingOutputTokensFromModelInvocationTokenCounts_NotTheMisleadingTopLevelField()
+    {
+        const string ok = """
+            {
+              "id": "v1_abc",
+              "status": "completed",
+              "usage": {
+                "total_input_tokens": 147,
+                "total_output_tokens": 0,
+                "total_cached_tokens": 5,
+                "total_thought_tokens": 3,
+                "input_tokens_by_modality": [{"modality": "audio", "tokens": 146}],
+                "model_invocation_token_counts": [
+                  {"candidates_tokens_details": [{"modality": "text", "tokens": 14}]}
+                ]
+              },
+              "steps": []
+            }
+            """;
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, ok);
+        var governor = new FakeCostGovernor();
+        var client = CreateClient(handler, governor);
+
+        await client.PostInteractionAsync(new InteractionRequest { Model = "gemini-3.5-transcribe", Input = [] });
+
+        var (model, usage) = Assert.Single(governor.RecordSpendCalls);
+        Assert.Equal("gemini-3.5-transcribe", model);
+        Assert.Equal(147, usage.PromptTokenCount);
+        Assert.Equal(14, usage.CandidatesTokenCount); // NOT 0, despite total_output_tokens: 0 above.
+        Assert.Equal(3, usage.ThoughtsTokenCount);
+        Assert.Equal(5, usage.CachedContentTokenCount);
+        Assert.Equal(147 + 14 + 3, usage.TotalTokenCount);
+    }
+
+    // PLAN-stt.md §3.2: named SSE events (interaction.created, step.delta, interaction.completed, ...),
+    // a materially different protocol than streamGenerateContent's one-response-per-line shape. No
+    // prior unit coverage existed for this parsing logic; only a live test exercised it before this.
+    [Fact]
+    public async Task StreamInteractionAsync_ParsesNamedSseEventsCorrectly()
+    {
+        const string sse =
+            "event: interaction.created\n" +
+            "data: {\"interaction\":{\"id\":\"v1_x\",\"status\":\"in_progress\"}}\n" +
+            "\n" +
+            "event: interaction.status_update\n" +
+            "data: {\"interaction_id\":\"v1_x\",\"status\":\"in_progress\"}\n" +
+            "\n" +
+            "event: step.delta\n" +
+            "data: {\"index\":0,\"delta\":{\"text\":\"hello\",\"type\":\"text\"}}\n" +
+            "\n" +
+            "event: interaction.completed\n" +
+            "data: {\"interaction\":{\"id\":\"v1_x\",\"status\":\"completed\",\"steps\":[{\"type\":\"model_output\",\"content\":[{\"type\":\"text\",\"text\":\"hello\"}]}]}}\n" +
+            "\n" +
+            "event: done\n" +
+            "data: [DONE]\n" +
+            "\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var client = CreateClient(handler);
+
+        var events = new List<InteractionStreamEvent>();
+        await foreach (var evt in client.StreamInteractionAsync(new InteractionRequest { Model = "gemini-3.5-transcribe", Input = [] }))
+        {
+            events.Add(evt);
+        }
+
+        // "done"'s literal "[DONE]" data is a sentinel, not JSON: skipped, not yielded.
+        Assert.Equal(4, events.Count);
+
+        Assert.Equal("interaction.created", events[0].EventType);
+        Assert.Equal("in_progress", events[0].Interaction?.Status);
+
+        Assert.Equal("interaction.status_update", events[1].EventType);
+        Assert.Null(events[1].Interaction);
+        Assert.Null(events[1].DeltaText);
+
+        Assert.Equal("step.delta", events[2].EventType);
+        Assert.Equal("hello", events[2].DeltaText);
+
+        Assert.Equal("interaction.completed", events[3].EventType);
+        Assert.Equal("completed", events[3].Interaction?.Status);
+        Assert.Equal("hello", events[3].Interaction?.Text());
+    }
+
+    // Regression test for a real mutation bug found in review: StreamInteractionAsync used to set
+    // request.Stream = true directly on the caller's own object. A caller reusing that same
+    // InteractionRequest instance for a later PostInteractionAsync call would have silently gotten
+    // "stream": true in a non-streaming request. Fixed to clone before setting Stream.
+    [Fact]
+    public async Task StreamInteractionAsync_DoesNotMutateCallersRequestObject()
+    {
+        const string sse = "event: done\ndata: [DONE]\n\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var client = CreateClient(handler);
+
+        var request = new InteractionRequest { Model = "gemini-3.5-transcribe", Input = [] };
+        Assert.Null(request.Stream);
+
+        await foreach (var _ in client.StreamInteractionAsync(request))
+        {
+            // drain
+        }
+
+        Assert.Null(request.Stream); // Unchanged: the client must have cloned, not mutated, the request.
+
+        var body = handler.RequestBodies[0]!;
+        Assert.Contains("\"stream\":true", body); // The clone sent to the wire does carry it.
+    }
+
     private sealed class FakeCostGovernor : ICostGovernor
     {
         public bool ThrowOnCheckBudget { get; set; }

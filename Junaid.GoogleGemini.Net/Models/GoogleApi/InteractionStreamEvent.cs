@@ -1,5 +1,3 @@
-using System.Text.Json.Serialization;
-
 namespace Junaid.GoogleGemini.Net.Models.GoogleApi;
 
 /// <summary>

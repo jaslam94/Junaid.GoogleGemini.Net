@@ -5,9 +5,17 @@
 through the actual `ITranscriptionService`/`IGeminiClient` code, not raw REST calls: inline
 transcription, diarization with real distinct speaker labels, file-based transcription via the
 existing Files API, streaming, and the client-side `CustomVocabulary`+`DiarizationMode` guard against
-the real API's rejection. Full solution build 0 warnings on all three targets; 167/167 unit tests
-(11 new); 39 passed/7 paid-tier-skipped/0 failed on the full live suite (5 new STT live tests, no
-regression to any existing feature).
+the real API's rejection.
+
+**A deep second-pass self-review, done separately from the implementation pass, found and fixed three
+real bugs before merge (§10).** None were caught by the first pass's own tests, which is exactly why
+a second pass asked for by name matters, not a formality: a single build-and-test-green pass had
+already happened and reported success, and still missed these. Full solution build 0 warnings on all
+three targets after fixes; 172/172 unit tests (16 new total: 11 from implementation, 5 more from the
+second pass's own regression tests); 39 passed/7 paid-tier-skipped/0 failed on the full live suite;
+the ASP.NET Core sample's new `/transcribe` endpoint (added during the second pass, matching TTS's
+`/speak` precedent) actually run and hit with a real request, round-tripping through TTS and STT
+together, not just compiled.
 
 ## 1. Goal
 
@@ -621,3 +629,62 @@ new STT tests plus every pre-existing live test, confirming no regression).
       to "should this use the Interactions API" went the other way from TTS's.
 - [x] Written in this repo's `CLAUDE.md` style throughout: short sentences, no em dashes (checked with
       a literal grep across every new/changed file before publishing, not just a visual scan).
+
+## 10. Deep second-pass review: three real bugs found and fixed before merge
+
+Asked explicitly for a second, separate review pass after the implementation was already built,
+tested (167/167 unit, 39/39 non-skipped live), and PR'd. Re-reading every changed file fresh, as if
+seeing it for the first time, found three real bugs none of the first pass's own tests caught. None
+of these were caught by "build succeeds, tests pass": all three are the kind of thing a test suite
+only catches if someone thinks to write the specific test for it, which is exactly what a second pass
+is for.
+
+**Bug 1: `StreamInteractionAsync` mutated the caller's own `InteractionRequest` object.**
+`request.Stream = true;` was set directly on the object the caller passed in, not a copy. This
+library's own established convention (`GenerateAudioAsync`/`StreamAudioAsync`'s doc comment: "on a
+cloned options object") exists precisely to avoid this: a caller who built one `InteractionRequest`
+and reused it for both a `PostInteractionAsync` call and a `StreamInteractionAsync` call would have
+silently gotten `"stream": true` on the non-streaming call too, since the same object got mutated in
+place. Fixed to clone. Regression test:
+`GeminiClientTests.StreamInteractionAsync_DoesNotMutateCallersRequestObject`.
+
+**Bug 2: `StreamTranscribeAsync` was not an async iterator, so validation threw synchronously at call
+time instead of on first `MoveNextAsync()`.** Every other `IAsyncEnumerable`-returning method in this
+codebase (`StreamAsync`, `StreamWithImageAsync`, `StreamAudioAsync`) is an `async IAsyncEnumerable`
+iterator (`yield return`), which defers everything, including argument validation, to first
+enumeration. `StreamTranscribeAsync` instead ran its validation immediately and returned the
+downstream enumerable directly. A caller who wraps only the `await foreach` in a try/catch (the
+natural pattern given how every other streaming method here behaves) would have had a validation
+`ArgumentException` escape uncaught. Fixed to a real iterator method. Regression test:
+`TranscriptionTests.StreamTranscribeAsync_DefersValidationToFirstMoveNext_NotAtCallTime`.
+
+**Bug 3 (minor, no observable effect, fixed anyway): `MapUsage`'s `TotalTokenCount` excluded thought
+tokens.** `generateContent`'s real `totalTokenCount` = prompt + candidates + thoughts (confirmed from
+a live call earlier this session: 8 + 2 + 96 = 106). The mapper computed only prompt + candidates.
+Harmless today, since nothing in `ComputeCost`/`RecordSpend`/telemetry actually reads
+`TotalTokenCount`, only the individual fields, but wrong if that ever changes or if a caller ever
+inspects the mapped value directly. Fixed. Also added an explicit code comment flagging that
+`CachedContentTokenCount`'s subset-of-input assumption (borrowed from `generateContent`'s semantics)
+was never actually exercised live, since every observed `TotalCachedTokens` was `0` (transcription
+requests have no way to attach cached content today). Regression test:
+`GeminiClientTests.PostInteractionAsync_MapsUsage_ReadingOutputTokensFromModelInvocationTokenCounts_NotTheMisleadingTopLevelField`
+asserts the corrected value directly.
+
+**Also found during the same pass, not bugs but real gaps, both fixed:**
+- Zero unit test coverage existed for `StreamTranscribeAsync`/`StreamInteractionAsync` before this
+  pass; only a live test exercised the SSE parsing logic. Added
+  `GeminiClientTests.StreamInteractionAsync_ParsesNamedSseEventsCorrectly` (client level) and
+  `TranscriptionTests.StreamTranscribeAsync_SendsCorrectRequestShapeAndYieldsEvents` (service level).
+- The ASP.NET Core sample never demonstrated this feature. TTS's own checklist required its `/speak`
+  endpoint to be "actually run and hit with a real request, not just compiled" before considering that
+  feature done; this feature's PR had skipped the equivalent. Added `GET /transcribe`, which
+  round-trips through both audio features (speaks text via TTS, transcribes the result back), and
+  actually ran it: `curl` against a live instance returned the correct transcript, `HTTP 200`.
+
+**What this pass did not re-verify live:** the two streaming fixes (Bug 1, Bug 2) were validated by
+precise unit tests asserting the exact corrected behavior (wire body content, mutation absence,
+deferred-throw timing), not by a third live pass specifically targeting `StreamTranscribeAsync`. The
+underlying SSE-reading mechanism itself was already live-verified twice before this review (research
+phase and post-implementation phase); these fixes are narrow, mechanical corrections to object
+lifecycle and exception timing, not to wire-protocol handling. Judged sufficient rather than asking
+for the API key a fourth time in one session; noted here rather than left unstated.

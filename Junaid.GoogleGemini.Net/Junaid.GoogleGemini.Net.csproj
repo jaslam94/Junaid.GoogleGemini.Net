@@ -46,7 +46,19 @@
 			transcription's output at $0 forever. Adds the gemini-3.5-transcribe model constant and a
 			cost-governance pricing entry. CustomVocabulary is rejected by the API when combined with
 			DiarizationMode/TimestampGranularities; TranscriptionOptions validates this client-side
-			before any network call, confirmed against the real API's rejection. No breaking changes.
+			before any network call, confirmed against the real API's rejection.
+			A separate, deliberate second-pass review (done after the first build-and-test-green pass
+			already reported success) found and fixed three more real bugs before merge, none caught
+			by the first pass's own tests: StreamInteractionAsync mutated the caller's own request
+			object in place instead of cloning it (this library's established pattern, e.g.
+			GenerateAudioAsync/StreamAudioAsync's "on a cloned options object"); StreamTranscribeAsync
+			was not a real async iterator, so a validation exception threw synchronously at call time
+			instead of on first enumeration, unlike every other streaming method in this library,
+			meaning it could escape a caller's try/catch around only the "await foreach"; and the
+			usage-mapping helper's TotalTokenCount omitted thought tokens (no observable effect today,
+			fixed for correctness). Added an ASP.NET Core sample /transcribe endpoint, actually run
+			against a live key, round-tripping through both TTS and STT. See PLAN-stt.md section 10
+			for the full account. No breaking changes.
 			6.5.0: adds text-to-speech (TTS). New GenerateAudioAsync/StreamAudioAsync on IGeminiService
 			generate spoken audio from text using Gemini's native TTS models, the same
 			responseModalities pattern GenerateImageAsync already uses for images. Single-speaker

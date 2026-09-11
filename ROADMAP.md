@@ -505,6 +505,36 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       came from a single fetch of Google's pricing page, not a live billing check; re-verify before
       relying on it for a cost-sensitive deployment, same standing caveat as every other pricing entry.
 
+      **Asked directly for a deep second-pass review, done separately from the implementation pass
+      above, after that pass had already reported a fully green build and test suite.** It found and
+      fixed three real bugs none of the first pass's own tests caught, the exact reason a second pass
+      is worth asking for by name rather than treating "tests pass" as the finish line:
+      1. `StreamInteractionAsync` mutated the caller's own `InteractionRequest` object in place
+         (`request.Stream = true` directly on it), instead of cloning it the way this library's own
+         established pattern requires (`GenerateAudioAsync`/`StreamAudioAsync`'s "on a cloned options
+         object"). A caller reusing one request object across both a streaming and non-streaming call
+         would have silently gotten `"stream": true` leak into the non-streaming one.
+      2. `StreamTranscribeAsync` was not a real `async` iterator (no `yield return`), so its input
+         validation threw synchronously at call time instead of on first `MoveNextAsync()`, unlike
+         every other `IAsyncEnumerable` method in this codebase. A caller wrapping only the
+         `await foreach` in try/catch, the natural pattern given how every sibling method behaves,
+         would have had the exception escape uncaught.
+      3. The usage-mapping helper's `TotalTokenCount` omitted thought tokens (real
+         `generateContent` semantics are prompt + candidates + thoughts, confirmed live this session:
+         8 + 2 + 96 = 106). No observable effect today (nothing reads `TotalTokenCount` directly), but
+         fixed for correctness, plus a new code comment flagging that the cached-token subset
+         assumption borrowed from `generateContent` was never actually live-exercised (every observed
+         `TotalCachedTokens` was `0`).
+
+      Also found, not bugs but real gaps: zero unit coverage existed for the SSE streaming path before
+      this pass (only a live test exercised it), and the ASP.NET Core sample never got a `/transcribe`
+      endpoint, unlike TTS's `/speak`, which its own checklist required to be "actually run and hit
+      with a real request, not just compiled." Both fixed: 5 new unit tests targeting exactly the three
+      bugs above (172 total, up from 167), and a new `GET /transcribe` sample endpoint that round-trips
+      through TTS and STT together, actually run against a live key (`curl` returned the correct
+      transcript, `HTTP 200`), not merely compiled. Full solution build still 0 warnings on all three
+      targets after the fixes. See `PLAN-stt.md` §10 for the complete account.
+
 ---
 
 ## Success metrics

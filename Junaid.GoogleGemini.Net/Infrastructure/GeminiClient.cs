@@ -585,7 +585,18 @@ public class GeminiClient : IGeminiClient
         [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (request is null) throw new ArgumentNullException(nameof(request));
-        request.Stream = true;
+
+        // Clone rather than mutate the caller's request in place: GenerateAudioAsync/StreamAudioAsync
+        // establish the pattern of filling in call-specific fields "on a cloned options object" (see
+        // IGeminiService), specifically so a caller who reuses the same request instance elsewhere
+        // (e.g. also passing it to PostInteractionAsync) isn't surprised by a side effect here.
+        request = new InteractionRequest
+        {
+            Model = request.Model,
+            Input = request.Input,
+            GenerationConfig = request.GenerationConfig,
+            Stream = true,
+        };
 
         var correlationId = Guid.NewGuid().ToString();
         const string operation = "interactions";
@@ -848,6 +859,16 @@ public class GeminiClient : IGeminiClient
     /// output text was produced; <see cref="UsageMetadata.CandidatesTokenCount"/> below is summed from
     /// <see cref="InteractionUsage.ModelInvocationTokenCounts"/> instead, which is where the real
     /// count lives.
+    ///
+    /// NOT independently confirmed: whether <see cref="InteractionUsage.TotalCachedTokens"/> is a
+    /// subset of <see cref="InteractionUsage.TotalInputTokens"/> (as <c>generateContent</c>'s
+    /// equivalent fields are, which is what <see cref="GeminiCostGovernor.ComputeCost"/>'s
+    /// <c>PromptTokenCount - CachedContentTokenCount</c> subtraction assumes) or a separate, additive
+    /// figure. Every live call made while building this feature had <c>TotalCachedTokens == 0</c>
+    /// (transcription requests have no way to attach cached content today), so this was never
+    /// actually exercised. Mapped here on the same subset assumption as everywhere else in this
+    /// library; re-verify live before trusting cost governance for a transcription request that
+    /// somehow involves cached tokens.
     /// </summary>
     private static UsageMetadata? MapUsage(InteractionUsage? usage)
     {
@@ -862,7 +883,9 @@ public class GeminiClient : IGeminiClient
         {
             PromptTokenCount = usage.TotalInputTokens,
             CandidatesTokenCount = candidatesTokenCount,
-            TotalTokenCount = usage.TotalInputTokens + candidatesTokenCount,
+            // Matches generateContent's real totalTokenCount = prompt + candidates + thoughts
+            // (confirmed live, e.g. a plain-text sanity call this session: 8 + 2 + 96 == 106).
+            TotalTokenCount = usage.TotalInputTokens + candidatesTokenCount + usage.TotalThoughtTokens,
             ThoughtsTokenCount = usage.TotalThoughtTokens,
             CachedContentTokenCount = usage.TotalCachedTokens,
             PromptTokensDetails = usage.InputTokensByModality?

@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Junaid.GoogleGemini.Net.Infrastructure.Interfaces;
 using Junaid.GoogleGemini.Net.Infrastructure.Utilities;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
@@ -73,11 +74,16 @@ public class TranscriptionService : ITranscriptionService
     }
 
     /// <inheritdoc/>
-    public IAsyncEnumerable<InteractionStreamEvent> StreamTranscribeAsync(
+    // A real async iterator (yield return), not a plain pass-through, so validation is deferred to
+    // the first MoveNextAsync() like every other IAsyncEnumerable method in this codebase
+    // (StreamAsync/StreamWithImageAsync/StreamAudioAsync). A plain pass-through would throw
+    // synchronously at call time instead, escaping a caller's try/catch around only the `await
+    // foreach`, which every other streaming method here already protects against.
+    public async IAsyncEnumerable<InteractionStreamEvent> StreamTranscribeAsync(
         byte[] audioBytes,
         string mimeType,
         TranscriptionOptions? options = null,
-        CancellationToken cancellationToken = default)
+        [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         if (audioBytes is null || audioBytes.Length == 0)
         {
@@ -93,7 +99,11 @@ public class TranscriptionService : ITranscriptionService
         };
 
         var request = BuildRequest(input, options);
-        return _client.StreamInteractionAsync(request, cancellationToken);
+
+        await foreach (var evt in _client.StreamInteractionAsync(request, cancellationToken))
+        {
+            yield return evt;
+        }
     }
 
     /// <inheritdoc/>

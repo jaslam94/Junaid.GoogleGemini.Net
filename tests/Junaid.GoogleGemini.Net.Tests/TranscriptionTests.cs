@@ -53,6 +53,58 @@ public class TranscriptionTests
     }
 
     [Fact]
+    public async Task StreamTranscribeAsync_SendsCorrectRequestShapeAndYieldsEvents()
+    {
+        const string sse =
+            "event: step.delta\n" +
+            "data: {\"index\":0,\"delta\":{\"text\":\"hi\",\"type\":\"text\"}}\n" +
+            "\n" +
+            "event: interaction.completed\n" +
+            "data: {\"interaction\":{\"id\":\"v1_x\",\"status\":\"completed\",\"steps\":[{\"type\":\"model_output\",\"content\":[{\"type\":\"text\",\"text\":\"hi\"}]}]}}\n" +
+            "\n";
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, sse);
+        var service = CreateService(handler);
+
+        var events = new List<InteractionStreamEvent>();
+        await foreach (var evt in service.StreamTranscribeAsync([1, 2, 3], "audio/wav"))
+        {
+            events.Add(evt);
+        }
+
+        var body = handler.RequestBodies[0]!;
+        Assert.Contains($"\"model\":\"{GeminiConstants.Models.Gemini35Transcribe}\"", body);
+        Assert.Contains("\"stream\":true", body);
+        Assert.Contains("interactions?alt=sse", handler.Requests[0].RequestUri!.ToString());
+
+        Assert.Equal(2, events.Count);
+        Assert.Equal("hi", events[0].DeltaText);
+        Assert.Equal("completed", events[1].Interaction?.Status);
+    }
+
+    // A real async iterator, not a plain pass-through (see TranscriptionService.StreamTranscribeAsync's
+    // own comment): validation must be deferred to the first MoveNextAsync(), matching every other
+    // IAsyncEnumerable method in this codebase. A caller who wraps only the `await foreach` in
+    // try/catch (the normal pattern for this library's other streaming methods) must still catch this.
+    [Fact]
+    public async Task StreamTranscribeAsync_DefersValidationToFirstMoveNext_NotAtCallTime()
+    {
+        var handler = FakeHttpMessageHandler.RespondWith(HttpStatusCode.OK, "event: done\ndata: [DONE]\n\n");
+        var service = CreateService(handler);
+
+        // Calling it must not throw synchronously, even with invalid input.
+        var stream = service.StreamTranscribeAsync([], "audio/wav");
+        Assert.Empty(handler.Requests); // Nothing sent yet: enumeration hasn't started.
+
+        // The exception surfaces once enumeration actually begins.
+        await Assert.ThrowsAsync<ArgumentException>(async () =>
+        {
+            await foreach (var _ in stream)
+            {
+            }
+        });
+    }
+
+    [Fact]
     public async Task TranscribeAsync_WithTranscriptionOptions_SendsTranscriptionConfig()
     {
         const string ok = """{"id":"v1_abc","status":"completed","steps":[]}""";
