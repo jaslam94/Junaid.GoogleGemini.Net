@@ -16,13 +16,13 @@ Console.WriteLine(recipe.Title);
 2. `responseMimeType = application/json` and `responseSchema` are set on the request.
 3. The model's JSON reply is deserialized into `T`.
 
-You can still pass options (model, temperature, system instruction); the schema and MIME type are
+You can still pass options (model, thinking level, system instruction); the schema and MIME type are
 filled in only if you didn't set them:
 
 ```csharp
 var person = await gemini.GenerateAsync<Person>(
     "Pick a famous scientist.",
-    new GeminiRequestOptions { Model = "gemini-3.5-flash", Temperature = 0.2f });
+    new GeminiRequestOptions { Model = "gemini-3.8-flash", ThinkingLevel = "low" });
 ```
 
 ## Tips

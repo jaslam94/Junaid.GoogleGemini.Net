@@ -54,6 +54,41 @@ public class Part
     /// </summary>
     [JsonPropertyName("thoughtSignature")]
     public string? ThoughtSignature { get; set; }
+
+    /// <summary>
+    /// Speaker and delivery style for a text part sent to a Gemini 3.8 TTS model. The 3.8 models read
+    /// the text as a verbatim transcript, so this is where a speaker name and a style such as
+    /// "whispering" go. The older TTS models reject this field with HTTP 400. The library sets it for
+    /// you when you use <c>GeminiRequestOptions.SpeakerVoices</c> or <c>SpeechStyle</c>.
+    /// </summary>
+    [JsonPropertyName("speechMetadata")]
+    public SpeechMetadata? SpeechMetadata { get; set; }
+
+    /// <summary>
+    /// How the model reads a video part: one of the <c>GeminiConstants.MediaProcessing</c> values.
+    /// Google ignores it on parts that are not video. Taken from Google's API reference and not
+    /// live-tested against a real video.
+    /// </summary>
+    [JsonPropertyName("mediaProcessing")]
+    public string? MediaProcessing { get; set; }
+}
+
+/// <summary>
+/// Speaker and style for one text part, for Gemini 3.8 TTS models (<c>Part.speechMetadata</c>).
+/// Live-verified on 2026-10-10, see <c>PLAN-tts-3-8.md</c>.
+/// </summary>
+public class SpeechMetadata
+{
+    /// <summary>
+    /// The speaker for this turn. In a multi-speaker request it must match a name in
+    /// <c>SpeakerVoices</c>, and every text part must set it.
+    /// </summary>
+    [JsonPropertyName("speaker")]
+    public string? Speaker { get; set; }
+
+    /// <summary>A short delivery direction for this turn, for example "whispering" or "cheerful".</summary>
+    [JsonPropertyName("style")]
+    public string? Style { get; set; }
 }
 
 /// <summary>References a file uploaded via the Files API.</summary>
@@ -71,6 +106,15 @@ public class FileData
 /// <summary>A function call emitted by the model.</summary>
 public class FunctionCallPart
 {
+    /// <summary>
+    /// The call identifier the model assigned (for example <c>"call_148005"</c>). Gemini 3 models
+    /// return it. Copy it into <see cref="FunctionResponsePart.Id"/> when you reply. A reply without it
+    /// still worked on <c>gemini-3.8-flash</c> in a live test (2026-10-10), but Google's 3.8 migration
+    /// checklist asks for it, and it is the only way to match replies to parallel calls of one function.
+    /// </summary>
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
     /// <summary>The function name the model wants to call.</summary>
     [JsonPropertyName("name")]
     public string? Name { get; set; }
@@ -83,6 +127,13 @@ public class FunctionCallPart
 /// <summary>A function result sent back to the model.</summary>
 public class FunctionResponsePart
 {
+    /// <summary>
+    /// The <see cref="FunctionCallPart.Id"/> of the call this response answers. Leave it null when the
+    /// call had no id.
+    /// </summary>
+    [JsonPropertyName("id")]
+    public string? Id { get; set; }
+
     /// <summary>The function name being responded to.</summary>
     [JsonPropertyName("name")]
     public string? Name { get; set; }

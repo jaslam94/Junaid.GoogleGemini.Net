@@ -37,26 +37,33 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// GA (September 2, 2026), the most capable Flash model: "engineered for long-horizon
             /// software engineering, autonomous agents, and complex enterprise workflows" per Google's
-            /// own description. Same introductory pricing as <see cref="Gemini37Flash"/> (through
-            /// December 31, 2026). Also ignores temperature/topP/topK (see the deprecation note on
-            /// <c>GenerationConfig</c>).
+            /// own description. It has the same introductory pricing as <see cref="Gemini36Flash"/>
+            /// through December 31, 2026. It accepts the thinking levels low, medium and high, and
+            /// returns HTTP 400 for minimal (live-verified). It ignores temperature, topP and topK (see
+            /// the deprecation note on <c>GenerationConfig</c>).
             /// </summary>
             public const string Gemini38Flash = "gemini-3.8-flash";
             /// <summary>
-            /// GA (August 2026), the most capable Flash model: built for complex coding and agentic
-            /// workflows. Superseded as the default by <see cref="Gemini38Flash"/> (September 2026) but
-            /// still fully supported, same introductory pricing through December 31, 2026. Also ignores
-            /// temperature/topP/topK (see the deprecation note on <c>GenerationConfig</c>).
+            /// Deprecated by Google on October 8, 2026. Google now routes every request for this model
+            /// to <see cref="Gemini38Flash"/>, so the response comes from 3.8 whatever name you send.
+            /// Use <see cref="Gemini38Flash"/>.
             /// </summary>
+            [Obsolete("Google deprecated gemini-3.7-flash on 2026-10-08 and routes it to gemini-3.8-flash. Use Models.Gemini38Flash.")]
             public const string Gemini37Flash = "gemini-3.7-flash";
             /// <summary>
-            /// GA (July 2026): improved coding/agentic planning and ~17% fewer tokens per response
-            /// than <see cref="Gemini35Flash"/>. Superseded as the default by <see cref="Gemini37Flash"/>
-            /// (August 2026) but still fully supported. See the temperature/topP/topK deprecation note
-            /// on <c>GenerationConfig</c>. This model ignores those sampling params.
+            /// GA (July 2026): improved coding and agentic planning, and about 17% fewer tokens per
+            /// response than gemini-3.5-flash. Superseded as the default by <see cref="Gemini38Flash"/>
+            /// but still supported, with the same introductory pricing through December 31, 2026. Per
+            /// Google's docs it accepts all four thinking levels (we did not test that). It ignores
+            /// temperature, topP and topK (see the deprecation note on <c>GenerationConfig</c>).
             /// </summary>
             public const string Gemini36Flash = "gemini-3.6-flash";
-            /// <summary>GA, sustained frontier flash performance. Superseded as the default by <see cref="Gemini36Flash"/> (July 2026) but still fully supported.</summary>
+            /// <summary>
+            /// Deprecated by Google on October 8, 2026. Google now routes every request for this model
+            /// to <see cref="Gemini36Flash"/>. Use <see cref="Gemini38Flash"/> or
+            /// <see cref="Gemini36Flash"/>.
+            /// </summary>
+            [Obsolete("Google deprecated gemini-3.5-flash on 2026-10-08 and routes it to gemini-3.6-flash. Use Models.Gemini38Flash or Models.Gemini36Flash.")]
             public const string Gemini35Flash = "gemini-3.5-flash";
             public const string Gemini31Pro = "gemini-3.1-pro-preview";
             public const string Gemini3Flash = "gemini-3-flash-preview";
@@ -68,6 +75,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>GA, cost-efficient for high volume.</summary>
             public const string Gemini31FlashLite = "gemini-3.1-flash-lite";
             /// <summary>
+            /// GA (October 6, 2026): Nano Banana 2.1, the update to <see cref="Gemini31FlashImage"/>.
+            /// It improves text rendering and multi-turn character consistency. It accepts the wide and
+            /// tall ratios 1:4, 4:1, 1:8 and 8:1 (live-verified at 1:8), and the sizes 1K, 2K and 4K. It
+            /// rejects the 512 size. Thinking levels are minimal, medium (the default) and high. It has
+            /// no free tier and does not support context caching. Live-tested 2026-10-10: simple prompts
+            /// sometimes return <c>finishReason: IMAGE_RECITATION</c> with no image, so
+            /// <see cref="RecommendedImage"/> still points at the older model.
+            /// </summary>
+            public const string GeminiNanoBanana21 = "gemini-nano-banana-2.1";
+            /// <summary>
             /// Highest-quality native image generation (Nano Banana Pro). GA (May 2026, unsuffixed
             /// name); the earlier "-preview"-suffixed model ID this constant used to hold was shut
             /// down June 25, 2026. Pass this value, not the old preview string.
@@ -76,7 +93,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// High-efficiency native image generation (Nano Banana 2). GA (May 2026, unsuffixed
             /// name); the earlier "-preview"-suffixed model ID this constant used to hold was shut
-            /// down June 25, 2026. Pass this value, not the old preview string.
+            /// down June 25, 2026. Pass this value, not the old preview string. Google deprecated this
+            /// model on October 6, 2026 (no shutdown date yet) in favor of <see cref="GeminiNanoBanana21"/>.
             /// </summary>
             public const string Gemini31FlashImage = "gemini-3.1-flash-image";
             /// <summary>
@@ -85,12 +103,33 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// </summary>
             public const string Gemini31FlashLiteImage = "gemini-3.1-flash-lite-image";
 
-            // Text-to-speech. All three are "-preview" models as of 2026-09-04; live-verified
-            // request/response shape, see PLAN-tts.md. This library does not enumerate voice names
-            // (e.g. "Kore") as constants: see PLAN-tts.md for why, and Google's TTS voice list for
-            // the current full set.
+            // Text-to-speech. The two 3.8 models are GA (September 22, 2026) and live-verified, see
+            // PLAN-tts-3-8.md. The three older models shut down on November 17, 2026. This library does
+            // not enumerate voice names (e.g. "Kore") as constants: see PLAN-tts.md for why, and Google's
+            // TTS voice list for the current full set.
+
+            /// <summary>
+            /// GA (September 22, 2026): Google's flagship TTS model, built for studio-grade voice, acting
+            /// nuance and long-form audio. It covers over 130 languages. It reads the prompt as a verbatim
+            /// transcript, so put delivery directions in <c>SpeechStyle</c>, not in the text. Input is
+            /// limited to 8,192 tokens. It has a free tier.
+            /// </summary>
+            public const string Gemini38FlashTts = "gemini-3.8-flash-tts";
+            /// <summary>
+            /// GA (September 22, 2026): the faster, cheaper TTS model for high-volume and real-time use.
+            /// It is Google's replacement for <c>gemini-3.1-flash-tts-preview</c> and covers over 100
+            /// languages. It reads the prompt as a verbatim transcript, like <see cref="Gemini38FlashTts"/>.
+            /// It has a free tier.
+            /// </summary>
+            public const string Gemini38FlashLiteTts = "gemini-3.8-flash-lite-tts";
+            /// <summary>Shuts down November 17, 2026. Use <see cref="Gemini38FlashLiteTts"/> or <see cref="Gemini38FlashTts"/>.</summary>
+            [Obsolete("Google shuts down gemini-2.5-flash-preview-tts on 2026-11-17. Use Models.Gemini38FlashLiteTts or Models.Gemini38FlashTts.")]
             public const string Gemini25FlashTts = "gemini-2.5-flash-preview-tts";
+            /// <summary>Shuts down November 17, 2026. Use <see cref="Gemini38FlashTts"/>.</summary>
+            [Obsolete("Google shuts down gemini-2.5-pro-preview-tts on 2026-11-17. Use Models.Gemini38FlashTts or Models.Gemini38FlashLiteTts.")]
             public const string Gemini25ProTts = "gemini-2.5-pro-preview-tts";
+            /// <summary>Shuts down November 17, 2026. Use <see cref="Gemini38FlashLiteTts"/>, Google's named replacement.</summary>
+            [Obsolete("Google shuts down gemini-3.1-flash-tts-preview on 2026-11-17. Use Models.Gemini38FlashLiteTts or Models.Gemini38FlashTts.")]
             public const string Gemini31FlashTts = "gemini-3.1-flash-tts-preview";
 
             // Speech-to-text. This is NOT a generateContent model: it is called through the
@@ -100,7 +139,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             // shape, see PLAN-stt.md. Not listed in ContentGenerationModels for that reason.
             public const string Gemini35Transcribe = "gemini-3.5-transcribe";
 
-            // Gemini 2.x (still available).
+            // Gemini 2.x. Not deprecated, but since September 18, 2026 Google limits access to projects
+            // that used these models before. A new project can be refused. Use the Gemini 3 models above.
             public const string Gemini25Pro = "gemini-2.5-pro";
             public const string Gemini25Flash = "gemini-2.5-flash";
             public const string Gemini15Pro = "gemini-1.5-pro";
@@ -120,9 +160,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public static readonly string[] ContentGenerationModels =
             {
                 Gemini38Flash,
-                Gemini37Flash,
                 Gemini36Flash,
-                Gemini35Flash,
                 Gemini31Pro,
                 Gemini3Flash,
                 Gemini35FlashLite,
@@ -148,19 +186,27 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
             /// <summary>
             /// The recommended model for image generation: the efficient flash variant, not the
-            /// higher-cost "pro" one. Both are GA (unsuffixed model IDs). Pass
-            /// <see cref="Gemini3ProImage"/> explicitly for higher quality, or
-            /// <see cref="Gemini31FlashLiteImage"/> for the fastest/cheapest option.
+            /// higher-cost "pro" one. This is still <see cref="Gemini31FlashImage"/>, which Google
+            /// deprecated on October 6, 2026 without a shutdown date. We tried
+            /// <see cref="GeminiNanoBanana21"/> as the default on 2026-10-10 and kept the old model:
+            /// the newer one answered simple prompts with <c>finishReason: IMAGE_RECITATION</c> and no
+            /// image ("A small red circle on a plain white background" failed 2 of 2 calls, and a plain
+            /// blue rectangle failed 1 of 6), while the old model returned an image. Pass
+            /// <see cref="GeminiNanoBanana21"/> explicitly to use it, and check
+            /// <c>GenerateContentResponse.FinishReason</c> when no image comes back. Pass
+            /// <see cref="Gemini3ProImage"/> for higher quality, or <see cref="Gemini31FlashLiteImage"/>
+            /// for the fastest and cheapest option. Change this default once Google sets a shutdown
+            /// date for the old model.
             /// </summary>
             public static string RecommendedImage => Gemini31FlashImage;
 
             /// <summary>
-            /// The recommended model for text-to-speech: free tier available, per Google's pricing
-            /// page (re-verify before relying on this for a free-tier deployment; see PLAN-tts.md).
-            /// Pass <see cref="Gemini25ProTts"/> explicitly for higher quality (paid tier only), or
-            /// <see cref="Gemini31FlashTts"/> for the newer Gemini 3 generation.
+            /// The recommended model for text-to-speech: <see cref="Gemini38FlashLiteTts"/>, the
+            /// cheaper of the two 3.8 models. It has a free tier on Google's Standard rate. Pass
+            /// <see cref="Gemini38FlashTts"/> explicitly for the highest voice quality. Before 6.8.0
+            /// this was <c>gemini-2.5-flash-preview-tts</c>, which shuts down on November 17, 2026.
             /// </summary>
-            public static string RecommendedTts => Gemini25FlashTts;
+            public static string RecommendedTts => Gemini38FlashLiteTts;
 
             /// <summary>
             /// The recommended model for speech-to-text (only one option exists today, see
@@ -345,8 +391,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         {
             /// <summary>
             /// Default timeout in seconds. Generous by default because current models (Gemini 3
-            /// "thinking" models default to high reasoning depth) can take well over a minute on a
-            /// single call; a short timeout produces spurious GeminiTimeoutExceptions.
+            /// "thinking" models) can take well over a minute on a single call at a high reasoning
+            /// depth; a short timeout produces spurious GeminiTimeoutExceptions.
             /// </summary>
             public const int TimeoutSeconds = 100;
 
@@ -372,9 +418,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
         /// <summary>
         /// Thinking levels for Gemini 3+ (<c>thinkingConfig.thinkingLevel</c>). Controls reasoning depth.
+        /// Not every model accepts every level. Live-verified on 2026-10-10: <c>gemini-3.8-flash</c>
+        /// accepts low, medium and high, and returns HTTP 400 for <see cref="Minimal"/>. Per Google,
+        /// <c>gemini-3.6-flash</c> and <c>gemini-3.5-flash-lite</c> accept all four levels, and
+        /// <c>gemini-nano-banana-2.1</c> accepts minimal, medium and high. To turn thinking off on
+        /// <c>gemini-3.8-flash</c>, <c>GeminiRequestOptions.ThinkingBudget = 0</c> returned HTTP 200 with
+        /// no thought tokens. Google's docs do not describe that, so treat it as observed behavior.
         /// </summary>
         public static class ThinkingLevels
         {
+            /// <summary>Not supported by <c>gemini-3.8-flash</c> (HTTP 400).</summary>
             public const string Minimal = "minimal";
             public const string Low = "low";
             public const string Medium = "medium";
@@ -425,6 +478,15 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string Portrait9x16 = "9:16";
             public const string Widescreen16x9 = "16:9";
             public const string Ultrawide21x9 = "21:9";
+
+            /// <summary>Tall strip. Listed in Google's API reference for <c>gemini-nano-banana-2.1</c> (GA October 2026).</summary>
+            public const string Tall1x4 = "1:4";
+            /// <summary>Wide strip. Added with <c>gemini-nano-banana-2.1</c> (GA October 2026).</summary>
+            public const string Wide4x1 = "4:1";
+            /// <summary>Very tall strip. Live-verified on <c>gemini-nano-banana-2.1</c> (GA October 2026).</summary>
+            public const string Tall1x8 = "1:8";
+            /// <summary>Very wide strip. Added with <c>gemini-nano-banana-2.1</c> (GA October 2026).</summary>
+            public const string Wide8x1 = "8:1";
         }
 
         /// <summary>
@@ -432,11 +494,57 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// </summary>
         public static class ImageSizes
         {
+            /// <summary>
+            /// The API accepts <c>512</c> as a value, and Google documents it for
+            /// <c>gemini-3.1-flash-image</c>. <c>gemini-nano-banana-2.1</c> rejects it with HTTP 400
+            /// ("Image size 512 is not supported for this model"), live-verified on 2026-10-10.
+            /// </summary>
+            public const string FiveTwelve = "512";
             public const string OneK = "1K";
             public const string TwoK = "2K";
             public const string FourK = "4K";
         }
 
         #endregion Image Generation
+
+        #region Audio & Video
+
+        /// <summary>
+        /// Output encodings for <c>generationConfig.responseFormat.audio.mimeType</c> on the Gemini 3.8
+        /// TTS models. Live-verified on 2026-10-10: without this setting a unary call returns
+        /// <c>audio/wav</c> and a streaming call returns <c>audio/l16</c>.
+        /// </summary>
+        public static class AudioFormats
+        {
+            /// <summary>
+            /// Raw 16-bit linear PCM, returned as <c>audio/l16; rate=24000; channels=1</c>. This is the
+            /// shape <c>GeneratedAudio.ToWav()</c> wraps in a WAV header.
+            /// </summary>
+            public const string Pcm16 = "AUDIO_L16";
+            /// <summary>A WAV file with a RIFF header. This is the default for a unary 3.8 TTS call.</summary>
+            public const string Wav = "AUDIO_WAV";
+            /// <summary>8-bit G.711 mu-law, for telephony. <c>ToWav()</c> does not convert this format.</summary>
+            public const string Mulaw = "AUDIO_MULAW";
+            /// <summary>8-bit G.711 A-law, for telephony. <c>ToWav()</c> does not convert this format.</summary>
+            public const string Alaw = "AUDIO_ALAW";
+        }
+
+        /// <summary>
+        /// Values for <c>Part.MediaProcessing</c>, which controls how the model reads a video part.
+        /// Taken from Google's API reference. Not live-tested against a real video.
+        /// </summary>
+        public static class MediaProcessing
+        {
+            /// <summary>Fixed-rate frame extraction. All frames go into the context.</summary>
+            public const string Static = "STATIC";
+            /// <summary>
+            /// The model navigates the video on demand and asks for transcripts, frames or audio as it
+            /// needs them. Google calls this "recommended for most use cases" and claims up to 88%
+            /// fewer tokens on long videos.
+            /// </summary>
+            public const string Agentic = "AGENTIC";
+        }
+
+        #endregion Audio & Video
     }
 }

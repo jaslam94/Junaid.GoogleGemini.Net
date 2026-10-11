@@ -63,13 +63,18 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
 
         /// <summary>
         /// Thinking/reasoning token budget (Gemini 2.5). <c>0</c> disables thinking where allowed;
-        /// <c>-1</c> lets the model decide. Mutually exclusive with <see cref="ThinkingLevel"/>.
+        /// <c>-1</c> lets the model decide. Mutually exclusive with <see cref="ThinkingLevel"/>. Google's
+        /// docs tell Gemini 3.6 and later users to use <see cref="ThinkingLevel"/> instead. In a live test
+        /// on 2026-10-10, <c>0</c> returned HTTP 200 with no thought tokens on <c>gemini-3.6-flash</c> and
+        /// <c>gemini-3.8-flash</c>. That is the only way to turn thinking off on 3.8, which rejects the
+        /// "minimal" level. Google does not document this, so it may change.
         /// </summary>
         public int? ThinkingBudget { get; set; }
 
         /// <summary>
         /// Reasoning depth for Gemini 3+ (see <c>GeminiConstants.ThinkingLevels</c>): "minimal", "low",
-        /// "medium", or "high". Mutually exclusive with <see cref="ThinkingBudget"/>.
+        /// "medium", or "high". Mutually exclusive with <see cref="ThinkingBudget"/>. Not every model
+        /// accepts every level. <c>gemini-3.8-flash</c> returns HTTP 400 for "minimal".
         /// </summary>
         public string? ThinkingLevel { get; set; }
 
@@ -135,11 +140,58 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// <c>[("Joe", "Kore"), ("Jane", "Puck")]</c>. Each <c>Speaker</c> must match a speaker name
         /// as it appears in the input text. Takes priority over <see cref="VoiceName"/> when both
         /// are set.
+        /// <para>
+        /// Write the script as <c>Joe: Hi Jane! Jane: Hello Joe!</c>. On the Gemini 3.8 TTS models the
+        /// library splits the script at each <c>Name:</c> marker and sends one part per turn. Google
+        /// requires this shape, and it rejects the older "labels inside one text" shape with HTTP 400.
+        /// Text before the first marker is dropped, because the 3.8 models would read it aloud. A
+        /// marker also splits dialogue that contains a speaker name followed by a colon in the middle
+        /// of a sentence. The older TTS models still get the whole prompt unchanged.
+        /// </para>
         /// </summary>
         public IReadOnlyList<(string Speaker, string VoiceName)>? SpeakerVoices { get; set; }
 
         /// <summary>
-        /// Creates options optimized for creative tasks using the recommended model
+        /// A short delivery direction for the whole clip, such as <c>"whispering"</c> or
+        /// <c>"cheerful, then calm"</c>. The library sends it as <c>speechMetadata.style</c> on every
+        /// text part. The Gemini 3.8 TTS models read the prompt as a verbatim transcript, so a direction
+        /// written inside the prompt text ("Say cheerfully: ...") is spoken aloud. The older TTS models do
+        /// not support this field, so setting it with one of them throws an
+        /// <see cref="InvalidOperationException"/>. Write the direction in the prompt for those models.
+        /// </summary>
+        public string? SpeechStyle { get; set; }
+
+        /// <summary>
+        /// Chooses between the two multi-speaker and style request shapes. <c>null</c> (the default)
+        /// picks by model: the three older TTS models (<c>gemini-2.5-flash-preview-tts</c>,
+        /// <c>gemini-2.5-pro-preview-tts</c> and <c>gemini-3.1-flash-tts-preview</c>) use text labels, and
+        /// every other model uses <c>speechMetadata</c>. Set <c>true</c> or <c>false</c> to force a
+        /// shape, for example for a TTS model released after this library version.
+        /// </summary>
+        public bool? UseSpeechMetadata { get; set; }
+
+        /// <summary>
+        /// Audio encoding for a Gemini 3.8 TTS response: one of the <c>GeminiConstants.AudioFormats</c>
+        /// values. Leave it null for the model default (WAV for a unary call, raw 16-bit PCM for a
+        /// stream). <c>GeneratedAudio.ToWav()</c> accepts both defaults. The older TTS models were not
+        /// tested with this field. There is no sample-rate option on purpose. Google documents one, but
+        /// in a live test on 2026-10-10 the API ignored requests for 16000 and 8000: the WAV header and
+        /// the L16 mimeType both stayed at 24000.
+        /// </summary>
+        public string? AudioFormat { get; set; }
+
+        /// <summary>
+        /// A BCP-47 language code such as <c>"en-US"</c> for TTS. Optional, because the Gemini 3.8 TTS
+        /// models detect the language of the text.
+        /// </summary>
+        public string? SpeechLanguageCode { get; set; }
+
+        /// <summary>
+        /// Creates options optimized for creative tasks using the recommended model.
+        /// <b>Note:</b> the recommended model (<c>gemini-3.8-flash</c>) ignores these sampling params
+        /// (see the deprecation note on <see cref="Temperature"/>). Google plans to return HTTP 400 for
+        /// them on future model generations, so do not rely on this preset for a model you have not
+        /// tested.
         /// </summary>
         public static GeminiRequestOptions Creative(string? model = null) => new()
         {
@@ -254,7 +306,11 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             ImageAspectRatio = ImageAspectRatio,
             ImageSize = ImageSize,
             VoiceName = VoiceName,
-            SpeakerVoices = SpeakerVoices
+            SpeakerVoices = SpeakerVoices,
+            SpeechStyle = SpeechStyle,
+            UseSpeechMetadata = UseSpeechMetadata,
+            AudioFormat = AudioFormat,
+            SpeechLanguageCode = SpeechLanguageCode
         };
     }
 }

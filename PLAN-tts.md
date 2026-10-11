@@ -6,6 +6,10 @@ against a fresh billing-enabled key (all 5 live tests plus the full 41-test live
 evaluated and deliberately deferred a newer "Interactions API" surface Google now documents
 alongside `generateContent`; see §9.
 
+Update, October 2026: Google shuts down all three models this plan covers on 2026-11-17. The
+replacement models change the request shape. `PLAN-tts-3-8.md` records what we found and what
+`6.8.0` changed. Read it before you rely on §2 below.
+
 ## 1. Goal
 
 Let a caller turn text into spoken audio using Gemini's native TTS models, in the same low-friction

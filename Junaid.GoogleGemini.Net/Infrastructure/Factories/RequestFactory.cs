@@ -10,14 +10,16 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
     public static class RequestFactory
     {
         /// <summary>
-        /// Creates a simple text request
+        /// Creates a simple text request. When <see cref="GeminiRequestOptions.SpeakerVoices"/> or
+        /// <see cref="GeminiRequestOptions.SpeechStyle"/> is set, the text may become several parts that
+        /// carry <c>speechMetadata</c>. See <c>PLAN-tts-3-8.md</c>.
         /// </summary>
         public static GenerateContentRequest CreateTextRequest(string text, GeminiRequestOptions? options = null)
         {
             var content = new Content
             {
                 Role = "user",
-                Parts = new List<Part> { new() { Text = text } }
+                Parts = SpeechScript.BuildTextParts(text, options)
             };
 
             return new GenerateContentRequest
@@ -143,7 +145,22 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
                 ThinkingConfig = BuildThinkingConfig(options),
                 ResponseModalities = options.ResponseModalities,
                 ImageConfig = BuildImageConfig(options),
-                SpeechConfig = BuildSpeechConfig(options)
+                SpeechConfig = BuildSpeechConfig(options),
+                ResponseFormat = BuildResponseFormat(options)
+            };
+        }
+
+        /// <summary>Builds an audio response format from options, or null when no format is set.</summary>
+        private static ResponseFormatConfig? BuildResponseFormat(GeminiRequestOptions options)
+        {
+            if (options.AudioFormat is null)
+            {
+                return null;
+            }
+
+            return new ResponseFormatConfig
+            {
+                Audio = new AudioResponseFormat { MimeType = options.AudioFormat }
             };
         }
 
@@ -163,27 +180,27 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
         }
 
         /// <summary>
-        /// Builds a speech config from options, or null when neither field is set.
+        /// Builds a speech config from options, or null when no voice or language is set.
         /// <see cref="GeminiRequestOptions.SpeakerVoices"/> takes priority over
         /// <see cref="GeminiRequestOptions.VoiceName"/> when both are set, since a script naming
         /// multiple speakers cannot sensibly also use one global voice.
         /// </summary>
         private static SpeechConfig? BuildSpeechConfig(GeminiRequestOptions options)
         {
+            var languageCode = string.IsNullOrWhiteSpace(options.SpeechLanguageCode) ? null : options.SpeechLanguageCode;
+
             if (options.SpeakerVoices is { Count: > 0 })
             {
                 return new SpeechConfig
                 {
+                    LanguageCode = languageCode,
                     MultiSpeakerVoiceConfig = new MultiSpeakerVoiceConfig
                     {
                         SpeakerVoiceConfigs = options.SpeakerVoices
                             .Select(sv => new SpeakerVoiceConfig
                             {
                                 Speaker = sv.Speaker,
-                                VoiceConfig = new VoiceConfig
-                                {
-                                    PrebuiltVoiceConfig = new PrebuiltVoiceConfig { VoiceName = sv.VoiceName }
-                                }
+                                VoiceConfig = CreateVoiceConfig(sv.VoiceName)
                             })
                             .ToList()
                     }
@@ -194,15 +211,23 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories
             {
                 return new SpeechConfig
                 {
-                    VoiceConfig = new VoiceConfig
-                    {
-                        PrebuiltVoiceConfig = new PrebuiltVoiceConfig { VoiceName = options.VoiceName }
-                    }
+                    LanguageCode = languageCode,
+                    VoiceConfig = CreateVoiceConfig(options.VoiceName)
                 };
             }
 
-            return null;
+            return languageCode is null ? null : new SpeechConfig { LanguageCode = languageCode };
         }
+
+        /// <summary>
+        /// A custom voice id (<c>voice_...</c> or <c>voicekey_...</c>) goes in <c>voiceConfig.voice</c>.
+        /// A named voice such as <c>Kore</c> goes in <c>prebuiltVoiceConfig</c>. Live-verified on
+        /// 2026-10-10: the API looks up an id only through the first field.
+        /// </summary>
+        private static VoiceConfig CreateVoiceConfig(string voice) =>
+            voice.StartsWith("voice_", StringComparison.Ordinal) || voice.StartsWith("voicekey_", StringComparison.Ordinal)
+                ? new VoiceConfig { Voice = voice }
+                : new VoiceConfig { PrebuiltVoiceConfig = new PrebuiltVoiceConfig { VoiceName = voice } };
 
         /// <summary>Builds a system-instruction content block from options, or null when none is set.</summary>
         private static Content? BuildSystemInstruction(GeminiRequestOptions? options)

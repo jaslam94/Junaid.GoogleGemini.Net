@@ -109,9 +109,10 @@ app.MapPost("/chat", async (IChatClient chat, ChatRequest request) =>
 
 app.Run();
 
-// gemini-3.8-flash (like the 3.x flash models before it) defaults to a "high" thinking level, which
-// can add tens of seconds (even >2 min) of latency per call. For these simple demo endpoints we opt
-// down to "low" so responses are snappy.
+// gemini-3.8-flash is a thinking model. Google documents "medium" as its default level, but a call
+// can still add tens of seconds of latency when it reasons for long. We have seen more than 2
+// minutes on earlier 3.x models. For these simple demo endpoints we opt down to "low" so responses
+// are snappy.
 // Drop this (or raise it) when you actually want deeper reasoning.
 static GeminiRequestOptions Fast() => new() { ThinkingLevel = GeminiConstants.ThinkingLevels.Low };
 

@@ -47,7 +47,7 @@ public class MultimodalEmbeddingLiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task EmbedContentAsync_AudioWithoutText_ReturnsValidEmbedding()
     {
-        var audioBytes = await GenerateSpeechWavAsync("Say clearly: The stock market rallied today.");
+        var audioBytes = await GenerateSpeechWavAsync("The stock market rallied today.");
 
         var response = await Embeddings.EmbedContentAsync(GeminiConstants.Models.GeminiEmbedding2, audioBytes, "audio/wav");
 
@@ -118,7 +118,7 @@ public class MultimodalEmbeddingLiveTests(GeminiFixture fixture)
     {
         var response = await Gemini.GenerateAudioAsync(prompt, new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
+            Model = GeminiConstants.Models.RecommendedTts,
             VoiceName = "Kore",
         });
         return response.GetAudioOrThrow().ToWav();

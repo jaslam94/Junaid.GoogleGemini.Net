@@ -572,6 +572,60 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       audio without text, file-based, a hand-built PDF, mixed-batch, and the `TaskType` no-effect
       confirmation through the typed client) plus the broader 43-passing non-Batch live suite,
       confirming no regression to any existing feature. No breaking changes.
+- [x] Gemini 3.8 TTS and the October 2026 model refresh (`6.8.0`): Google shuts down all three TTS
+      models this library shipped on 2026-11-17, and `GenerateAudioAsync` used one of them by default.
+      We wrote `PLAN-tts-3-8.md` and checked every difference live before any code. The 3.8 models are
+      not a drop-in swap. We found four breaks:
+      1. A unary call returns `audio/wav`, not raw PCM. `GeneratedAudio.ToWav()` threw on it.
+      2. The model speaks the prompt word for word. The docs example `"Say cheerfully: ..."` was read
+         aloud. We proved it: output tokens went from 46 to 83.
+      3. The multi-speaker request from `6.5.0` returns HTTP 400. Google now wants one part per turn,
+         each with `speechMetadata.speaker`.
+      4. The three old models reject `speechMetadata` with HTTP 400, so one shape cannot serve both.
+
+      We kept the public API stable, as you chose. `SpeakerVoices` takes the same script. On a 3.8 model
+      the library splits it at each `Name:` marker and drops any text before the first marker. The old
+      models keep the old shape. A new `UseSpeechMetadata` option overrides the choice by model name. New
+      options: `SpeechStyle`, `AudioFormat` and `SpeechLanguageCode`. We left out a sample-rate option:
+      Google documents one, but the API ignored requests for 16000 and 8000 in a live test. A `VoiceName` that
+      starts with `voice_` or `voicekey_` now goes in the custom-voice field. `ToWav()` returns WAV input
+      unchanged.
+
+      Cost governance is now date-aware. Google's introductory price for `gemini-3.6-flash`,
+      `gemini-3.8-flash` and the 3.8 TTS models ends on 2026-12-31, and the standard rate (double) starts
+      on 2027-01-01. `ModelPricing` has `NextPricing` and `NextPricingEffectiveFromUtc`. The built-in table
+      carries the 2027 rates, so a budget does not silently undercount by half in January. We assume 00:00
+      UTC, because Google gives no time zone. `gemini-3.5-flash` and `gemini-3.7-flash` are priced as the
+      models Google routes them to. We assume that is how Google bills them. That is not confirmed.
+
+      Smaller changes: the Nano Banana 2.1 model and its 1:4, 4:1, 1:8 and 8:1 ratios; the `512` image
+      size; call `Id` on function calls and responses; `Part.MediaProcessing`; `[Obsolete]` on the 3.5
+      and 3.7 Flash constants and the three old TTS constants; corrected thinking-level docs.
+
+      Live findings worth keeping, all from 2026-10-10: `gemini-3.8-flash` rejects `minimal` thinking with
+      HTTP 400. `ThinkingBudget = 0` returned HTTP 200 with no thought tokens on 3.6 and 3.8, which is
+      undocumented. A history that ends with a model turn returns HTTP 400. The call `id` is returned by
+      3.8, but a reply without it still worked. Nano Banana 2.1 rejects the `512` size.
+
+      The live suite changed one decision. We planned to make Nano Banana 2.1 the default image model.
+      Two live tests failed: the new model returned `finishReason: IMAGE_RECITATION` and no image for
+      "a small red circle on a plain white background" (2 of 2 calls). A plain blue rectangle failed 1 of 6
+      calls, and the same prompt worked on the next call. The old model returned an image. We reverted
+      the default to `gemini-3.1-flash-image`, and kept Nano Banana 2.1 as an opt-in constant. Google
+      deprecated the old model but set no shutdown date. Revisit this when it does.
+
+      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 241 tests
+      (up from 185), all green on both net8.0 and net9.0. The non-Batch live suite has 52 tests, all
+      green. The TTS live tests send their audio back through the transcription model, so they check
+      what was said, not only that the file is well formed. That proves the style direction is no longer
+      spoken and that the preamble no longer leaks into the speech, for a unary call and for a stream.
+
+      We did not verify: `Part.MediaProcessing` against a real video (no safe test clip); the inline
+      tags such as `<laugh>`; a working custom voice id (we only saw the 404 for an unknown id); or the
+      Voices API, which this release does not wrap. No .NET 8 runtime is installed on the build machine,
+      so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. The `netstandard2.0` target
+      is compiled but not run. There are no breaking changes to compiled code. The behavior changes are the default TTS model, `ToWav()` on WAV input,
+      and prompts that put a direction in the text.
 
 ---
 

@@ -108,6 +108,38 @@ public class GenerationConfig
     /// </summary>
     [JsonPropertyName("speechConfig")]
     public SpeechConfig? SpeechConfig { get; set; }
+
+    /// <summary>
+    /// Output format per modality. Today this library uses it only for audio, to choose the encoding of
+    /// a Gemini 3.8 TTS response (see <see cref="AudioResponseFormat"/>).
+    /// </summary>
+    [JsonPropertyName("responseFormat")]
+    public ResponseFormatConfig? ResponseFormat { get; set; }
+}
+
+/// <summary>
+/// Output format settings (<c>generationConfig.responseFormat</c>). Google's reference also lists
+/// <c>text</c> and <c>image</c> members. This library models only <c>audio</c> for now.
+/// </summary>
+public class ResponseFormatConfig
+{
+    /// <summary>Audio encoding and sample rate.</summary>
+    [JsonPropertyName("audio")]
+    public AudioResponseFormat? Audio { get; set; }
+}
+
+/// <summary>
+/// Audio output encoding for Gemini 3.8 TTS models. Live-verified on 2026-10-10: setting
+/// <see cref="MimeType"/> to <c>AUDIO_L16</c> returns <c>audio/l16; rate=24000; channels=1</c>.
+/// </summary>
+public class AudioResponseFormat
+{
+    /// <summary>One of the <c>GeminiConstants.AudioFormats</c> values (for example <c>"AUDIO_L16"</c>).</summary>
+    [JsonPropertyName("mimeType")]
+    public string? MimeType { get; set; }
+
+    // Google's reference also lists sampleRate. We do not model it: in a live test on 2026-10-10 the API
+    // ignored requests for 16000 and 8000 and returned 24000 audio every time.
 }
 
 /// <summary>Image generation settings for Gemini 3+ image models (<c>generationConfig.imageConfig</c>).</summary>
@@ -134,14 +166,30 @@ public class SpeechConfig
     /// <see cref="VoiceConfig"/> when the input text names more than one speaker.</summary>
     [JsonPropertyName("multiSpeakerVoiceConfig")]
     public MultiSpeakerVoiceConfig? MultiSpeakerVoiceConfig { get; set; }
+
+    /// <summary>
+    /// A BCP-47 language code such as <c>"en-US"</c>. The 3.8 TTS models detect the language on their
+    /// own, so this is optional. Live-verified as accepted by <c>gemini-3.8-flash-lite-tts</c>.
+    /// </summary>
+    [JsonPropertyName("languageCode")]
+    public string? LanguageCode { get; set; }
 }
 
-/// <summary>Wraps a single named voice. See <c>GeminiConstants</c>'s remarks on TTS voice names for
-/// why this library does not enumerate them as constants.</summary>
+/// <summary>Wraps a single voice. Set either <see cref="PrebuiltVoiceConfig"/> (one of Google's named
+/// voices) or <see cref="Voice"/> (a custom voice id). See <c>GeminiConstants</c>'s remarks on TTS voice
+/// names for why this library does not enumerate the named voices as constants.</summary>
 public class VoiceConfig
 {
     [JsonPropertyName("prebuiltVoiceConfig")]
     public PrebuiltVoiceConfig? PrebuiltVoiceConfig { get; set; }
+
+    /// <summary>
+    /// A stored or replicated custom voice (<c>"voice_..."</c> or <c>"voicekey_..."</c>), Gemini 3.8 TTS
+    /// models only. The older TTS models reject this field. Live-verified on 2026-10-10: an unknown id
+    /// returns HTTP 404 here, while the same id in <see cref="PrebuiltVoiceConfig"/> returns HTTP 400.
+    /// </summary>
+    [JsonPropertyName("voice")]
+    public string? Voice { get; set; }
 }
 
 /// <summary>Names one of Google's built-in TTS voices, e.g. <c>"Kore"</c>. See Google's TTS voice

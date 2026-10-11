@@ -102,11 +102,11 @@ public class AudioGenerationTests
 
         await service.GenerateAudioAsync("hello", new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini31FlashTts,
+            Model = GeminiConstants.Models.Gemini38FlashTts,
             VoiceName = "Puck"
         });
 
-        Assert.Contains(GeminiConstants.Models.Gemini31FlashTts, handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains(GeminiConstants.Models.Gemini38FlashTts, handler.Requests[0].RequestUri!.ToString());
         var body = handler.RequestBodies[0]!;
         Assert.Contains("\"voiceName\":\"Puck\"", body);
     }

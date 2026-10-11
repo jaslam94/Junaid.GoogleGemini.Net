@@ -6,122 +6,163 @@ using Xunit;
 namespace Junaid.GoogleGemini.Net.IntegrationTests;
 
 /// <summary>
-/// Live tests against the real Gemini TTS models. See <c>PLAN-tts.md</c> for the full research this
-/// feature was built from, including the request/response shape live-verified before any code was
-/// written.
+/// Live tests against the real Gemini 3.8 TTS models. See <c>PLAN-tts-3-8.md</c> for the research
+/// these tests came from, and <c>PLAN-tts.md</c> for the original feature.
 ///
-/// Uses the plain <see cref="RequiresGeminiKeyAttribute"/>, not the paid-tier one, for
-/// <c>gemini-2.5-flash-preview-tts</c>: Google's pricing page lists it as free-tier available, but
-/// this session only had a billing-enabled key to test with, so that claim is unconfirmed either way
-/// (a paid key passing this test proves nothing about whether a free-tier key also would). Do not
-/// upgrade this to <see cref="RequiresPaidGeminiKeyAttribute"/> without a free-tier key actually
-/// failing here first, per <c>PLAN-tts.md</c> §6.
+/// Google shuts down the three older TTS models (2.5 Flash, 2.5 Pro and 3.1 Flash) on 2026-11-17, so
+/// these tests use only the 3.8 models. The older request shape is covered by unit tests, and was
+/// checked live against the real API on 2026-10-10 before 6.8.0 shipped.
+///
+/// Several tests send the audio back through <see cref="ITranscriptionService"/>. Checking that a WAV file
+/// is well formed does not show what the model said. A transcript does. That is how these tests catch
+/// a style direction that the model read aloud, or a preamble that leaked into the speech.
+///
+/// Both 3.8 models list a free tier on Google's pricing page, so these use the plain
+/// <see cref="RequiresGeminiKeyAttribute"/>.
 /// </summary>
 [Collection("Live")]
 public class AudioGenerationLiveTests(GeminiFixture fixture)
 {
     private IGeminiService Gemini => fixture.Get<IGeminiService>();
+    private ITranscriptionService Transcription => fixture.Get<ITranscriptionService>();
 
     [RequiresGeminiKey]
-    public async Task GenerateAudioAsync_SingleSpeaker_ReturnsPlayableWav()
+    public async Task GenerateAudioAsync_DefaultModel_ReturnsAPlayableWav()
     {
-        var options = new GeminiRequestOptions
-        {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
-            VoiceName = "Kore",
-        };
-
-        var response = await Gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!", options);
+        // No model, no format: the defaults a first-time caller gets. The 3.8 models answer a unary
+        // call with a complete WAV file, and ToWav() must hand it back untouched.
+        var response = await Gemini.GenerateAudioAsync("Have a wonderful day.", new GeminiRequestOptions { VoiceName = "Kore" });
 
         var audio = response.GetAudioOrThrow();
-        Assert.StartsWith("audio/", audio.MimeType);
-        Assert.NotEmpty(audio.Data);
-
+        Assert.Equal("audio/wav", audio.MimeType);
+        Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(audio.Data, 0, 4));
+        Assert.Same(audio.Data, audio.ToWav());
         AssertHasRealAudioSignal(audio.ToWav());
     }
 
     [RequiresGeminiKey]
-    public async Task GenerateAudioAsync_MultiSpeaker_ReturnsPlayableWav()
+    public async Task GenerateAudioAsync_FlashTts_ReturnsAPlayableWav()
+    {
+        var options = new GeminiRequestOptions { Model = GeminiConstants.Models.Gemini38FlashTts, VoiceName = "Puck" };
+
+        var response = await Gemini.GenerateAudioAsync("Have a wonderful day.", options);
+
+        AssertHasRealAudioSignal(response.GetAudioOrThrow().ToWav());
+    }
+
+    [RequiresGeminiKey]
+    public async Task GenerateAudioAsync_AudioFormatPcm16_ReturnsRawPcmThatToWavWraps()
     {
         var options = new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
-            SpeakerVoices = [("Joe", "Kore"), ("Jane", "Puck")],
+            VoiceName = "Kore",
+            AudioFormat = GeminiConstants.AudioFormats.Pcm16,
         };
+
+        var response = await Gemini.GenerateAudioAsync("Have a wonderful day.", options);
+
+        var audio = response.GetAudioOrThrow();
+        Assert.Equal("audio/l16; rate=24000; channels=1", audio.MimeType);
+        Assert.NotEqual("RIFF", System.Text.Encoding.ASCII.GetString(audio.Data, 0, 4));
+        AssertHasRealAudioSignal(audio.ToWav());
+    }
+
+    [RequiresGeminiKey]
+    public async Task GenerateAudioAsync_SpeechStyle_IsNotSpokenAloud()
+    {
+        // Before 6.8.0 the way to give a direction was to write it in the prompt: "Say cheerfully: ...".
+        // The 3.8 models speak the whole prompt, so that read the direction out loud. SpeechStyle sends
+        // it as speech metadata instead.
+        var options = new GeminiRequestOptions { VoiceName = "Kore", SpeechStyle = "cheerful and upbeat" };
+
+        var response = await Gemini.GenerateAudioAsync("Have a wonderful day.", options);
+
+        var wav = response.GetAudioOrThrow().ToWav();
+        AssertHasRealAudioSignal(wav);
+        var transcript = (await Transcription.TranscribeAsync(wav, "audio/wav")).GetTextOrThrow();
+        Assert.Contains("wonderful day", transcript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("cheerful", transcript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("upbeat", transcript, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [RequiresGeminiKey]
+    public async Task GenerateAudioAsync_MultiSpeaker_SplitsTheScriptAndDropsThePreamble()
+    {
+        // This is the exact prompt from PLAN-tts.md and the docs. Before 6.8.0 it worked on the old
+        // models. On a 3.8 model the same request, sent as one text part, returned HTTP 400.
+        var options = new GeminiRequestOptions { SpeakerVoices = [("Joe", "Kore"), ("Jane", "Puck")] };
 
         var response = await Gemini.GenerateAudioAsync(
             "TTS the following conversation between Joe and Jane: Joe: Hi Jane! Jane: Hello Joe!",
             options);
 
-        var audio = response.GetAudioOrThrow();
-        AssertHasRealAudioSignal(audio.ToWav());
-    }
+        var wav = response.GetAudioOrThrow().ToWav();
+        AssertHasRealAudioSignal(wav);
 
-    // gemini-2.5-flash-preview-tts is the only model exercised above. These two cover the other
-    // constants this library ships (Gemini25ProTts, Gemini31FlashTts): neither had ever been called
-    // through the actual library code before, only assumed to share the same shape per Google's docs
-    // (see PLAN-tts.md §2). gemini-2.5-pro-preview-tts is documented as paid-tier only; this uses the
-    // plain RequiresGeminiKey rather than RequiresPaidGeminiKey for the same reason as the class-level
-    // remarks above, this session only ever had a paid key to test with, so a pass here does not
-    // independently confirm the paid-tier restriction either way.
-    [RequiresGeminiKey]
-    public async Task GenerateAudioAsync_Gemini25ProTts_ReturnsPlayableWav()
-    {
-        var options = new GeminiRequestOptions
-        {
-            Model = GeminiConstants.Models.Gemini25ProTts,
-            VoiceName = "Kore",
-        };
-
-        var response = await Gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!", options);
-
-        var audio = response.GetAudioOrThrow();
-        Assert.Equal("audio/L16;codec=pcm;rate=24000", audio.MimeType);
-        AssertHasRealAudioSignal(audio.ToWav());
+        var transcript = (await Transcription.TranscribeAsync(wav, "audio/wav")).GetTextOrThrow();
+        Assert.Contains("Hi Jane", transcript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Hello Joe", transcript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("conversation", transcript, StringComparison.OrdinalIgnoreCase); // the preamble was dropped
     }
 
     [RequiresGeminiKey]
-    public async Task GenerateAudioAsync_Gemini31FlashTts_ReturnsPlayableWav()
+    public async Task StreamAudioAsync_MultiSpeaker_SplitsTheScriptToo()
     {
-        // Confirmed live: this model returns a genuinely different mimeType shape than the 2.5-era
-        // models above (lowercase "l16", spaced parameters, "channels=" instead of "codec=pcm"). A
-        // first version of this test asserted the 2.5-era string here and failed against this
-        // model's real response; GeneratedAudio.ToWav() was fixed to parse both shapes (see
-        // PLAN-tts.md §2), and this assertion now checks the format actually confirmed, not an
-        // assumption carried over from the other model.
-        var options = new GeminiRequestOptions
+        // Streaming builds its request through a different method than a unary call. This proves the
+        // script split reaches both.
+        var options = new GeminiRequestOptions { SpeakerVoices = [("Joe", "Kore"), ("Jane", "Puck")] };
+
+        var pcm = new List<byte>();
+        string? mimeType = null;
+        await foreach (var chunk in Gemini.StreamAudioAsync(
+            "TTS the following conversation between Joe and Jane: Joe: Hi Jane! Jane: Hello Joe!", options))
         {
-            Model = GeminiConstants.Models.Gemini31FlashTts,
-            VoiceName = "Kore",
-        };
+            if (chunk.Audio() is { } clip)
+            {
+                mimeType ??= clip.MimeType;
+                pcm.AddRange(clip.Data);
+            }
+        }
 
-        var response = await Gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!", options);
+        Assert.NotNull(mimeType);
+        var wav = new Models.GoogleApi.GeneratedAudio(mimeType!, pcm.ToArray()).ToWav();
+        AssertHasRealAudioSignal(wav);
 
-        var audio = response.GetAudioOrThrow();
-        Assert.Equal("audio/l16; rate=24000; channels=1", audio.MimeType);
-        AssertHasRealAudioSignal(audio.ToWav());
+        var transcript = (await Transcription.TranscribeAsync(wav, "audio/wav")).GetTextOrThrow();
+        Assert.Contains("Hi Jane", transcript, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("Hello Joe", transcript, StringComparison.OrdinalIgnoreCase);
+        Assert.DoesNotContain("conversation", transcript, StringComparison.OrdinalIgnoreCase);
     }
 
     [RequiresGeminiKey]
-    public async Task StreamAudioAsync_YieldsAudioAndFinalUsageMetadata()
+    public async Task GenerateAudioAsync_LanguageCode_IsAccepted()
     {
-        var options = new GeminiRequestOptions
-        {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
-            VoiceName = "Kore",
-        };
+        var options = new GeminiRequestOptions { VoiceName = "Kore", SpeechLanguageCode = "en-US" };
+
+        var response = await Gemini.GenerateAudioAsync("Have a wonderful day.", options);
+
+        AssertHasRealAudioSignal(response.GetAudioOrThrow().ToWav());
+    }
+
+    [RequiresGeminiKey]
+    public async Task StreamAudioAsync_YieldsPcmAudioAndFinalUsageMetadata()
+    {
+        var options = new GeminiRequestOptions { VoiceName = "Kore" };
 
         var chunks = new List<Models.GoogleApi.GenerateContentResponse>();
-        await foreach (var chunk in Gemini.StreamAudioAsync("Say cheerfully: Have a wonderful day!", options))
+        await foreach (var chunk in Gemini.StreamAudioAsync("Have a wonderful day, and thank you for listening today.", options))
         {
             chunks.Add(chunk);
         }
 
         Assert.NotEmpty(chunks);
-        Assert.Contains(chunks, c => c.Audio() is not null);
+        var audioChunks = chunks.Select(c => c.Audio()).Where(a => a is not null).Select(a => a!).ToList();
+        Assert.NotEmpty(audioChunks);
+        // A stream defaults to raw PCM, so every chunk can go straight through ToWav().
+        Assert.All(audioChunks, a => Assert.StartsWith("audio/l16", a.MimeType));
+        var allPcm = audioChunks.SelectMany(a => a.Data).ToArray();
+        AssertHasRealAudioSignal(new Models.GoogleApi.GeneratedAudio(audioChunks[0].MimeType, allPcm).ToWav());
 
-        // The API's own docs only promise usage on the final chunk; a short clip may arrive as a
-        // single chunk, so this just confirms usage showed up somewhere with an AUDIO modality tag.
         var usageChunk = chunks.LastOrDefault(c => c.Usage is not null);
         Assert.NotNull(usageChunk);
         Assert.Contains(

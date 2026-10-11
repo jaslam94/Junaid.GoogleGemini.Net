@@ -178,6 +178,22 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         /// of prompt size (true for every other current model).
         /// </summary>
         public HighVolumeTier? HighVolumeTier { get; set; }
+
+        /// <summary>
+        /// Optional rates that replace this entry from <see cref="NextPricingEffectiveFromUtc"/> on.
+        /// Google uses this for introductory prices, for example <c>gemini-3.8-flash</c> doubles on
+        /// 2027-01-01. The cost governor reads the clock on every call, so a long-running process
+        /// switches at the right moment without a restart. A schedule can chain: the replacement may
+        /// have its own <see cref="NextPricing"/>.
+        /// </summary>
+        public ModelPricing? NextPricing { get; set; }
+
+        /// <summary>
+        /// When <see cref="NextPricing"/> takes over, in UTC. Required when <see cref="NextPricing"/>
+        /// is set. A <see cref="DateTimeKind.Local"/> value is converted to UTC. Ignored when
+        /// <see cref="NextPricing"/> is null.
+        /// </summary>
+        public DateTime? NextPricingEffectiveFromUtc { get; set; }
     }
 
     /// <summary>The above-threshold pricing tier for models that have one.</summary>

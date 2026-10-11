@@ -111,10 +111,37 @@ options.Budget.ModelPricingOverrides = new Dictionary<string, ModelPricing>
 };
 ```
 
-Watch for **time-limited introductory pricing**: Google launched `gemini-3.7-flash` on August 13, 2026
-and moved `gemini-3.6-flash` onto the same 50%-off introductory rate shown above; both revert to the
-standard rate (double these numbers) on January 1, 2027. The built-in table will need updating again
-around then, same as any other pricing change.
+Watch for time-limited introductory pricing. Google charges a 50%-off introductory rate for
+`gemini-3.6-flash`, `gemini-3.8-flash` and the two 3.8 TTS models through December 31, 2026. The
+standard rate (double these numbers) starts on January 1, 2027.
+
+The built-in table already knows both rates. Each entry carries its 2027 rate in
+`ModelPricing.NextPricing`, and the governor switches to it on 2027-01-01 at 00:00 UTC. A long-running
+process switches without a restart. Google's pricing page gives no time zone, so the exact hour is our
+assumption.
+
+You can schedule a change in your own overrides in the same way:
+
+```csharp
+["gemini-3.8-flash"] = new ModelPricing
+{
+    InputPerMillionTokensUsd = 0.75m,
+    OutputPerMillionTokensUsd = 3.75m,
+    CachedInputPerMillionTokensUsd = 0.075m,
+    NextPricingEffectiveFromUtc = new DateTime(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc),
+    NextPricing = new ModelPricing
+    {
+        InputPerMillionTokensUsd = 1.50m,
+        OutputPerMillionTokensUsd = 7.50m,
+        CachedInputPerMillionTokensUsd = 0.15m,
+    },
+},
+```
+
+Google deprecated `gemini-3.5-flash` and `gemini-3.7-flash` on October 8, 2026 and routes them to
+`gemini-3.6-flash` and `gemini-3.8-flash`. The built-in table prices those two names at the rate of
+the model that answers. We assume Google bills the same way. Google no longer lists a price for
+either name.
 
 A model with no pricing entry (built-in or overridden) has its cost calculation skipped entirely:
 token usage is still recorded as normal, but nothing is added to the running daily total and no
@@ -179,8 +206,9 @@ vision, chat, image generation, and their streaming counterparts. Not covered in
   `GenerateContentResponse`.
 - Per-minute/per-hour budgets. Daily (UTC calendar day) only, for now.
 - `gemini-2.5-flash-image` (the older "Nano Banana" model) specifically: Google prices its output
-  strictly per-image with no published per-token equivalent, unlike the three current image models
-  (`gemini-3.1-flash-image`, `gemini-3-pro-image`, `gemini-3.1-flash-lite-image`), which *are* priced
+  strictly per-image with no published per-token equivalent, unlike the four current image models
+  (`gemini-nano-banana-2.1`, `gemini-3.1-flash-image`, `gemini-3-pro-image`,
+  `gemini-3.1-flash-lite-image`), which *are* priced
   per-1M-tokens on both input and output and so do have built-in pricing entries like any text model.
 - The [Batch API](batch-api.md) (`IBatchService`). It bypasses this entirely, on purpose:
   `BatchService` uses its own `HttpClient` rather than the shared pipeline `ICostGovernor` hooks into,

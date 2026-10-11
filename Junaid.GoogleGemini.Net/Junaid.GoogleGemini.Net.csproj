@@ -19,8 +19,49 @@
 		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.7.0</Version>
+		<Version>6.8.0</Version>
 		<PackageReleaseNotes>
+			6.8.0: moves text-to-speech to the Gemini 3.8 TTS models before Google shuts down the old
+			ones on 2026-11-17, and refreshes the model lineup for Google's October 2026 changes.
+			One default changes on purpose: GenerateAudioAsync now uses gemini-3.8-flash-lite-tts.
+			Models.RecommendedImage stays gemini-3.1-flash-image. We tried gemini-nano-banana-2.1 as the
+			default and reverted it, because it sometimes returns no image (finishReason
+			IMAGE_RECITATION) for simple prompts that the old model handles.
+			(1) Text-to-speech. The 3.8 models are not a drop-in swap. We checked each difference
+			against the real API on 2026-10-10 (see PLAN-tts-3-8.md). A unary call returns a WAV file,
+			not raw PCM, so GeneratedAudio.ToWav() now returns it unchanged instead of throwing. The
+			model speaks the prompt word for word, so "Say cheerfully: ..." was read aloud. The new
+			SpeechStyle option sends the direction as speech metadata instead. A multi-speaker request
+			as 6.5.0 sent it gets HTTP 400 from the 3.8 models. SpeakerVoices still takes the same
+			script, "Joe: Hi Jane! Jane: Hello Joe!". The library now splits it at each name and sends
+			one part per turn with the speaker in speech metadata. It drops any text before the first
+			name, because the old "TTS the following conversation..." preamble would be read aloud. The
+			three old models reject speech metadata, so they keep the old shape. The library picks by
+			model name, and UseSpeechMetadata overrides that choice. New options: SpeechStyle,
+			UseSpeechMetadata, AudioFormat and SpeechLanguageCode. A VoiceName that
+			starts with voice_ or voicekey_ (a custom voice) now goes in the field Google uses for those.
+			The Voices API (list, design, replicate) is not wrapped yet.
+			(2) Cost governance is now date-aware. Google's introductory price for gemini-3.6-flash,
+			gemini-3.8-flash and the 3.8 TTS models ends on 2026-12-31, and the standard rate (double)
+			starts on 2027-01-01. ModelPricing has new NextPricing and NextPricingEffectiveFromUtc
+			properties. The built-in table already carries the 2027 rates and switches on that date
+			(00:00 UTC, our assumption, because Google gives no time zone). Without this, a budget would
+			undercount by half from January. Added pricing for both 3.8 TTS models and for
+			gemini-nano-banana-2.1. gemini-3.5-flash and gemini-3.7-flash are priced as the models Google
+			routes them to.
+			(3) Model lineup. Google deprecated gemini-3.5-flash and gemini-3.7-flash on 2026-10-08 and
+			routes them to 3.6 and 3.8 (confirmed live: the response reports the new model). Their
+			constants, and the three old TTS constants, are now [Obsolete]. Added the Nano Banana 2.1
+			model, the 1:4, 4:1, 1:8 and 8:1 aspect ratios (1:8 checked live) and the 512 image size
+			(Nano Banana 2.1 rejects it).
+			(4) Smaller changes. FunctionCallPart and FunctionResponsePart now carry the call Id that the
+			Gemini 3 models return, so you can echo it. Part gets MediaProcessing (Google's agentic video
+			setting, from the API reference only, not tested against a real video). The thinking docs now
+			say gemini-3.8-flash rejects the "minimal" level with HTTP 400, and that ThinkingBudget = 0
+			turned thinking off on 3.6 and 3.8 in a live test. Two doc comments that said 3.x models
+			default to "high" thinking were softened, because Google documents "medium".
+			Callers of GenerateAudioAsync need no code change, except that a prompt with an in-text
+			direction will now speak it. Move that direction to SpeechStyle.
 			6.7.0: adds multimodal embeddings input. gemini-embedding-2 has accepted image, video,
 			audio, and PDF input since GA (April 2026), mapping all of them into one shared vector
 			space alongside text, but IEmbeddingService was still text-only. New overloads:

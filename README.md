@@ -135,12 +135,17 @@ foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ??
 
 Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`, `.Fast()`.
 
-> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.8-flash`, `gemini-3.7-flash`,
-> `gemini-3.6-flash`, and `gemini-3.5-flash-lite` (July-September 2026). Those models ignore the
-> sampling params entirely, so `.Factual()`/`.Code()` won't have the effect you'd expect on the
-> default model. Use `SystemInstruction` with explicit rules instead. Also, `PresencePenalty` and
-> `FrequencyPenalty` are not just ignored on these models. They are actively rejected with HTTP 400.
-> See the XML docs on `GenerationConfig` before setting either.
+> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.8-flash`, `gemini-3.6-flash`,
+> and `gemini-3.5-flash-lite` (July to September 2026). Those models ignore the sampling parameters,
+> so `.Factual()` and `.Code()` have no effect on the default model. Google plans to return HTTP 400
+> for these parameters on future model generations. Use `SystemInstruction` with explicit rules
+> instead. These models also reject `PresencePenalty` and `FrequencyPenalty` with HTTP 400. See the
+> XML docs on `GenerationConfig` before you set either.
+
+> **Note:** Google deprecated `gemini-3.5-flash` and `gemini-3.7-flash` on October 8, 2026. It routes
+> them to `gemini-3.6-flash` and `gemini-3.8-flash`. Change your model string to the new name.
+> `gemini-3.8-flash` also rejects `ThinkingLevel = "minimal"` with HTTP 400. Use `low`, `medium` or
+> `high`.
 
 > **Gemini 3 ready.** Model names aren't allow-listed, so any current/future model works without a
 > library update. `ThinkingLevel` and `MediaResolution` are supported, and the model's encrypted
@@ -158,19 +163,27 @@ foreach (var image in response.Images())
 ```
 
 Defaults to the efficient flash image model; pass `Model = GeminiConstants.Models.Gemini3ProImage` for
-higher quality, or `ImageAspectRatio`/`ImageSize` (Gemini 3+ image models) for finer control. See
+higher quality, or `ImageAspectRatio`/`ImageSize` (Gemini 3+ image models) for finer control. Google's
+newer Nano Banana 2.1 is available as `GeminiConstants.Models.GeminiNanoBanana21`. It is not the
+default yet, because it sometimes returns no image for simple prompts. See
 [docs/articles/image-generation.md](docs/articles/image-generation.md).
 
 ### Text-to-speech
 
 ```csharp
-var response = await gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!");
+var response = await gemini.GenerateAudioAsync("Have a wonderful day!", new GeminiRequestOptions
+{
+    VoiceName = "Kore",
+    SpeechStyle = "cheerful",
+});
 var audio = response.GetAudioOrThrow();
-await File.WriteAllBytesAsync("greeting.wav", audio.ToWav()); // adds a real WAV header to the raw PCM
+await File.WriteAllBytesAsync("greeting.wav", audio.ToWav());
 ```
 
-Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (each speaker named
-in the prompt text, mapped to a voice). See [docs/articles/tts.md](docs/articles/tts.md).
+Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (write it as
+`Joe: Hi! Jane: Hello!` and map each name to a voice). Put delivery directions in `SpeechStyle`, not in
+the prompt: the Gemini 3.8 TTS models read the prompt aloud word for word. Google shuts down the older TTS
+models on November 17, 2026. See [docs/articles/tts.md](docs/articles/tts.md).
 
 ### Speech-to-text
 
@@ -300,7 +313,7 @@ Submit large volumes of `generateContent` requests for asynchronous processing a
 
 ```csharp
 var job = await batchService.CreateFromRequestsFileAsync(
-    "gemini-3.7-flash",
+    "gemini-3.8-flash",
     new List<BatchRequestLine> { new() { Key = "row-1", Request = new GenerateContentRequest { /* ... */ } } });
 
 var finished = await batchService.WaitUntilCompleteAsync(job.Name!, timeout: TimeSpan.FromHours(2));
