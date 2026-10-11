@@ -77,6 +77,13 @@ public class Part
     /// slightly more input tokens (723 against 671). Google says it uses up to 88% fewer on long videos.
     /// We have not tested that.
     /// </para>
+    /// <para>
+    /// Use the Files API for a large video. Live-verified on 2026-10-10: a file uploaded through the Files
+    /// API works in agentic mode with or without <see cref="FileData.MimeType"/>. We could not get a clear
+    /// rule for an external URL. A public YouTube URL returned HTTP 403 on our project. Without a
+    /// <see cref="FileData.MimeType"/> it returned HTTP 400 ("mime_type must be set when media_processing
+    /// is specified"), so set it for any URL.
+    /// </para>
     /// </summary>
     [JsonPropertyName("mediaProcessing")]
     public string? MediaProcessing { get; set; }

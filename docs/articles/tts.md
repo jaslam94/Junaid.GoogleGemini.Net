@@ -106,10 +106,56 @@ constants. Pass any current voice name as a plain string; see
 for the current full set. The API rejects a mistyped voice name. The library does not check it, which
 matches how it treats model names.
 
-A custom voice from Google's voice design or voice replication works the same way. Pass its id as
-`VoiceName`. The library sends ids that start with `voice_` or `voicekey_` in the field Google uses
-for custom voices. Only the 3.8 models accept them. You create custom voices through Google's
-Voices API. This library does not wrap that API yet.
+### Custom voices
+
+A custom voice is a voice you create yourself. Google gives it an id that starts with `voice_` (a stored
+voice) or `voicekey_` (a voice that is not stored). Pass the id as `VoiceName`, like any other voice name:
+
+```csharp
+var options = new GeminiRequestOptions { VoiceName = "voice_YOUR_VOICE_ID" };
+var response = await gemini.GenerateAudioAsync("Hello, this is my custom voice.", options);
+```
+
+The library sends ids that start with `voice_` or `voicekey_` in the field Google uses for custom
+voices. Both 3.8 models accept them. The older TTS models reject them.
+
+**How to get an id.** You create a custom voice with Google's Voices API. This library does not wrap
+that API yet. There are two ways:
+
+- **Voice design.** Describe the voice in words. Google creates it and returns the id. You can try this
+  without code in [Google AI Studio](https://aistudio.google.com/generate-speech), then copy the id.
+- **Voice replication.** Give Google reference audio, with a consent check, to copy a speaker's voice.
+  We have not tested this.
+
+To create a designed voice from code, send `POST https://generativelanguage.googleapis.com/v1beta/voices`
+with your API key in the `x-goog-api-key` header:
+
+```json
+{
+  "store": true,
+  "voice": {
+    "type": "prompted",
+    "display_name": "Calm narrator",
+    "gender": "female",
+    "language_code": "en-US",
+    "prompted": { "input": "A calm, friendly narrator in her thirties with a clear American accent." }
+  }
+}
+```
+
+The response has the id in `id`, and a short preview clip in `sample_audio`. Three things we found when
+we tried it on 2026-10-10:
+
+- **Do not set `voice.model`.** Google's page says both 3.8 models support voice design. The API
+  answered HTTP 400 for `gemini-3.8-flash-lite-tts`. Leave the field out, and the voice works with
+  either TTS model.
+- **Creating one costs very little.** Our test used 662 tokens, mostly for the preview clip. Google
+  lists no separate price.
+- **Stored voices have limits.** A project can keep 200 of them, and each one expires after a year.
+  Delete a voice you no longer need with `DELETE /v1beta/voices/{id}`.
+
+A live test in the repo (`CustomVoiceLiveTests`) creates a voice, uses it with both models, checks the
+speech with a transcript, and deletes it.
 
 Set `SpeechLanguageCode` (for example `"en-US"`) to name the language. It is optional. The 3.8 models
 detect the language from the text.

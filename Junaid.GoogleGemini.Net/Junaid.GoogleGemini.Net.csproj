@@ -40,7 +40,10 @@
 			model name, and UseSpeechMetadata overrides that choice. New options: SpeechStyle,
 			UseSpeechMetadata, AudioFormat and SpeechLanguageCode. A VoiceName that
 			starts with voice_ or voicekey_ (a custom voice) now goes in the field Google uses for those.
-			The Voices API (list, design, replicate) is not wrapped yet.
+			We tested a real custom voice end to end: one made with Google's voice design worked with both
+			3.8 models. The Voices API (list, design, replicate) is not wrapped yet. docs/articles/tts.md
+			shows how to get an id. GenerateContentResponse.ModelVersion now reports which model really
+			answered, which shows the 3.5 and 3.7 routing.
 			(2) Cost governance is now date-aware. Google's introductory price for gemini-3.6-flash,
 			gemini-3.8-flash and the 3.8 TTS models ends on 2026-12-31, and the standard rate (double)
 			starts on 2027-01-01. ModelPricing has new NextPricing and NextPricingEffectiveFromUtc
@@ -65,7 +68,8 @@
 			token metrics still report only promptTokenCount, so they under-report agentic calls. The
 			thinking docs now
 			say gemini-3.8-flash rejects the "minimal" level with HTTP 400, and that ThinkingBudget = 0
-			turned thinking off on 3.6 and 3.8 in a live test. Two doc comments that said 3.x models
+			was accepted on 3.6 and 3.8 and usually gave no thoughts, but not always (1 call in 8 on 3.8
+			still thought). Two doc comments that said 3.x models
 			default to "high" thinking were softened, because Google documents "medium".
 			Callers of GenerateAudioAsync need no code change, except that a prompt with an in-text
 			direction will now speak it. Move that direction to SpeechStyle.

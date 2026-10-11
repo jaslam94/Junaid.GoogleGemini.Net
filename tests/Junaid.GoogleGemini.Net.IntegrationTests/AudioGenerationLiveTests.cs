@@ -176,7 +176,7 @@ public class AudioGenerationLiveTests(GeminiFixture fixture)
     /// zero bytes; this reads the actual 16-bit samples and requires real variance across them, the
     /// way genuine speech has and pure silence or a corrupt/constant buffer does not.
     /// </summary>
-    private static void AssertHasRealAudioSignal(byte[] wav)
+    internal static void AssertHasRealAudioSignal(byte[] wav)
     {
         Assert.True(wav.Length > 44, "Expected more than just the WAV header.");
         Assert.Equal("RIFF", System.Text.Encoding.ASCII.GetString(wav, 0, 4));

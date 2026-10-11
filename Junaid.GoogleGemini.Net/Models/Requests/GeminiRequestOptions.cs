@@ -64,10 +64,12 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// <summary>
         /// Thinking/reasoning token budget (Gemini 2.5). <c>0</c> disables thinking where allowed;
         /// <c>-1</c> lets the model decide. Mutually exclusive with <see cref="ThinkingLevel"/>. Google's
-        /// docs tell Gemini 3.6 and later users to use <see cref="ThinkingLevel"/> instead. In a live test
-        /// on 2026-10-10, <c>0</c> returned HTTP 200 with no thought tokens on <c>gemini-3.6-flash</c> and
-        /// <c>gemini-3.8-flash</c>. That is the only way to turn thinking off on 3.8, which rejects the
-        /// "minimal" level. Google does not document this, so it may change.
+        /// docs tell Gemini 3.6 and later users to use <see cref="ThinkingLevel"/> instead. In live tests
+        /// on 2026-10-10, <c>0</c> was accepted (HTTP 200) on <c>gemini-3.6-flash</c> and
+        /// <c>gemini-3.8-flash</c>, and it usually produced no thought tokens. It is not a guarantee. On
+        /// 3.8, one call in eight still thought for 67 tokens, and on 3.6 none of eight did. 3.8 rejects the
+        /// "minimal" level, so <c>0</c> is the closest thing to "off" there. Google does not document this,
+        /// so it may change. Do not rely on it for a hard cost bound.
         /// </summary>
         public int? ThinkingBudget { get; set; }
 
@@ -131,7 +133,9 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         /// <summary>
         /// Voice for single-speaker TTS, e.g. <c>"Kore"</c>. See Google's TTS voice list for the
         /// current full set; this library does not enumerate voice names as constants (see
-        /// <c>PLAN-tts.md</c> for why). Ignored if <see cref="SpeakerVoices"/> is also set.
+        /// <c>PLAN-tts.md</c> for why). Ignored if <see cref="SpeakerVoices"/> is also set. A custom voice id
+        /// (<c>voice_...</c> or <c>voicekey_...</c>, from Google's Voices API) also goes here. The library
+        /// sends it in the field Google uses for custom voices. The Gemini 3.8 TTS models accept it.
         /// </summary>
         public string? VoiceName { get; set; }
 

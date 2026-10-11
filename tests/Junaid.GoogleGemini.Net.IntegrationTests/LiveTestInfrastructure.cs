@@ -41,6 +41,28 @@ public sealed class RequiresPaidGeminiKeyAttribute : FactAttribute
 }
 
 /// <summary>
+/// Like <see cref="RequiresGeminiKeyAttribute"/>, but also needs a small local video. Set
+/// <c>GeminiTestVideo</c> to the path of an MP4 of about 10 seconds. No video lives in the repo, so the
+/// test shows up as skipped, not passed, on any machine without one. A public YouTube URL is not an
+/// option: Google returned HTTP 403 for one on 2026-10-10.
+/// </summary>
+public sealed class RequiresTestVideoAttribute : FactAttribute
+{
+    public RequiresTestVideoAttribute()
+    {
+        var path = Environment.GetEnvironmentVariable("GeminiTestVideo");
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GeminiApiKey")))
+        {
+            Skip = "Set the GeminiApiKey environment variable to run live integration tests.";
+        }
+        else if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            Skip = "Set GeminiTestVideo to the path of a small MP4 (about 10 seconds) to run this test.";
+        }
+    }
+}
+
+/// <summary>
 /// Builds a real DI container once for the whole suite (reading the key from the environment), the
 /// same way a consuming app would. Constructing this does not call the API or validate the key.
 /// validation happens lazily on first use, which only occurs when a test actually runs.

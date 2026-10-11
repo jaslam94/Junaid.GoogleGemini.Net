@@ -21,6 +21,16 @@ public class GenerateContentResponse
     [JsonPropertyName("usageMetadata")]
     public UsageMetadata? UsageMetadata { get; set; }
 
+    /// <summary>
+    /// The model that actually produced this response, as the API reports it (for example
+    /// <c>"gemini-3.6-flash"</c>). It can differ from the model you asked for. Google deprecated
+    /// <c>gemini-3.5-flash</c> and <c>gemini-3.7-flash</c> on 2026-10-08 and routes them to
+    /// <c>gemini-3.6-flash</c> and <c>gemini-3.8-flash</c>, and this property is how you see that happen.
+    /// Null when the API omits it.
+    /// </summary>
+    [JsonPropertyName("modelVersion")]
+    public string? ModelVersion { get; set; }
+
     /// <summary>Why generation finished for the first candidate (e.g. "STOP", "SAFETY"), if available.</summary>
     [JsonIgnore]
     public string? FinishReason => Candidates is { Length: > 0 } ? Candidates[0].FinishReason : null;

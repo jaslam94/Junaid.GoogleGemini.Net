@@ -71,10 +71,17 @@ public class TranscriptionLiveTests(GeminiFixture fixture)
     {
         var wav = await GenerateSpeechWavAsync("Testing one two three.");
         var file = await Files.UploadFileAsync(wav, "audio/wav", "stt-live-test.wav");
+        try
+        {
+            var interaction = await Transcription.TranscribeFileAsync(file.Uri!, "audio/wav");
 
-        var interaction = await Transcription.TranscribeFileAsync(file.Uri!, "audio/wav");
-
-        Assert.Contains("testing", interaction.GetTextOrThrow(), StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("testing", interaction.GetTextOrThrow(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            // Uploaded files otherwise sit in the project until Google expires them after 48 hours.
+            await Files.DeleteFileAsync(file.Name!);
+        }
     }
 
     [RequiresGeminiKey]

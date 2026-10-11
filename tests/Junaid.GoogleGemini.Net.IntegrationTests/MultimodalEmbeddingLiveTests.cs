@@ -60,10 +60,17 @@ public class MultimodalEmbeddingLiveTests(GeminiFixture fixture)
     {
         var imageBytes = await GenerateImageAsync("A blue square.");
         var file = await Files.UploadFileAsync(imageBytes, "image/jpeg", "embed-live-test.jpg");
+        try
+        {
+            var response = await Embeddings.EmbedFileAsync(GeminiConstants.Models.GeminiEmbedding2, file.Uri!, "image/jpeg", "A blue square");
 
-        var response = await Embeddings.EmbedFileAsync(GeminiConstants.Models.GeminiEmbedding2, file.Uri!, "image/jpeg", "A blue square");
-
-        Assert.NotNull(response.Embedding?.Values);
+            Assert.NotNull(response.Embedding?.Values);
+        }
+        finally
+        {
+            // Uploaded files otherwise sit in the project until Google expires them after 48 hours.
+            await Files.DeleteFileAsync(file.Name!);
+        }
     }
 
     [RequiresGeminiKey]

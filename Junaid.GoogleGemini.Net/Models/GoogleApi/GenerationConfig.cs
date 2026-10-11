@@ -186,7 +186,9 @@ public class VoiceConfig
     /// <summary>
     /// A stored or replicated custom voice (<c>"voice_..."</c> or <c>"voicekey_..."</c>), Gemini 3.8 TTS
     /// models only. The older TTS models reject this field. Live-verified on 2026-10-10: an unknown id
-    /// returns HTTP 404 here, while the same id in <see cref="PrebuiltVoiceConfig"/> returns HTTP 400.
+    /// returns HTTP 404 here, while the same id in <see cref="PrebuiltVoiceConfig"/> returns HTTP 400. A
+    /// real voice made with Google's voice design (<c>POST /v1beta/voices</c>, type <c>prompted</c>) worked
+    /// with both <c>gemini-3.8-flash-tts</c> and <c>gemini-3.8-flash-lite-tts</c>.
     /// </summary>
     [JsonPropertyName("voice")]
     public string? Voice { get; set; }

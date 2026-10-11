@@ -603,8 +603,9 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       and 3.7 Flash constants and the three old TTS constants; corrected thinking-level docs.
 
       Live findings worth keeping, all from 2026-10-10: `gemini-3.8-flash` rejects `minimal` thinking with
-      HTTP 400. `ThinkingBudget = 0` returned HTTP 200 with no thought tokens on 3.6 and 3.8, which is
-      undocumented. A history that ends with a model turn returns HTTP 400. The call `id` is returned by
+      HTTP 400. `ThinkingBudget = 0` was accepted on 3.6 and 3.8 and usually gave no thought tokens. It is
+      not a guarantee: one call in eight on 3.8 still thought for 67 tokens, and none of eight on 3.6. Google
+      does not document it. A history that ends with a model turn returns HTTP 400. The call `id` is returned by
       3.8, but a reply without it still worked. Nano Banana 2.1 rejects the `512` size.
 
       We then tested `Part.MediaProcessing` against two real clips of about 10 seconds from the maintainer's own files.
@@ -619,6 +620,21 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       is for long videos, and we did not test long ones. The OpenTelemetry token metrics still report only
       `promptTokenCount`, so they under-report agentic calls. We did not change that.
 
+      We then added live tests that pin every behavior this release documents from observation
+      (`Gemini38BehaviorLiveTests` and `CustomVoiceLiveTests`, 12 tests; the 2 video tests need a local clip
+      and show as skipped without one). Two of them first failed, and both failures were wrong claims of
+      ours, not library bugs. We had written that agentic mode needs a `mimeType` on a `fileData` part. An
+      uploaded file works without one, and the error came from a YouTube URL. We had also written that
+      `ThinkingBudget = 0` turns thinking off, and a full run caught a call that still thought. Both claims
+      are corrected in the docs, and the tests now assert what is true.
+
+      We made a real custom voice with Google's voice design, used it with both 3.8 models, and deleted it.
+      Voice design returned HTTP 400 for `gemini-3.8-flash-lite-tts`, although Google's page says both models
+      support it, so the docs say to leave `voice.model` out. A custom voice costs very little to make (662
+      tokens). Two older live tests uploaded files and never deleted them, which left 2 files per run behind.
+      They now delete them. `GenerateContentResponse.ModelVersion` is new, so a caller can see which model
+      answered, and a live test uses it to pin the 3.5 and 3.7 routing.
+
       The live suite changed one decision. We planned to make Nano Banana 2.1 the default image model.
       Two live tests failed: the new model returned `finishReason: IMAGE_RECITATION` and no image for
       "a small red circle on a plain white background" (2 of 2 calls). A plain blue rectangle failed 1 of 6
@@ -626,15 +642,18 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       the default to `gemini-3.1-flash-image`, and kept Nano Banana 2.1 as an opt-in constant. Google
       deprecated the old model but set no shutdown date. Revisit this when it does.
 
-      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 247 tests
-      (up from 185), all green on both net8.0 and net9.0. The non-Batch live suite has 52 tests, all
-      green. The TTS live tests send their audio back through the transcription model, so they check
-      what was said, not only that the file is well formed. That proves the style direction is no longer
+      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 251 tests
+      (up from 185), all green on both net8.0 and net9.0. The last complete live run had 69 tests, including
+      Batch and both video tests. 68 passed. The one failure was the thinking-budget test above. We corrected
+      it, and it passed once. Google's spending cap on the test project then blocked every later call, so
+      the corrected test has not had a second run. Re-run it when the cap allows. The TTS live tests send
+      their audio back through the transcription model, so they check what was said, not only that the file
+      is well formed. That proves the style direction is no longer
       spoken and that the preamble no longer leaks into the speech, for a unary call and for a stream.
 
-      We did not verify: the long-video savings that Google claims for agentic video (our clips run about 10 seconds); the inline
-      tags such as `<laugh>`; a working custom voice id (we only saw the 404 for an unknown id); or the
-      Voices API, which this release does not wrap. No .NET 8 runtime is installed on the build machine,
+      We did not verify: the long-video savings that Google claims for agentic video (our clips run about
+      10 seconds); voice replication; or a wrapper for the Voices API, which this release does not add (the
+      custom voice test calls its REST endpoint directly). No .NET 8 runtime is installed on the build machine,
       so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. The `netstandard2.0` target
       is compiled but not run. There are no breaking changes to compiled code. The behavior changes are the default TTS model, `ToWav()` on WAV input,
       and prompts that put a direction in the text.

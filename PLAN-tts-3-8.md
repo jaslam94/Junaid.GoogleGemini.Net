@@ -39,12 +39,14 @@ Other dated changes also need action:
 | Is the mu-law `rate=24000` label true? | Probably not. A mu-law clip was about 52 KB, where the same text as 24 kHz PCM was about 340 KB. That fits 8 kHz. We did not confirm it. |
 | Do the old models still work through this library after the change? | Yes. We ran `gemini-2.5-flash-preview-tts` and `gemini-3.1-flash-tts-preview` with a multi-speaker script and the old preamble, through the real client. Both transcribed correctly. An in-text direction still acts as a direction on the old model. |
 | Does the multi-speaker split work for a stream? | Yes. A live test streams a script and transcribes the result. |
+| Does a real custom voice work? | Yes. We made one with voice design (`POST /v1beta/voices`, type `prompted`). Both 3.8 models spoke with it through `voiceConfig.voice`. `gemini-2.5-flash-preview-tts` rejected it with 400. The voice can be read, listed and deleted, and a deleted voice returns 404. Creating it used 662 tokens. |
+| Does voice design work on `gemini-3.8-flash-lite-tts`? | No. HTTP 400: "does not support Prompted Voice Design". Google's page says both models do. Leave `voice.model` out and the voice works with either model. |
 | Is there a rate limit to know about? | Yes. `gemini-3.8-flash-lite-tts` returned HTTP 429 after about 10 calls in a minute on our key (limit 10 per minute per model). |
 
 Other live results used by this release:
 - `gemini-3.5-flash` reports `modelVersion: gemini-3.6-flash`. `gemini-3.7-flash` reports 3.8.
 - `thinkingLevel: minimal` on `gemini-3.8-flash` returns 400.
-- `thinkingBudget: 0` returns 200 on 3.6 and 3.8 and produces no thought tokens.
+- `thinkingBudget: 0` returns 200 on 3.6 and 3.8 and usually produces no thought tokens. It is not a guarantee: 1 call in 8 on 3.8 still thought for 67 tokens, and 0 in 8 on 3.6. A first version of its live test asserted "always zero" and failed on a later run.
 - A history that ends with a model turn returns 400.
 - Nano Banana 2.1 accepts `imageConfig` with ratio `1:8` through `generateContent`.
 - Nano Banana 2.1 rejects image size `512` with 400.
@@ -92,6 +94,7 @@ Other live results used by this release:
 
 - New constants: both 3.8 TTS models, `gemini-nano-banana-2.1`, four wide and tall aspect ratios,
   the `512` image size, audio format values, and media processing values.
+- `GenerateContentResponse` gets `ModelVersion`, so a caller can see which model answered.
 - `Part` gets `SpeechMetadata` and `MediaProcessing`. `FunctionCallPart` and `FunctionResponsePart`
   get `Id`, so callers can echo it.
 - Mark obsolete: `Gemini35Flash`, `Gemini37Flash`, and the three legacy TTS constants.

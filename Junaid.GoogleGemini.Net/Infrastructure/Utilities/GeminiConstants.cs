@@ -421,9 +421,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// Not every model accepts every level. Live-verified on 2026-10-10: <c>gemini-3.8-flash</c>
         /// accepts low, medium and high, and returns HTTP 400 for <see cref="Minimal"/>. Per Google,
         /// <c>gemini-3.6-flash</c> and <c>gemini-3.5-flash-lite</c> accept all four levels, and
-        /// <c>gemini-nano-banana-2.1</c> accepts minimal, medium and high. To turn thinking off on
-        /// <c>gemini-3.8-flash</c>, <c>GeminiRequestOptions.ThinkingBudget = 0</c> returned HTTP 200 with
-        /// no thought tokens. Google's docs do not describe that, so treat it as observed behavior.
+        /// <c>gemini-nano-banana-2.1</c> accepts minimal, medium and high. To cut thinking on
+        /// <c>gemini-3.8-flash</c>, <c>GeminiRequestOptions.ThinkingBudget = 0</c> was accepted (HTTP 200)
+        /// and usually produced no thought tokens, but one call in eight still thought. Google's docs do not
+        /// describe that, so treat it as observed behavior, not a guarantee.
         /// </summary>
         public static class ThinkingLevels
         {
