@@ -49,6 +49,12 @@ Other live results used by this release:
 - Nano Banana 2.1 accepts `imageConfig` with ratio `1:8` through `generateContent`.
 - Nano Banana 2.1 rejects image size `512` with 400.
 - A function response without an `id` still works on 3.8. The API does return call ids.
+- `Part.mediaProcessing` works with two real clips of about 10 seconds. Unset and `STATIC` give the
+  same result (671 prompt tokens). `AGENTIC` answers correctly. Its response has extra `toolCall`
+  and `toolResponse` parts, and the video tokens move to `usageMetadata.toolUsePromptTokenCount`
+  (712 and 806 in two runs), leaving `promptTokenCount` at 11. The cost governor ignored that field,
+  so we added it to `UsageMetadata` and price it as input. On these short clips `AGENTIC` used
+  slightly more tokens, not fewer.
 
 ## 3. Decisions
 
@@ -99,8 +105,11 @@ Other live results used by this release:
 - It does not move to the Interactions API. Google documents `generateContent` as legacy but fully
   supported, and the new models work through it. The Interactions API still lacks Batch, explicit
   caching and safety settings.
-- It does not check `Part.MediaProcessing` against a real video. We lack a safe test clip. The field
-  comes from Google's API reference only.
+- It does not test the long-video savings of `Part.MediaProcessing`. We tested the field against two
+  real clips of about 10 seconds (see section 2). It works, but Google's claim of up to 88% fewer
+  tokens is for long videos, and we had none to test.
+- It does not add the tool-use tokens to the OpenTelemetry token metrics. Those still report only
+  `promptTokenCount`, so they under-report agentic video calls. The cost governor does count them.
 
 ## 6. Risks
 

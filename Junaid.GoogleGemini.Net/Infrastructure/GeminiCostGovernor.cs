@@ -424,7 +424,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
 
     // Cost formula (see PLAN-cost-governance.md §6.3):
     //   tier = usage.PromptTokenCount > pricing.HighVolumeTier?.ThresholdTokens ? HighVolumeTier : base
-    //   billableInputTokens = PromptTokenCount - CachedContentTokenCount
+    //   billableInputTokens = PromptTokenCount - CachedContentTokenCount + ToolUsePromptTokenCount
     //   inputCost  = billableInputTokens / 1e6 * tier.InputPerMillionTokensUsd
     //   cachedCost = CachedContentTokenCount / 1e6 * tier.CachedInputPerMillionTokensUsd
     //   outputCost = (CandidatesTokenCount + ThoughtsTokenCount) / 1e6 * tier.OutputPerMillionTokensUsd
@@ -440,9 +440,14 @@ public sealed class GeminiCostGovernor : ICostGovernor
             return null;
         }
 
-        var rates = SelectRates(pricing, usage.PromptTokenCount);
+        // Tool-use prompt tokens (for example the frames an agentic video call loads) are not in
+        // PromptTokenCount. Google bills tool tokens as input on its pricing page, so we price them at
+        // the standard input rate. That is an assumption: we found no per-model rate for them. Leaving
+        // them out priced a whole agentic video call as if the video were free.
+        var rates = SelectRates(pricing, usage.PromptTokenCount + usage.ToolUsePromptTokenCount);
 
-        var billableInputTokens = Math.Max(0, usage.PromptTokenCount - usage.CachedContentTokenCount);
+        var billableInputTokens = Math.Max(0, usage.PromptTokenCount - usage.CachedContentTokenCount)
+            + Math.Max(0, usage.ToolUsePromptTokenCount);
         var inputCost = billableInputTokens / 1_000_000m * rates.Input;
         var cachedCost = usage.CachedContentTokenCount / 1_000_000m * rates.Cached;
         var outputCost = (usage.CandidatesTokenCount + usage.ThoughtsTokenCount) / 1_000_000m * rates.Output;

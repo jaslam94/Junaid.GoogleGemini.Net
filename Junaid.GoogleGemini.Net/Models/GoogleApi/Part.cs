@@ -66,8 +66,17 @@ public class Part
 
     /// <summary>
     /// How the model reads a video part: one of the <c>GeminiConstants.MediaProcessing</c> values.
-    /// Google ignores it on parts that are not video. Taken from Google's API reference and not
-    /// live-tested against a real video.
+    /// Google ignores it on parts that are not video.
+    /// <para>
+    /// Live-tested on 2026-10-10 against <c>gemini-3.8-flash</c> with two clips of about 10 seconds.
+    /// Leaving it unset and <c>STATIC</c> behaved the same (671 prompt tokens). <c>AGENTIC</c> was
+    /// accepted and answered correctly. Its response also carries extra <c>toolCall</c> and
+    /// <c>toolResponse</c> parts, which this library does not model. <c>GenerateContentResponse.Text()</c>
+    /// still returns the answer. The video tokens move out of <see cref="UsageMetadata.PromptTokenCount"/>
+    /// into <see cref="UsageMetadata.ToolUsePromptTokenCount"/>. On these short clips <c>AGENTIC</c> used
+    /// slightly more input tokens (723 against 671). Google says it uses up to 88% fewer on long videos.
+    /// We have not tested that.
+    /// </para>
     /// </summary>
     [JsonPropertyName("mediaProcessing")]
     public string? MediaProcessing { get; set; }

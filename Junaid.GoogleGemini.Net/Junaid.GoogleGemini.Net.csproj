@@ -56,7 +56,14 @@
 			(Nano Banana 2.1 rejects it).
 			(4) Smaller changes. FunctionCallPart and FunctionResponsePart now carry the call Id that the
 			Gemini 3 models return, so you can echo it. Part gets MediaProcessing (Google's agentic video
-			setting, from the API reference only, not tested against a real video). The thinking docs now
+			setting). We tested it with two real clips of about 10 seconds: the field works. Agentic
+			mode reports the video in a separate usage field, toolUsePromptTokenCount, and the cost
+			governor ignored that field, so an agentic video call was priced at about a quarter of its
+			real cost. UsageMetadata now has ToolUsePromptTokenCount and the governor prices it as input
+			(an assumption: we found no per-model rate for it). On short clips agentic used slightly more
+			tokens, not fewer. Google's saving is for long videos, which we did not test. The OpenTelemetry
+			token metrics still report only promptTokenCount, so they under-report agentic calls. The
+			thinking docs now
 			say gemini-3.8-flash rejects the "minimal" level with HTTP 400, and that ThinkingBudget = 0
 			turned thinking off on 3.6 and 3.8 in a live test. Two doc comments that said 3.x models
 			default to "high" thinking were softened, because Google documents "medium".

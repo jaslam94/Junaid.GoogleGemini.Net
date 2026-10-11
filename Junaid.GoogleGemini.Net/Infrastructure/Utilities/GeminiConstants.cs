@@ -531,7 +531,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
 
         /// <summary>
         /// Values for <c>Part.MediaProcessing</c>, which controls how the model reads a video part.
-        /// Taken from Google's API reference. Not live-tested against a real video.
+        /// Both values were live-tested on 2026-10-10 against short clips. See <c>Part.MediaProcessing</c>
+        /// for what we saw.
         /// </summary>
         public static class MediaProcessing
         {
@@ -540,7 +541,8 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// The model navigates the video on demand and asks for transcripts, frames or audio as it
             /// needs them. Google calls this "recommended for most use cases" and claims up to 88%
-            /// fewer tokens on long videos.
+            /// fewer tokens on long videos. On two 10-second clips it used slightly more, and it bills
+            /// the loaded media as tool-use tokens (<c>UsageMetadata.ToolUsePromptTokenCount</c>).
             /// </summary>
             public const string Agentic = "AGENTIC";
         }

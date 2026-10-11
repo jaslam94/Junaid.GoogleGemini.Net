@@ -375,6 +375,21 @@ public class UsageMetadata
     /// </summary>
     [JsonPropertyName("candidatesTokensDetails")]
     public List<ModalityTokenCount>? CandidatesTokensDetails { get; set; }
+
+    /// <summary>
+    /// Input tokens that a tool loaded while it ran, such as the frames, audio and transcript that the
+    /// model asks for in agentic video mode (<c>Part.MediaProcessing = "AGENTIC"</c>). These are NOT
+    /// part of <see cref="PromptTokenCount"/>. They are part of <see cref="TotalTokenCount"/>. Live-verified
+    /// on 2026-10-10: a 660-token video sent as a plain part showed up in <see cref="PromptTokenCount"/>
+    /// (671 in all), and the same video in agentic mode showed 11 here and 712 in this field. Zero when
+    /// no tool loaded input. The cost governor prices these tokens at the input rate.
+    /// </summary>
+    [JsonPropertyName("toolUsePromptTokenCount")]
+    public int ToolUsePromptTokenCount { get; set; }
+
+    /// <summary>Per-modality breakdown of <see cref="ToolUsePromptTokenCount"/> (for example TEXT and VIDEO).</summary>
+    [JsonPropertyName("toolUsePromptTokensDetails")]
+    public List<ModalityTokenCount>? ToolUsePromptTokensDetails { get; set; }
 }
 
 /// <summary>One entry in a <see cref="UsageMetadata"/> per-modality token breakdown.</summary>

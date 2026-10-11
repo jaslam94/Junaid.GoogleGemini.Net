@@ -583,7 +583,7 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
          each with `speechMetadata.speaker`.
       4. The three old models reject `speechMetadata` with HTTP 400, so one shape cannot serve both.
 
-      We kept the public API stable, as you chose. `SpeakerVoices` takes the same script. On a 3.8 model
+      We kept the public API stable, as the maintainer chose. `SpeakerVoices` takes the same script. On a 3.8 model
       the library splits it at each `Name:` marker and drops any text before the first marker. The old
       models keep the old shape. A new `UseSpeechMetadata` option overrides the choice by model name. New
       options: `SpeechStyle`, `AudioFormat` and `SpeechLanguageCode`. We left out a sample-rate option:
@@ -607,6 +607,18 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       undocumented. A history that ends with a model turn returns HTTP 400. The call `id` is returned by
       3.8, but a reply without it still worked. Nano Banana 2.1 rejects the `512` size.
 
+      We then tested `Part.MediaProcessing` against two real clips of about 10 seconds from the maintainer's own files.
+      The field works. Unset and `STATIC` behave the same (671 prompt tokens). `AGENTIC` answers correctly,
+      but it returns `toolCall` and `toolResponse` parts that the library does not model (`Text()` still
+      works). It also reports the video as `toolUsePromptTokenCount` (712 to 806 tokens across runs) and
+      leaves `promptTokenCount` at 11. The cost governor ignored that field, so an agentic call was priced
+      at about a quarter of its real cost. We added `UsageMetadata.ToolUsePromptTokenCount` and price those
+      tokens as input. That is an assumption: Google's pricing page bills tool tokens as input for URL
+      context, and we found no per-model rate for video tool tokens. The same gap hit any tool that loads
+      input. On these short clips `AGENTIC` used slightly more input tokens, not 88% fewer. Google's saving
+      is for long videos, and we did not test long ones. The OpenTelemetry token metrics still report only
+      `promptTokenCount`, so they under-report agentic calls. We did not change that.
+
       The live suite changed one decision. We planned to make Nano Banana 2.1 the default image model.
       Two live tests failed: the new model returned `finishReason: IMAGE_RECITATION` and no image for
       "a small red circle on a plain white background" (2 of 2 calls). A plain blue rectangle failed 1 of 6
@@ -614,13 +626,13 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       the default to `gemini-3.1-flash-image`, and kept Nano Banana 2.1 as an opt-in constant. Google
       deprecated the old model but set no shutdown date. Revisit this when it does.
 
-      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 241 tests
+      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 247 tests
       (up from 185), all green on both net8.0 and net9.0. The non-Batch live suite has 52 tests, all
       green. The TTS live tests send their audio back through the transcription model, so they check
       what was said, not only that the file is well formed. That proves the style direction is no longer
       spoken and that the preamble no longer leaks into the speech, for a unary call and for a stream.
 
-      We did not verify: `Part.MediaProcessing` against a real video (no safe test clip); the inline
+      We did not verify: the long-video savings that Google claims for agentic video (our clips run about 10 seconds); the inline
       tags such as `<laugh>`; a working custom voice id (we only saw the 404 for an unknown id); or the
       Voices API, which this release does not wrap. No .NET 8 runtime is installed on the build machine,
       so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. The `netstandard2.0` target
