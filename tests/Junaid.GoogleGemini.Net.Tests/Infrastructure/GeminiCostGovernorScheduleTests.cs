@@ -1,6 +1,7 @@
 using Junaid.GoogleGemini.Net.Infrastructure;
 using Junaid.GoogleGemini.Net.Infrastructure.Options;
 using Junaid.GoogleGemini.Net.Models.GoogleApi;
+using Microsoft.Extensions.Configuration;
 using Xunit;
 
 namespace Junaid.GoogleGemini.Net.Tests.Infrastructure;
@@ -114,6 +115,35 @@ public class GeminiCostGovernorScheduleTests
         Assert.Equal(2m, CostAt(new DateTime(2028, 6, 1, 0, 0, 0, DateTimeKind.Utc)));  // 1 + 1
         Assert.Equal(4m, CostAt(new DateTime(2029, 6, 1, 0, 0, 0, DateTimeKind.Utc)));  // 2 + 2
         Assert.Equal(8m, CostAt(new DateTime(2031, 1, 1, 0, 0, 0, DateTimeKind.Utc)));  // 4 + 4
+    }
+
+    [Theory]
+    [InlineData("2027-01-01T00:00:00Z")]       // what a user would write for a UTC instant
+    [InlineData("2027-01-01T05:00:00+05:00")]  // the same instant with an offset
+    public void AScheduleBindsFromConfiguration_LikeAnAppsettingsFile(string effective)
+    {
+        // The binder turns a date string into a DateTime of Kind Local. The governor must convert it to UTC.
+        var config = new Microsoft.Extensions.Configuration.ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["Enabled"] = "true",
+                ["ModelPricingOverrides:m:InputPerMillionTokensUsd"] = "1",
+                ["ModelPricingOverrides:m:OutputPerMillionTokensUsd"] = "1",
+                ["ModelPricingOverrides:m:CachedInputPerMillionTokensUsd"] = "1",
+                ["ModelPricingOverrides:m:NextPricingEffectiveFromUtc"] = effective,
+                ["ModelPricingOverrides:m:NextPricing:InputPerMillionTokensUsd"] = "2",
+                ["ModelPricingOverrides:m:NextPricing:OutputPerMillionTokensUsd"] = "2",
+                ["ModelPricingOverrides:m:NextPricing:CachedInputPerMillionTokensUsd"] = "2",
+            })
+            .Build();
+        var budget = new BudgetOptions();
+        Microsoft.Extensions.Configuration.ConfigurationBinder.Bind(config, budget);
+
+        decimal CostAt(DateTime now) => new GeminiCostGovernor(budget, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend("m", new UsageMetadata { PromptTokenCount = 1_000_000, CandidatesTokenCount = 1_000_000 });
+
+        Assert.Equal(2m, CostAt(LastIntroSecond));        // 1 + 1, still before the date
+        Assert.Equal(4m, CostAt(FirstStandardSecond));    // 2 + 2, on the date
     }
 
     [Fact]
