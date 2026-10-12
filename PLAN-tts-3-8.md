@@ -89,6 +89,22 @@ Other live results used by this release:
     calls, and the same prompt worked on the next call). The old model returned an image. Nano
     Banana 2.1 stays available as an opt-in constant. We move the default when Google sets a
     shutdown date for the old model.
+13. **Wrap the Voices API as `IVoiceService`.** The first plan left it out. Custom voices are only
+    useful if a caller can get an id, and the test for them called the endpoint by hand. The service
+    lists and filters the library, pages through it, gets, designs, replicates and deletes. It uses
+    the shared client, so auth, retries and telemetry apply. The Voices API uses snake_case, so every
+    property names its JSON field. We read the real list, create and error shapes from live calls, and
+    the filter names from Google's page. Google rejects an unknown filter name with HTTP 400, so a
+    live list test proves the names. Replication follows Google's documented shape only (see section 5).
+14. **Run the unit suite on .NET Framework.** The library multi-targets `netstandard2.0`, and we had
+    never run that build. The tests now also target `net48` on Windows, and CI has a Windows job for
+    it. The first run found a real bug (decision 15). A target that is compiled but never run can hide
+    a bug like this one for as long as it exists.
+15. **Honor the cancellation token on `netstandard2.0`.** The streaming helper ignored it, because
+    `StreamReader.ReadLineAsync` has no token overload there. A caller who cancelled a stream on .NET
+    Framework, Mono or Unity got no cancellation, and the cost governor recorded spend for the
+    abandoned stream. The helper now checks the token and stops waiting when it is cancelled. Two
+    tests pin it. We proved they fail on `net48` without the fix.
 
 ## 4. Smaller changes
 
@@ -103,14 +119,20 @@ Other live results used by this release:
 
 ## 5. What this release does not do
 
-- It does not add the Voices endpoint (list, design, replicate). That is a separate feature.
+- It does not run voice replication against the real API. `IVoiceService.CreateReplicatedAsync` follows
+  Google's documented request shape, but a test needs a real person's voice and that person's consent.
+  We will not use anyone's voice without it, and we will not make a fake consent recording. An opt-in
+  live test reads two recordings that the maintainer makes of their own voice. It is also the reason the
+  stateless `voicekey_` variant is not supported: we could not see its response shape.
 - It does not add the Live API. That stays a separate package.
 - It does not move to the Interactions API. Google documents `generateContent` as legacy but fully
   supported, and the new models work through it. The Interactions API still lacks Batch, explicit
   caching and safety settings.
-- It does not test the long-video savings of `Part.MediaProcessing`. We tested the field against two
-  real clips of about 10 seconds (see section 2). It works, but Google's claim of up to 88% fewer
-  tokens is for long videos, and we had none to test.
+- It has not yet measured the long-video savings of `Part.MediaProcessing`. We tested the field against
+  two real clips of about 10 seconds (see section 2). It works, but Google's claim of up to 88% fewer
+  tokens is for long videos, and we had none. An opt-in live test
+  (`AgenticVideo_OnALongVideo_UsesFewerTokensThanStatic`, set `GeminiTestLongVideo`) is written and
+  waits for a clip of at least three minutes and for the spending cap to allow the calls.
 - It does not add the tool-use tokens to the OpenTelemetry token metrics. Those still report only
   `promptTokenCount`, so they under-report agentic video calls. The cost governor does count them.
 

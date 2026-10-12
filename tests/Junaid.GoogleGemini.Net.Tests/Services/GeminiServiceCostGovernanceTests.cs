@@ -36,7 +36,7 @@ public class GeminiServiceCostGovernanceTests
         var handler = new FakeHttpMessageHandler(request =>
         {
             var path = request.RequestUri!.ToString();
-            var json = path.Contains(":countTokens", StringComparison.Ordinal) ? CountTokensJson : GenerateJson;
+            var json = path.IndexOf(":countTokens", StringComparison.Ordinal) >= 0 ? CountTokensJson : GenerateJson;
             return FakeHttpMessageHandler.JsonResponse(HttpStatusCode.OK, json);
         });
 

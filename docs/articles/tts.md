@@ -119,43 +119,70 @@ var response = await gemini.GenerateAudioAsync("Hello, this is my custom voice."
 The library sends ids that start with `voice_` or `voicekey_` in the field Google uses for custom
 voices. Both 3.8 models accept them. The older TTS models reject them.
 
-**How to get an id.** You create a custom voice with Google's Voices API. This library does not wrap
-that API yet. There are two ways:
+**How to get an id.** You create a custom voice through Google's Voices API, and `IVoiceService` wraps it.
+There are two ways:
 
-- **Voice design.** Describe the voice in words. Google creates it and returns the id. You can try this
-  without code in [Google AI Studio](https://aistudio.google.com/generate-speech), then copy the id.
-- **Voice replication.** Give Google reference audio, with a consent check, to copy a speaker's voice.
-  We have not tested this.
+- **Voice design.** Describe the voice in words. Google creates it and returns the id. You can also try
+  this without code in [Google AI Studio](https://aistudio.google.com/generate-speech), then copy the id.
+- **Voice replication.** Give Google two recordings of a real speaker, with a consent check, to copy their
+  voice. See the warning below.
 
-To create a designed voice from code, send `POST https://generativelanguage.googleapis.com/v1beta/voices`
-with your API key in the `x-goog-api-key` header:
+To design a voice from code:
 
-```json
+```csharp
+var voice = await voices.CreateDesignedAsync(new DesignedVoiceRequest
 {
-  "store": true,
-  "voice": {
-    "type": "prompted",
-    "display_name": "Calm narrator",
-    "gender": "female",
-    "language_code": "en-US",
-    "prompted": { "input": "A calm, friendly narrator in her thirties with a clear American accent." }
-  }
-}
+    Description = "A calm, friendly narrator in her thirties with a clear American accent.",
+    DisplayName = "Calm narrator",
+    Gender = "female",
+    LanguageCode = "en-US",
+});
+
+string id = voice.Id!;                       // "voice_..."
+File.WriteAllBytes("preview.wav", voice.SampleAudio!.GetBytes());   // a short preview clip
+
+var response = await gemini.GenerateAudioAsync("Hello!", new GeminiRequestOptions { VoiceName = id });
 ```
 
-The response has the id in `id`, and a short preview clip in `sample_audio`. Three things we found when
-we tried it on 2026-10-10:
+`IVoiceService` is registered by `AddGemini`. It also lists, gets and deletes voices:
 
-- **Do not set `voice.model`.** Google's page says both 3.8 models support voice design. The API
-  answered HTTP 400 for `gemini-3.8-flash-lite-tts`. Leave the field out, and the voice works with
+```csharp
+// Browse Google's voice library. Filters match exactly, and two values for one filter mean "either".
+var british = await voices.ListAsync(new VoiceListOptions { LanguageCodes = ["en-GB"], Genders = ["female"] });
+await foreach (var v in voices.ListAllAsync(new VoiceListOptions { Types = ["prompted", "replicated"] }))
+    Console.WriteLine($"{v.Id}  {v.DisplayName}  expires {v.ExpiresAt:d}");   // your own stored voices
+
+var mine = await voices.GetAsync("voice_...");   // includes the preview clip
+await voices.DeleteAsync("voice_...");
+```
+
+What we found when we tried it against the real API on 2026-10-10:
+
+- **Filter values must match exactly.** `Personas = ["Narrator"]` finds nothing, because the real persona
+  is "Storyteller & Narrator". Read the exact values from a list result first. Google rejects an unknown
+  filter name with HTTP 400.
+- **Get and delete work only for your own stored voices.** A prebuilt voice, such as `achernar`, returns
+  HTTP 404 for both. Find prebuilt voices with `ListAsync`.
+- **A list returns your own voices first**, newest first, and then the prebuilt voices that match. With no
+  filter that is more than a thousand voices, so filter first.
+
+- **Do not set `DesignedVoiceRequest.Model`.** Google's page says both 3.8 models support voice design.
+  The API answered HTTP 400 for `gemini-3.8-flash-lite-tts`. Leave it null, and the voice works with
   either TTS model.
-- **Creating one costs very little.** Our test used 662 tokens, mostly for the preview clip. Google
-  lists no separate price.
+- **Creating one costs very little.** Our test used 662 tokens, mostly for the preview clip. Google lists
+  no separate price. That usage does not feed cost governance, and it counts against your spending cap.
 - **Stored voices have limits.** A project can keep 200 of them, and each one expires after a year.
-  Delete a voice you no longer need with `DELETE /v1beta/voices/{id}`.
 
-A live test in the repo (`CustomVoiceLiveTests`) creates a voice, uses it with both models, checks the
-speech with a transcript, and deletes it.
+**Voice replication copies a real person's voice. Only use recordings of a speaker who has agreed.**
+Google requires two recordings of the same adult: 10 to 30 seconds of clean speech, and the speaker
+reading Google's consent statement. `CreateReplicatedAsync` takes both. The library does not check the
+consent and does not make one for you. Our authors have **not** run this method against the real API,
+because a test needs a real person's voice and consent. It follows Google's documented request shape.
+The stateless `voicekey_` variant is not supported. To test it yourself, record your own voice, then set
+`GeminiTestVoiceSource` and `GeminiTestVoiceConsent` to the two files and run `VoiceServiceLiveTests`.
+
+Live tests in the repo cover this. `CustomVoiceLiveTests` and `VoiceServiceLiveTests` create a voice,
+use it with both models, check the speech with a transcript, and delete it.
 
 Set `SpeechLanguageCode` (for example `"en-US"`) to name the language. It is optional. The 3.8 models
 detect the language from the text.

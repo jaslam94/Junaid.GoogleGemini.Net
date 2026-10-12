@@ -204,7 +204,7 @@ public class AudioGenerationTests
         Assert.Equal(bitsPerSample, BitConverter.ToInt16(wav, 34));
         Assert.Equal("data", System.Text.Encoding.ASCII.GetString(wav, 36, 4));
         Assert.Equal(pcm.Length, BitConverter.ToInt32(wav, 40));
-        Assert.Equal(pcm, wav[44..]);
+        Assert.Equal(pcm, wav.Skip(44).ToArray());
     }
 
     [Fact]

@@ -120,7 +120,7 @@ public class BatchServiceTests
 
         // The uploaded content (captured on the finalize request) must be two JSON lines, not an array.
         var uploadedBody = filesHandler.RequestBodies[1]!;
-        var jsonLines = uploadedBody.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        var jsonLines = uploadedBody.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(2, jsonLines.Length);
         Assert.Contains("req-1", jsonLines[0]);
         Assert.Contains("req-2", jsonLines[1]);

@@ -642,21 +642,43 @@ grounding, url_context, code_execution) + groundingMetadata; embeddings (taskTyp
       the default to `gemini-3.1-flash-image`, and kept Nano Banana 2.1 as an opt-in constant. Google
       deprecated the old model but set no shutdown date. Revisit this when it does.
 
-      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 251 tests
-      (up from 185), all green on both net8.0 and net9.0. The last complete live run had 69 tests, including
-      Batch and both video tests. 68 passed. The one failure was the thinking-budget test above. We corrected
-      it, and it passed once. Google's spending cap on the test project then blocked every later call, so
-      the corrected test has not had a second run. Re-run it when the cap allows. The TTS live tests send
-      their audio back through the transcription model, so they check what was said, not only that the file
-      is well formed. That proves the style direction is no longer
-      spoken and that the preamble no longer leaks into the speech, for a unary call and for a stream.
+      A later round closed four gaps that the first pass had listed as "not verified".
 
-      We did not verify: the long-video savings that Google claims for agentic video (our clips run about
-      10 seconds); voice replication; or a wrapper for the Voices API, which this release does not add (the
-      custom voice test calls its REST endpoint directly). No .NET 8 runtime is installed on the build machine,
-      so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. The `netstandard2.0` target
-      is compiled but not run. There are no breaking changes to compiled code. The behavior changes are the default TTS model, `ToWav()` on WAV input,
-      and prompts that put a direction in the text.
+      The `netstandard2.0` build had never been run, only compiled. We added a `net48` test target (Windows only,
+      because Linux cannot host .NET Framework) and a Windows CI job, and ran the whole unit suite on .NET
+      Framework 4.8. It found a real bug that exists only in that build. `StreamReader.ReadLineAsync` has no token
+      overload on `netstandard2.0`, and the streaming helper ignored the token there. A caller who cancelled a
+      stream on .NET Framework, Mono or Unity got no cancellation, and the cost governor recorded spend for the
+      abandoned stream. The helper now honors the token. Two tests pin it, and we proved both fail on `net48`
+      without the fix and pass on `net9.0` either way. The suite now has 271 tests on .NET Framework 4.8.
+
+      The Voices API now has a wrapper, `IVoiceService`: list and filter the voice library, page through it, get,
+      design a voice, replicate a voice, and delete. We read the real list, create and error shapes from live calls.
+      Listing, every filter name, paging across several pages, and the 404 for a prebuilt voice were checked live.
+      The create call is covered by unit tests built from the real response. Google's spending cap on the test
+      project then blocked the live create test, so creating through the wrapper has not run live. The earlier
+      test that creates a voice with a plain `HttpClient` did pass. Voice replication follows Google's
+      documented shape only. It needs two recordings of a real speaker, including that speaker's consent, so we
+      did not run it, and we did not use anyone's voice or make a fake consent recording. An opt-in live test
+      reads two recordings that the maintainer makes of their own voice. The long-video savings are also not
+      measured. Our only clips run about 10 seconds. An opt-in live test (`GeminiTestLongVideo`) is written.
+
+      Verified: the full solution build had 0 warnings on all three targets. The unit suite has 273 tests on
+      net8.0 and net9.0 and 271 on .NET Framework 4.8 (185 before), all green. The last complete live run had 69
+      tests, including Batch and both video tests. 68 passed. The one failure was the thinking-budget test above.
+      We corrected it, and it passed once. Google's spending cap on the test project then blocked every later
+      billable call, so the corrected test has not had a second run, and the new live tests for the Voices
+      wrapper ran only in their free parts (5 passed). Re-run the suite when the cap allows. The TTS live tests
+      send their audio back through the transcription model, so they check what was said, not only that the file
+      is well formed. That proves the style direction is no longer spoken and that the preamble no longer
+      leaks into the speech, for a unary call and for a stream.
+
+      We did not verify: the long-video savings that Google claims for agentic video; voice replication; the
+      designed-voice test through the new wrapper (blocked by the cap); or the `netstandard2.0` target on
+      Mono or Unity (it runs on .NET Framework 4.8 only). No .NET 8 runtime is installed on the build machine,
+      so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. There are no breaking changes to
+      compiled code. The behavior changes are the default TTS model, `ToWav()` on WAV input, and prompts that
+      put a direction in the text.
 
 ---
 

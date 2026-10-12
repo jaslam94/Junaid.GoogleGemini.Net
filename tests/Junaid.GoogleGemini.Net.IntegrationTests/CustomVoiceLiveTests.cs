@@ -14,9 +14,11 @@ namespace Junaid.GoogleGemini.Net.IntegrationTests;
 /// Custom voices, and the other Gemini 3.8 TTS options that need a real model to check. See
 /// <c>PLAN-tts-3-8.md</c>.
 ///
-/// A custom voice id (<c>voice_...</c>) comes from Google's Voices API. This library does not wrap that API
-/// yet, so the test calls it directly with an <see cref="HttpClient"/>: create a "prompted" voice from a text
-/// description, use its id as <see cref="GeminiRequestOptions.VoiceName"/>, then delete it. Stored voices
+/// A custom voice id (<c>voice_...</c>) comes from Google's Voices API. The library wraps that API in
+/// <c>IVoiceService</c> (see <c>VoiceServiceLiveTests</c>). This test deliberately does NOT use the wrapper. It
+/// calls the REST endpoint with a plain <see cref="HttpClient"/>, so it checks the wire format independently of the
+/// wrapper's own code: create a "prompted" voice from a text description, use its id as
+/// <see cref="GeminiRequestOptions.VoiceName"/>, then delete it. Stored voices
 /// count against a limit of 200 per project and live for a year, so the test always deletes what it makes.
 /// It also removes any leftover voice that starts with <see cref="TestVoicePrefix"/>, which a crashed run
 /// could leave behind. It never touches a voice with another name.

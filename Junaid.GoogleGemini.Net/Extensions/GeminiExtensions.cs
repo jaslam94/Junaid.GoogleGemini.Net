@@ -224,6 +224,7 @@ namespace Junaid.GoogleGemini.Net.Extensions
             services.AddTransient<ISafetyService, SafetyService>();
             services.AddSingleton<IFunctionService, FunctionService>();
             services.AddTransient<ITranscriptionService, TranscriptionService>();
+            services.AddTransient<IVoiceService, VoiceService>();
 
             return services;
         }

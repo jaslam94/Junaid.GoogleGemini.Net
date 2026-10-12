@@ -49,6 +49,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Serialization;
 [JsonSerializable(typeof(InteractionRequest))]
 [JsonSerializable(typeof(Interaction))]
 [JsonSerializable(typeof(InteractionsApiErrorResponse))]
+[JsonSerializable(typeof(Voice))]
+[JsonSerializable(typeof(VoiceList))]
+[JsonSerializable(typeof(CreateVoiceRequest))]
 internal partial class GeminiJsonContext : JsonSerializerContext
 {
 }

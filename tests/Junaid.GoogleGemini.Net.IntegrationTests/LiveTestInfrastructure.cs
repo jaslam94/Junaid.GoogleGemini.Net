@@ -63,6 +63,56 @@ public sealed class RequiresTestVideoAttribute : FactAttribute
 }
 
 /// <summary>
+/// Like <see cref="RequiresGeminiKeyAttribute"/>, but also needs a LONG video, to test the token savings that
+/// Google claims for agentic video mode. Set <c>GeminiTestLongVideo</c> to the path of an MP4, MOV or WEBM of at
+/// least three minutes. Google says the saving shows on long videos. On clips of about ten seconds, agentic used
+/// slightly MORE tokens. A five-minute video costs roughly ten cents to test. The test skips without the variable.
+/// </summary>
+public sealed class RequiresLongTestVideoAttribute : FactAttribute
+{
+    public RequiresLongTestVideoAttribute()
+    {
+        var path = Environment.GetEnvironmentVariable("GeminiTestLongVideo");
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GeminiApiKey")))
+        {
+            Skip = "Set the GeminiApiKey environment variable to run live integration tests.";
+        }
+        else if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+        {
+            Skip = "Set GeminiTestLongVideo to the path of a video of at least three minutes to run this test.";
+        }
+    }
+}
+
+/// <summary>
+/// Needs two recordings of YOUR OWN voice, because Google's voice replication needs a real speaker and that speaker's
+/// consent. Set <c>GeminiTestVoiceSource</c> to a 10 to 30 second clip of you speaking, and
+/// <c>GeminiTestVoiceConsent</c> to a clip of you reading Google's consent statement (24 kHz mono 16-bit WAV is
+/// recommended). Do not use anyone else's voice. Nothing in this repo creates or fakes a consent recording on purpose.
+/// The test skips without both variables.
+/// </summary>
+public sealed class RequiresOwnVoiceRecordingsAttribute : FactAttribute
+{
+    public RequiresOwnVoiceRecordingsAttribute()
+    {
+        var source = Environment.GetEnvironmentVariable("GeminiTestVoiceSource");
+        var consent = Environment.GetEnvironmentVariable("GeminiTestVoiceConsent");
+        if (string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("GeminiApiKey")))
+        {
+            Skip = "Set the GeminiApiKey environment variable to run live integration tests.";
+        }
+        else if (Environment.GetEnvironmentVariable("GeminiPaidTier") != "1")
+        {
+            Skip = "Creating a voice runs a model. Set GeminiPaidTier=1 to run.";
+        }
+        else if (string.IsNullOrWhiteSpace(source) || !File.Exists(source) || string.IsNullOrWhiteSpace(consent) || !File.Exists(consent))
+        {
+            Skip = "Set GeminiTestVoiceSource and GeminiTestVoiceConsent to recordings of your own voice to run this test.";
+        }
+    }
+}
+
+/// <summary>
 /// Builds a real DI container once for the whole suite (reading the key from the environment), the
 /// same way a consuming app would. Constructing this does not call the API or validate the key.
 /// validation happens lazily on first use, which only occurs when a test actually runs.
