@@ -666,10 +666,13 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       Cost governance is now date-aware. Google's introductory price for `gemini-3.6-flash`,
       `gemini-3.8-flash` and the 3.8 TTS models ends on 2026-12-31. The standard rate (double) starts on
       2027-01-01. `ModelPricing` has `NextPricing` and `NextPricingEffectiveFromUtc`. The built-in table
-      carries the 2027 rates, so a budget does not silently undercount by half in January. We assume
-      00:00 UTC, because Google gives no time zone. `gemini-3.5-flash` and `gemini-3.7-flash` are priced
-      as the models Google routes them to. We assume that is how Google bills them. We have not confirmed
-      it.
+      carries the 2027 rates, so a budget does not silently undercount by half in January. We use
+      00:00 UTC, because Google gives no time zone. Google's billing catalog stamps its current prices at
+      07:00 UTC, which is midnight Pacific time. That hints that the real switch may come 7 or 8 hours later. `gemini-3.5-flash` and
+      `gemini-3.7-flash` are priced as the models Google routes them to. Cloud Monitoring counted all 40
+      of our `gemini-3.5-flash` calls under `gemini-3.6-flash`, so we expect them to bill at the 3.6 rate.
+      We could not read an invoice to confirm it. The catalog still lists `gemini-3.5-flash` at $1.50
+      in and $9.00 out.
 
       Smaller changes: the Nano Banana 2.1 model and its 1:4, 4:1, 1:8 and 8:1 ratios; the `512` image
       size; call `Id` on function calls and responses; `Part.MediaProcessing`; `[Obsolete]` on the 3.5
@@ -687,9 +690,9 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       does not model (`Text()` still works). It also reports the video as `toolUsePromptTokenCount` (712
       to 806 tokens across runs) and leaves `promptTokenCount` at 11. The cost governor ignored that
       field, so it priced an agentic call at about a quarter of its real cost. We added
-      `UsageMetadata.ToolUsePromptTokenCount` and price those tokens as input. That is an assumption.
-      Google's pricing page bills tool tokens as input for URL context, and we found no per-model rate
-      for video tool tokens. Any tool that loads input has the same gap. On these short clips `AGENTIC`
+      `UsageMetadata.ToolUsePromptTokenCount` and price those tokens as input. Google's billing
+      catalog has no separate SKU for tool-use tokens, so the input rate is the only rate that could
+      apply. We do not know if Google bills them at all. Any tool that loads input has the same gap. On these short clips `AGENTIC`
       used slightly more input tokens, not 88% fewer. Google's saving is for long videos. One 5-minute
       screen recording used 81% fewer tokens in agentic mode (4,483 against 24,149). The OpenTelemetry token metrics still report only `promptTokenCount`, so they
       under-report agentic calls. We did not change that.

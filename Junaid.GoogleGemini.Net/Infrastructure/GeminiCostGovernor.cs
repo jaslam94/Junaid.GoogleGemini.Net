@@ -104,8 +104,12 @@ public sealed class GeminiCostGovernor : ICostGovernor
 
             // Deprecated on 2026-10-08. Google routes these names to the models above, and live
             // responses confirm it (2026-10-10: gemini-3.5-flash answers as gemini-3.6-flash, and
-            // gemini-3.7-flash answers as gemini-3.8-flash). Google no longer lists a price for either
-            // name. We use the rate of the model that answers the call. We assume it bills that way.
+            // gemini-3.7-flash answers as gemini-3.8-flash). Google's billing catalog still lists
+            // gemini-3.5-flash SKUs at $1.50 in and $9.00 out. But on 2026-10-12 Cloud Monitoring counted
+            // all 40 of our gemini-3.5-flash calls (111,103 input tokens) under gemini-3.6-flash, and
+            // none under gemini-3.5-flash. So we use the rate of the model that answers the call. That
+            // evidence comes from usage metering, not from an invoice. Monitoring counted our
+            // gemini-3.7-flash calls under that name, and the catalog gives it the same rate as 3.8.
             ["gemini-3.7-flash"] = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
             ["gemini-3.5-flash"] = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
             ["gemini-3.5-flash-lite"] = new ModelPricing
@@ -441,9 +445,12 @@ public sealed class GeminiCostGovernor : ICostGovernor
         }
 
         // Tool-use prompt tokens (for example the frames an agentic video call loads) are not in
-        // PromptTokenCount. Google bills tool tokens as input on its pricing page, so we price them at
-        // the standard input rate. That is an assumption: we found no per-model rate for them. Leaving
-        // them out priced a whole agentic video call as if the video were free.
+        // PromptTokenCount. Google's billing catalog has no separate SKU for tool-use tokens. Every
+        // input SKU of gemini-3.8-flash (text, audio and video) costs the same, so the input rate is the
+        // only rate that can apply if Google bills these tokens. We do not know whether it bills them at
+        // all: Cloud Monitoring's input-token meter did not count them (664 metered input tokens against
+        // 37,297 tool-use tokens in one test). Pricing them can only make the estimate too high.
+        // Leaving them out priced a whole agentic video call as if the video were free.
         var rates = SelectRates(pricing, usage.PromptTokenCount + usage.ToolUsePromptTokenCount);
 
         var billableInputTokens = Math.Max(0, usage.PromptTokenCount - usage.CachedContentTokenCount)

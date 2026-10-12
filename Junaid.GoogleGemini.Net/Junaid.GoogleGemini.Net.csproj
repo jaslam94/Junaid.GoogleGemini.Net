@@ -70,7 +70,8 @@
 			works. Agentic mode reports the video in a separate usage field, toolUsePromptTokenCount.
 			The cost governor ignored that field, so it priced an agentic video call at about a quarter
 			of its real cost. UsageMetadata now has ToolUsePromptTokenCount, and the governor prices it
-			as input. That is an assumption, because we found no per-model rate for it. On short clips,
+			as input. Google's billing catalog has no separate SKU for these tokens, so the input rate is the
+			only rate that could apply. We do not know if Google bills them at all. On short clips,
 			agentic mode used slightly more tokens, not fewer. Google's saving is for long videos. On one
 			5-minute screen recording, agentic mode used 81% fewer tokens (4,483 against 24,149). The OpenTelemetry token metrics still report only promptTokenCount, so they
 			under-report agentic calls. The thinking docs now say that gemini-3.8-flash rejects the

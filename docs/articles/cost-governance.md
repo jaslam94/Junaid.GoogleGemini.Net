@@ -143,8 +143,11 @@ You can schedule a change in your own overrides in the same way:
 
 Google deprecated `gemini-3.5-flash` and `gemini-3.7-flash` on October 8, 2026 and routes them to
 `gemini-3.6-flash` and `gemini-3.8-flash`. The built-in table prices those two names at the rate of
-the model that answers. We assume Google bills the same way. Google no longer lists a price for
-either name.
+the model that answers. Google's billing catalog still lists `gemini-3.5-flash` at $1.50 in and
+$9.00 out per million tokens. But on 2026-10-12 Google's usage metering counted all 40 of our
+`gemini-3.5-flash` calls under `gemini-3.6-flash`, and none under the old name. We take that as
+strong evidence that the calls bill at the 3.6 rate. It is not proof, because we could not read an
+invoice. If Google bills the old name at its catalog rate, the estimate is too low by half or more.
 
 If a model has no pricing entry (built-in or overridden), the library skips the cost calculation.
 It still records token usage as normal. It adds nothing to the running daily total and emits no
@@ -165,9 +168,11 @@ The cost formula handles three details in `UsageMetadata` that are easy to miss:
   audio, and the transcript on demand. The API reports those tokens in `ToolUsePromptTokenCount`
   and not in `PromptTokenCount`. A real test showed a 660-token video as 11 prompt tokens. The
   library adds `ToolUsePromptTokenCount` to the input tokens at the standard input rate. It also
-  counts them when it picks the high-volume tier. The input rate is an assumption. Google's pricing
-  page bills tool tokens as input for URL context, and we found no per-model rate for video tool
-  tokens. Without this, the governor priced an agentic call at about a quarter of its real cost.
+  counts them when it picks the high-volume tier. Google's billing catalog has no separate SKU for
+  tool-use tokens, and every input SKU of `gemini-3.8-flash` costs the same. So the input rate is the
+  only rate that can apply. We do not know whether Google bills these tokens at all, because its
+  usage meter did not count them as input in our test. If it does not, the estimate is too high, which
+  is the safe direction for a budget. Without this, the governor priced an agentic call at about a quarter of its real cost.
 
 Two models (`gemini-2.5-pro` and `gemini-3.1-pro-preview`) have a higher rate above 200k input
 tokens. The library picks the tier from the response's actual `PromptTokenCount`. For the
