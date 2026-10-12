@@ -26,7 +26,7 @@
     "globalMetadata": {
       "_appName": "Junaid.GoogleGemini.Net",
       "_appTitle": "Junaid.GoogleGemini.Net",
-      "_description": "A production-ready .NET client for the Google Gemini API.",
+      "_description": "A .NET client for the Google Gemini API.",
       "_enableSearch": true,
       "_disableContribution": true
     }

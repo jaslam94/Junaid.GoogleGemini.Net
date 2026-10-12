@@ -3,8 +3,8 @@
 ## Supported Versions
 
 Only the latest patch release of each package receives security fixes. There is no long-term
-support branch: given how quickly the Gemini API surface moves, security and correctness fixes
-land on top of the current major version, not backported to older ones.
+support branch. The Gemini API changes quickly, so security and correctness fixes land on top of
+the current major version. We do not backport them to older ones.
 
 | Package | Supported |
 |---|---|
@@ -14,19 +14,19 @@ land on top of the current major version, not backported to older ones.
 | `Junaid.GoogleGemini.Net.Extensions.AI` < 6.2.0 | No, upgrade |
 | 5.x (pre-modernization) | No |
 
-If you're on an older 6.x release, check the [changelog](ROADMAP.md) before upgrading, v6 is a
-modernization release with breaking changes.
+If you are on an older 6.x release, check the [changelog](ROADMAP.md) before you upgrade. v6 has
+breaking changes.
 
 ## Reporting a Vulnerability
 
-Please **do not** open a public GitHub issue for security vulnerabilities.
+Please do not open a public GitHub issue for a security vulnerability.
 
 Instead, report privately using one of these channels:
 
-1. **Preferred:** [GitHub Security Advisories](https://github.com/jaslam94/Junaid.GoogleGemini.Net/security/advisories/new)
+1. Preferred: [GitHub Security Advisories](https://github.com/jaslam94/Junaid.GoogleGemini.Net/security/advisories/new)
    for this repository. This keeps the report private until a fix ships and lets us collaborate
    on a coordinated disclosure and CVE if warranted.
-2. **Email:** aslam.junaid786@hotmail.com with a subject line starting `SECURITY:`.
+2. Email: aslam.junaid786@hotmail.com with a subject line starting `SECURITY:`.
 
 Please include:
 
@@ -37,12 +37,12 @@ Please include:
 
 ### What to expect
 
-- **Acknowledgment:** within 3 business days.
-- **Triage:** I'll confirm whether it's in scope and its severity, and let you know the plan.
-- **Fix:** for confirmed vulnerabilities, I aim to ship a patch release and publish an advisory
-  within 14 days of confirmation, sooner for critical issues. Complex fixes may take longer; I'll
+- Acknowledgment: within 3 business days.
+- Triage: I will confirm whether the report is in scope and how severe it is, and tell you the plan.
+- Fix: for a confirmed vulnerability, I aim to ship a patch release and publish an advisory
+  within 14 days of confirmation, sooner for critical issues. Complex fixes may take longer. I will
   keep you updated.
-- **Credit:** with your permission, you'll be credited in the advisory and release notes.
+- Credit: with your permission, we will credit you in the advisory and release notes.
 
 ## Scope
 
@@ -54,7 +54,7 @@ In scope:
 
 Out of scope:
 
-- Vulnerabilities in the Google Gemini API itself, if you find one there, report it to
+- Vulnerabilities in the Google Gemini API itself. If you find one there, report it to
   [Google's Vulnerability Reward Program](https://bughunters.google.com/) instead.
 - Issues that require an attacker to already have your Gemini API key or full control of your
-  process (that's the same trust boundary as any other HTTP client library).
+  process. This is the same trust boundary as any other HTTP client library.

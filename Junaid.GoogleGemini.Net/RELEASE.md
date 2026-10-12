@@ -1,11 +1,11 @@
 ﻿# Release Notes
 
 ## v5.1.0
-- **Enhanced Function Calling**: Complete implementation with robust JSON parameter handling
-- **Fixed JsonElement Issues**: Resolved deserialization errors when calling functions with numeric parameters
-- **Interactive Menu System**: New "CHOOSE YOUR ADVENTURE" interface in example console app for selective feature exploration
-- **Function Examples**: Added comprehensive demonstrations including calculator, weather service, and error handling scenarios
-- **Developer Experience**: Improved with helper methods for safe parameter extraction and duplicate registration prevention
+- Function calling: Complete implementation that handles JSON parameters correctly
+- JsonElement fix: Fixed deserialization errors when calling functions with numeric parameters
+- Interactive menu: The example console app has a new "CHOOSE YOUR ADVENTURE" menu. You can pick which features to try.
+- Function examples: Added demonstrations for a calculator, a weather service, and error handling
+- Developer experience: Added helper methods for safe parameter extraction and for preventing duplicate registration
 
 Example of function calling:
 ```csharp
@@ -41,23 +41,23 @@ var result = await functionService.CallFunctionAsync(new FunctionCall
 ```
 
 ## v5.0.0
-- **MAJOR CLEANUP**: Removed all legacy and obsolete services for simplified architecture
-- **Removed Services**: TextService, VisionService, and ChatService
-- **Removed Legacy**: ServiceCollectionExtensions and GeminiConfiguration classes
-- **Unified Service**: Single `IGeminiService` for all content generation operations (text, vision, chat, streaming)
-- **Specialized Services**: Consolidated to 4 focused services - `IEmbeddingService`, `IModelInfoService`, `ISafetyService`, `IFunctionService`
-- **Request Options**: Added predefined `GeminiRequestOptions` (Creative, Fast, Code, Factual)
-- **Model Constants**: Introduced `GeminiConstants.Models` for easy model selection (Gemini25Pro, Gemini25Flash, etc.)
-- **Modern Configuration**: New `GeminiOptions` class with comprehensive settings
-- **Environment Variables**: Automatic API key loading from `GeminiApiKey` environment variable
-- **Rate Limiting**: Built-in rate limiting with `System.Threading.RateLimiting`
-- **Enhanced Resilience**: Updated Polly integration (v8.2.0) for better retry policies
-- **Safety Enhancements**: Predefined safety settings (Strict, Moderate, Permissive)
-- **Modern Utilities**: Updated `ConfigurationUtilities`, `ValidationUtilities`, `FileUtilities`, and `GeminiConstants`
-- **.NET 8 LTS Only**: Targets .NET 8 exclusively for optimal performance
-- **Enhanced Streaming**: Improved streaming capabilities across all operations
-- **Comprehensive Token Counting**: Token counting for text, vision, and chat inputs
-- **Proxy Support**: Added proxy configuration options
+- Cleanup: Removed all legacy and obsolete services to simplify the architecture
+- Removed services: TextService, VisionService, and ChatService
+- Removed legacy code: ServiceCollectionExtensions and GeminiConfiguration classes
+- Unified service: Single `IGeminiService` for all content generation operations (text, vision, chat, streaming)
+- Specialized services: Reduced to 4 services: `IEmbeddingService`, `IModelInfoService`, `ISafetyService`, `IFunctionService`
+- Request options: Added predefined `GeminiRequestOptions` (Creative, Fast, Code, Factual)
+- Model constants: Added `GeminiConstants.Models` to make model selection easy (Gemini25Pro, Gemini25Flash, etc.)
+- Configuration: Added a `GeminiOptions` class that holds all settings
+- Environment variables: Automatic API key loading from `GeminiApiKey` environment variable
+- Rate limiting: Added built-in rate limiting with `System.Threading.RateLimiting`
+- Resilience: Updated the Polly integration (v8.2.0) to improve retry policies
+- Safety: Added predefined safety settings (Strict, Moderate, Permissive)
+- Utilities: Updated `ConfigurationUtilities`, `ValidationUtilities`, `FileUtilities`, and `GeminiConstants`
+- .NET 8 LTS only: The library targets .NET 8 exclusively, for performance
+- Streaming: Improved streaming across all operations
+- Token counting: Added token counting for text, vision, and chat inputs
+- Proxy support: Added proxy configuration options
 
 Example of unified API:
 ```csharp

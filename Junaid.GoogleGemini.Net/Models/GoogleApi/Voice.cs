@@ -92,7 +92,7 @@ public class Voice
     /// <summary>
     /// Token usage of the call that made the voice, in Google's raw shape. Present on a create response.
     /// The library keeps it as JSON because this is not the <c>generateContent</c> usage shape. It does
-    /// <b>not</b> feed cost governance. A designed voice used 662 tokens when we tried it.
+    /// not feed cost governance. A designed voice used 662 tokens when we tried it.
     /// </summary>
     [JsonPropertyName("usage")]
     public JsonNode? Usage { get; set; }

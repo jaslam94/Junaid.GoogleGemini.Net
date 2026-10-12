@@ -2,7 +2,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests;
 
 /// <summary>
 /// Filters and paging for <c>IVoiceService.ListAsync</c>. Every filter that takes a list matches a voice
-/// that has <b>any</b> of the values (OR). Different filters combine with AND. Values must match exactly:
+/// that has any of the values (OR). Different filters combine with AND. Values must match exactly:
 /// <c>Personas = ["Narrator"]</c> finds nothing, because the real persona is "Storyteller &amp; Narrator".
 /// Read the exact values from a list result first. Live-verified on 2026-10-10.
 /// </summary>

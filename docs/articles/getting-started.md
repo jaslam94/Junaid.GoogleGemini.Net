@@ -8,7 +8,7 @@ dotnet add package Junaid.GoogleGemini.Net
 dotnet add package Junaid.GoogleGemini.Net.Extensions.AI
 ```
 
-Targets **net8.0**, **net9.0**, and **netstandard2.0** (for .NET Framework / Unity / Mono).
+The package targets net8.0, net9.0, and netstandard2.0 (for .NET Framework, Unity, and Mono).
 
 ## Authenticate
 
@@ -50,14 +50,15 @@ public class MyService(IGeminiService gemini)
 
 ### Reading responses
 
-`Text()` returns the text, or an **empty string** when there is none (never a placeholder). To
-distinguish "no content":
+`Text()` returns the text, or an empty string when there is none. It never returns a placeholder. To
+detect missing content:
 
 ```csharp
 if (response.TryGetText(out var text)) { /* use text */ }
 string guaranteed = response.GetTextOrThrow();   // throws GeminiContentException if blocked/empty
 var finishReason = response.FinishReason;          // "STOP", "SAFETY", ...
 var usage = response.Usage;                         // token counts
+var model = response.ModelVersion;                  // the model that answered
 ```
 
 ### Errors

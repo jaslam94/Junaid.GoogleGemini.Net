@@ -43,7 +43,7 @@ namespace Junaid.GoogleGemini.Net.Services.Interfaces
         /// Makes a stored custom voice by copying a real speaker from two recordings (voice replication).
         /// <b>Only use recordings of a speaker who has agreed.</b> Google requires a consent recording, and
         /// this library does not check or fake it. This method follows Google's documented request shape and
-        /// has <b>not</b> been run against the real API by this library's authors, because a test needs a real
+        /// has not been run against the real API by this library's authors, because a test needs a real
         /// person's voice and consent. The stateless <c>voicekey_</c> variant is not supported.
         /// </summary>
         Task<Voice> CreateReplicatedAsync(ReplicatedVoiceRequest request, CancellationToken cancellationToken = default);

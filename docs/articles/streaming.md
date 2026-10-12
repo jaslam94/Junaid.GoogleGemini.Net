@@ -22,7 +22,8 @@ await gemini.StreamAsync("Tell me a long story", text => Console.Write(text));
 
 ## Cancellation
 
-Pass a `CancellationToken`; it cancels the underlying HTTP read promptly:
+Pass a `CancellationToken`. It cancels the underlying HTTP read promptly. This works on every target,
+including netstandard2.0 (.NET Framework, Mono, and Unity). A cancelled stream records no cost:
 
 ```csharp
 await foreach (var chunk in gemini.StreamAsync(prompt, cancellationToken: ct))

@@ -1,81 +1,85 @@
 # Plan: Cost governance for Junaid.GoogleGemini.Net
 
-**Status:** Implemented and shipped in 6.2.0. Kept here as a historical record (code comments cross-
-reference specific sections of this file, e.g. the cost formula in §6.3 and the design rationale in
-§4). **Audience:** an AI coding agent (Cursor) implementing this directly against the current
-`master` branch. **Author's confidence:** every file path, method signature, and integration point
-below was verified by reading the actual current source on 2026-08-02, not from memory. Pricing
-numbers were fetched from the live Google pricing page on the same date. Re-verify them before
-merging (see §7).
+Status: implemented and shipped in 6.2.0. We keep this file as a historical record. Code comments
+cross-reference specific sections of it, for example the cost formula in §6.3 and the design
+rationale in §4.
 
-**Post-implementation addendum:** §2, §4, and §11 describe `MaxCostPerRequestUsd` as in-scope but
-leave its actual enforcement path unspecified. The `ICostGovernor` interface given in §5.1 has no
-method for it, and no integration point, test, or checklist item covers wiring it up. It shipped in
-two stages as a result: 6.2.0 first landed everything specified here exactly as written, with
-`MaxCostPerRequestUsd` as a config-only property (no enforcement); a follow-up change in the same
-6.2.0 release then added the actual pre-flight enforcement (`ICostGovernor.CheckEstimatedRequestCost`,
-`ICostGovernor.HasRequestCeiling`, `GeminiRequestCostExceededException`, wired into `GeminiService`)
-as a deliberate extension beyond this plan's literal text. See `docs/articles/cost-governance.md`
-for what actually shipped, including limitations (e.g. no coverage for `ChatAsync(IList<Content>)`)
-this plan doesn't anticipate.
+Audience: an AI coding agent (Cursor) that implements this directly against the current `master`
+branch.
+
+Author's confidence: we verified every file path, method signature, and integration point below by
+reading the actual current source on 2026-08-02. We did not work from memory. We fetched the pricing
+numbers from the live Google pricing page on the same date. Re-verify them before merging (see §7).
+
+Post-implementation addendum: §2, §4, and §11 describe `MaxCostPerRequestUsd` as in scope, but they
+leave its enforcement path unspecified. The `ICostGovernor` interface in §5.1 has no method for it.
+No integration point, test, or checklist item covers how to wire it up. As a result, it shipped in
+two stages. First, 6.2.0 landed everything specified here exactly as written. `MaxCostPerRequestUsd`
+was a config-only property, with no enforcement. Then a follow-up change in the same 6.2.0 release
+added the actual pre-flight enforcement. That change added `ICostGovernor.CheckEstimatedRequestCost`,
+`ICostGovernor.HasRequestCeiling`, and `GeminiRequestCostExceededException`, and wired them into
+`GeminiService`. It was a deliberate extension beyond the literal text of this plan. See
+`docs/articles/cost-governance.md` for what actually shipped. That includes limitations that this
+plan does not anticipate, for example no coverage for `ChatAsync(IList<Content>)`.
 
 ---
 
 ## 1. Goal
 
-Let a caller cap what a Gemini integration can spend, and observe what it actually spends, without
-rolling their own token-counting and pricing math. Two mechanisms:
+Let a caller cap what a Gemini integration can spend, and see what it actually spends, without
+writing their own token-counting and pricing math. There are two mechanisms:
 
-1. **Cost observability** (always on if the feature is enabled): every response's real token usage
-   is converted to a USD cost and recorded as an OpenTelemetry metric, following the exact pattern
-   already used for token/duration metrics.
-2. **Budget enforcement** (opt-in): a configurable daily USD ceiling. Once cumulative *actual* spend
-   for the day reaches the ceiling, the **next** call is rejected before it's sent. No network
-   round-trip, no cost incurred by the rejected call itself.
+1. Cost observability (always on if the feature is enabled). The library converts every response's
+   real token usage to a USD cost. It records the cost as an OpenTelemetry metric, using the exact
+   pattern that the token and duration metrics already use.
+2. Budget enforcement (opt-in). This is a configurable daily USD ceiling. When the cumulative
+   actual spend for the day reaches the ceiling, the library rejects the next call before it sends
+   it. The rejected call makes no network round-trip and costs nothing.
 
-## 2. Explicit scope (read this before writing any code)
+## 2. Explicit scope (read this before you write any code)
 
-**In scope:**
-- `GenerateContentResponse`-based calls only, meaning everything that already flows through
-  `GeminiClient.PostAsync`/`StreamAsync` and populates `GenerateContentResponse.UsageMetadata`. This
-  is exactly the set of calls `GeminiTelemetry.RecordUsage` already instruments today.
-- Both non-streaming (`PostAsync`) and streaming (`StreamAsync`) calls. **Streaming must be
-  included**. A budget guardrail that silently doesn't apply to `StreamAsync`/`StreamChatAsync`
-  would let a runaway streaming loop blow through the budget completely unchecked, which defeats the
-  feature's entire purpose. See §5.3 for exactly what's missing there today.
-- A **cumulative daily budget**, enforced from real recorded spend (exact, not estimated).
-- An **optional, opt-in per-request estimate** (`MaxCostPerRequestUsd`), which is a best-effort
-  guard only. See §4 for why it can't be exact.
+In scope:
+- Only `GenerateContentResponse`-based calls. That means everything that already flows through
+  `GeminiClient.PostAsync` and `StreamAsync` and fills `GenerateContentResponse.UsageMetadata`. This
+  is exactly the set of calls that `GeminiTelemetry.RecordUsage` already instruments today.
+- Both non-streaming (`PostAsync`) and streaming (`StreamAsync`) calls. Streaming must be included.
+  A budget guardrail that silently does not apply to `StreamAsync` and `StreamChatAsync` would let a
+  runaway streaming loop pass the budget unchecked. That defeats the purpose of the feature. See
+  §5.3 for exactly what is missing there today.
+- A cumulative daily budget, enforced from real recorded spend (exact, not estimated).
+- An optional, opt-in per-request estimate (`MaxCostPerRequestUsd`). It is a best-effort guard
+  only. See §4 for why it cannot be exact.
 
-**Explicitly out of scope for this change (do not implement):**
-- Embeddings (`EmbedContentAsync`/`BatchEmbedContentAsync`). Verified: `EmbedContentResponse` has no
-  usage/token field at all today, so there's nothing to cost from without separate design work.
-- Files API and context caching operations themselves (the storage/management calls). Only the
-  *generation* calls that reference a `CachedContent` are covered, and they're covered automatically
-  since they still return `GenerateContentResponse`.
-- Per-minute or per-hour budgets. Daily (UTC calendar day) only for v1.
-- Multi-instance/distributed budget tracking (e.g. shared Redis-backed counter across horizontally
-  scaled instances). This is in-process, single-instance, in-memory only. Document that limitation
-  loudly (see §6.4).
+Out of scope for this change (do not implement):
+- Embeddings (`EmbedContentAsync` and `BatchEmbedContentAsync`). We verified that
+  `EmbedContentResponse` has no usage or token field today. There is nothing to cost without
+  separate design work.
+- The Files API and context caching operations themselves (the storage and management calls). The
+  feature covers only the generation calls that reference a `CachedContent`. They are covered
+  automatically, because they still return `GenerateContentResponse`.
+- Per-minute or per-hour budgets. v1 supports daily budgets only (UTC calendar day).
+- Multi-instance or distributed budget tracking (for example, a shared Redis-backed counter across
+  horizontally scaled instances). The tracking is in-process, single-instance, and in-memory only.
+  Document that limitation prominently (see §6.4).
 
 ## 3. Prerequisite bug fix (found during research, must land first)
 
-`IGeminiService.CountTokensAsync(string prompt, CancellationToken ct)` has **no way to specify a
-model**. Internally it always resolves to `Options.DefaultModel`
-(`Junaid.GoogleGemini.Net/Services/GeminiService.cs`, `GetCountTokensEndpoint(null)` →
-`FormatModelName(null, Options?.DefaultModel)`). This means: if a caller does
+`IGeminiService.CountTokensAsync(string prompt, CancellationToken ct)` has no way to specify a
+model. Internally it always resolves to `Options.DefaultModel`
+(`Junaid.GoogleGemini.Net/Services/GeminiService.cs`, `GetCountTokensEndpoint(null)`, which calls
+`FormatModelName(null, Options?.DefaultModel)`). Suppose a caller does this:
 
 ```csharp
 await gemini.GenerateAsync(prompt, new GeminiRequestOptions { Model = "gemini-3.1-pro-preview" });
 ```
 
-and this feature's per-request pre-flight estimate calls `CountTokensAsync(prompt)` to estimate
-input cost, it will silently count tokens (and therefore price) against the *default* model, not
-`gemini-3.1-pro-preview`, the model the call is actually going to use. Given the pricing table has
-materially different rates per model (see §7), this would produce a wrong estimate for any call that
+This feature's per-request pre-flight estimate calls `CountTokensAsync(prompt)` to estimate input
+cost. That call silently counts tokens, and therefore prices them, against the default model. It
+does not use `gemini-3.1-pro-preview`, the model that the call will actually use. The pricing table
+has materially different rates per model (see §7). So the estimate would be wrong for any call that
 overrides `Model`.
 
-**Fix:** add a new overload, do not change the existing one:
+The fix: add a new overload, and do not change the existing one:
 
 ```csharp
 // IGeminiService.cs: new overload, existing 2-arg one stays exactly as-is
@@ -85,50 +89,49 @@ Task<CountTokensResponse> CountTokensAsync(
     CancellationToken cancellationToken = default);
 ```
 
-Implement in `GeminiService.cs` by threading `options?.Model` into `GetCountTokensEndpoint`
-(currently hardcoded to `GetCountTokensEndpoint(null)` in the 2-arg overload. Change that call site
-to delegate to the new 3-arg overload with `options: null`, and have the new overload pass
-`options?.Model` through). Mirror the same fix for `CountTokensWithImageAsync` and
-`CountTokensChatAsync` for consistency, even though this feature only needs the plain-text one.
-leaving them inconsistent would be a foot-gun for the next person. Add the 3 new overloads to
-`IGeminiService.cs` with XML docs; keep the 3 existing overloads calling through to the new ones with
-`options: null`.
+Implement it in `GeminiService.cs` by threading `options?.Model` into `GetCountTokensEndpoint`. The
+2-arg overload currently hardcodes `GetCountTokensEndpoint(null)`. Change that call site to delegate
+to the new 3-arg overload with `options: null`. Have the new overload pass `options?.Model` through.
+Mirror the same fix for `CountTokensWithImageAsync` and `CountTokensChatAsync` for consistency, even
+though this feature needs only the plain-text one. Leaving them inconsistent would trip up the next
+person. Add the 3 new overloads to `IGeminiService.cs` with XML docs. Keep the 3 existing overloads
+and have them call through to the new ones with `options: null`.
 
-This is a real, independently-worthwhile bug fix. Call it out as such in the PR description, separate
-from the cost-governance feature itself.
+This is a real bug fix that is worth shipping on its own. Call it out as such in the PR description,
+separate from the cost-governance feature itself.
 
-## 4. Why cumulative-first, not "count tokens before every call"
+## 4. Why the daily budget comes first, and we do not count tokens before every call
 
-The naive design ("before every call, call `countTokens`, estimate cost, compare to budget, then
-send the real call") was rejected. It doubles the number of API calls (an extra HTTP round-trip
-*before every single generation call*, forever, even when nothing is near budget), which is a bad
-trade for a feature literally named "cost governance." It's also structurally incomplete: `countTokens`
-only returns `TotalTokens` for the *input*. It cannot know the *output* token count in advance, so
-even a "pre-flight" check can only ever bound the input side precisely; the output side is
-fundamentally unknown until generation completes (bounded only loosely by `MaxTokens`, if the caller
-set one).
+We rejected the naive design: before every call, call `countTokens`, estimate the cost, compare it
+to the budget, then send the real call. It doubles the number of API calls. It adds an extra HTTP
+round-trip before every single generation call, forever, even when spend is nowhere near the budget.
+That is a poor trade for a feature named "cost governance." The design is also structurally
+incomplete. `countTokens` returns only `TotalTokens` for the input. It cannot know the output token
+count in advance. A pre-flight check can bound only the input side precisely. The output side is
+unknown until generation completes. `MaxTokens` bounds it only loosely, if the caller set one.
 
-**Design actually used:**
-- The **primary, always-correct mechanism** is cumulative: after every real response, compute its
-  *actual* cost from the real `UsageMetadata`, add it to a running daily total, and record it via
-  OTel. Before sending the **next** call, check whether the running total has already reached the
-  configured ceiling, a cheap, in-memory, zero-extra-HTTP-call check. This is exact (built from real
-  billed tokens) and catches the "$4k overnight" runaway-loop scenario on the very next iteration,
-  which is the actual failure mode this feature exists to prevent.
-- The **secondary, opt-in mechanism** (`MaxCostPerRequestUsd`) is an estimate: input cost is exact
-  (via the fixed `CountTokensAsync` overload from §3), output cost is bounded by `MaxTokens` if the
-  caller set one, else a configurable worst-case assumption (default: treat it as unbounded / skip
-  the output half of the estimate and document that it only bounds input cost unless `MaxTokens` is
-  set). Document this precisely. Do not let the XML doc comment imply a guarantee it can't make.
+The design we used:
+- The primary mechanism is always correct, and it is cumulative. After every real response, compute
+  its actual cost from the real `UsageMetadata`. Add it to a running daily total, and record it
+  through OTel. Before sending the next call, check whether the running total has already reached
+  the configured ceiling. This check is cheap, in-memory, and makes no extra HTTP call. It is exact
+  because it uses real billed tokens. It catches the "$4k overnight" runaway-loop scenario on the
+  very next iteration. That is the actual failure mode this feature exists to prevent.
+- The secondary, opt-in mechanism (`MaxCostPerRequestUsd`) is an estimate. Input cost is exact,
+  through the fixed `CountTokensAsync` overload from §3. `MaxTokens` bounds the output cost if the
+  caller set one. Otherwise, the design needs a configurable worst-case assumption. The default is to
+  treat the output as unbounded and skip the output half of the estimate. In that case, the estimate
+  bounds only the input cost unless `MaxTokens` is set. Document this precisely. Do not let the XML
+  doc comment imply a guarantee that it cannot make.
 
 ## 5. Integration points (exact files, exact locations)
 
-### 5.1 New interface + implementation, mirroring `IRateLimiter`/`GeminiRateLimiter` exactly
+### 5.1 New interface and implementation, mirroring `IRateLimiter` and `GeminiRateLimiter` exactly
 
 Read `Junaid.GoogleGemini.Net/Infrastructure/GeminiRateLimiter.cs` first. This new component must
-follow the same shape: an interface + a real implementation + a `CreateDisabled()` factory for the
-zero-overhead-when-unused case, injected into `GeminiClient`'s constructor exactly like
-`IRateLimiter` is.
+follow the same shape: an interface, a real implementation, and a `CreateDisabled()` factory for the
+zero-overhead-when-unused case. Inject it into the `GeminiClient` constructor in the same way as
+`IRateLimiter`.
 
 New file `Junaid.GoogleGemini.Net/Infrastructure/GeminiCostGovernor.cs`:
 
@@ -179,23 +182,24 @@ public sealed class GeminiCostGovernor : ICostGovernor
 
 File: `Junaid.GoogleGemini.Net/Infrastructure/GeminiClient.cs`.
 
-Constructor: add `ICostGovernor costGovernor` as a fourth constructor parameter, stored in a new
-`_costGovernor` field, same null-check pattern as the other three (`ArgumentNullException` if null).
+Constructor: add `ICostGovernor costGovernor` as a fourth constructor parameter. Store it in a new
+`_costGovernor` field. Use the same null-check pattern as the other three (`ArgumentNullException`
+if null).
 
-In `PostAsync<TRequest, TResponse>`, immediately after the existing rate-limiter gate
-(`using var lease = await _rateLimiter.AcquireAsync(...)`, around line 94-98) and before the request
-is built, add:
+In `PostAsync<TRequest, TResponse>`, add the following immediately after the existing rate-limiter
+gate (`using var lease = await _rateLimiter.AcquireAsync(...)`, around line 94-98) and before the
+request is built:
 
 ```csharp
 _costGovernor.CheckBudget();
 ```
 
 This throws `GeminiBudgetExceededException` (a `GeminiException` subtype, see §6.1) before any HTTP
-work happens, exactly mirroring how the rate-limiter's `GeminiRateLimitException` is thrown before
-the request is built. No `try/catch` needed here. `GeminiBudgetExceededException` will be caught by
-the existing `catch (GeminiException) { activity?.SetStatus(...); throw; }` block already in
-`PostAsync` (verified present at line ~120), so it propagates cleanly without being wrapped by the
-generic `catch (Exception ex)` handler.
+work happens. That mirrors how the `GeminiRateLimitException` of the rate limiter is thrown before
+the request is built. No `try/catch` is needed here. The existing
+`catch (GeminiException) { activity?.SetStatus(...); throw; }` block in `PostAsync` catches
+`GeminiBudgetExceededException` (we verified that block is present at line ~120). The exception
+propagates cleanly, and the generic `catch (Exception ex)` handler does not wrap it.
 
 Then, in the existing block that already does telemetry recording:
 
@@ -206,7 +210,7 @@ if (result is GenerateContentResponse contentResponse)
 }
 ```
 
-add, immediately after:
+add the following immediately after it:
 
 ```csharp
 if (result is GenerateContentResponse { Usage: not null } usageResponse)
@@ -215,48 +219,48 @@ if (result is GenerateContentResponse { Usage: not null } usageResponse)
 }
 ```
 
-(Two separate `is` checks rather than reusing `contentResponse` from above is deliberate. Keep this
-patch minimal and additive rather than restructuring the existing conditional, to keep the diff easy
-to review.)
+We use two separate `is` checks on purpose, and we do not reuse `contentResponse` from above. This
+keeps the patch minimal and additive, and does not restructure the existing conditional. The diff
+stays easy to review.
 
-### 5.3 `GeminiClient.StreamAsync`: the currently-missing piece
+### 5.3 `GeminiClient.StreamAsync`: the piece that is missing today
 
-File: same, `StreamAsync<TRequest>`. **Important finding:** `StreamAsync` today has **zero**
-telemetry instrumentation of any kind: no `GeminiTelemetry.StartOperation`, no `RecordUsage`, no
-`RecordDuration`. Only `PostAsync` is instrumented. This is a pre-existing, already-acknowledged gap
-(unrelated to this feature), but cost governance **cannot silently inherit it**. If streaming calls
-aren't cost-tracked, the daily budget ceiling is trivially bypassable by anyone using
-`StreamAsync`/`StreamChatAsync`, which are documented, first-class APIs.
+File: the same file, `StreamAsync<TRequest>`. Important finding: `StreamAsync` today has zero
+telemetry instrumentation of any kind. It has no `GeminiTelemetry.StartOperation`, no `RecordUsage`,
+and no `RecordDuration`. Only `PostAsync` is instrumented. This gap already existed. We
+acknowledged it, and it is unrelated to this feature. But cost governance cannot silently inherit
+it. If the library does not cost-track streaming calls, anyone who uses `StreamAsync` or
+`StreamChatAsync` can bypass the daily budget ceiling. Both are documented, first-class APIs.
 
-**Required additions to `StreamAsync`:**
-1. Add the same `_costGovernor.CheckBudget()` call at the top, in the same place the rate-limiter
-   lease is acquired (right after `using var lease = await _rateLimiter.AcquireAsync(...)`).
-2. Gemini's SSE stream carries `usageMetadata` on the **final** chunk (intermediate chunks typically
-   omit it or carry partial data). Track the most recent non-null `UsageMetadata` seen across yielded
-   chunks: add a local `UsageMetadata? finalUsage = null;` before the `while (true)` loop, and after
+Required additions to `StreamAsync`:
+1. Add the same `_costGovernor.CheckBudget()` call at the top, in the same place that the
+   rate-limiter lease is acquired (right after `using var lease = await _rateLimiter.AcquireAsync(...)`).
+2. Gemini's SSE stream carries `usageMetadata` on the final chunk. Intermediate chunks usually omit
+   it or carry partial data. Track the most recent non-null `UsageMetadata` across the yielded
+   chunks. Add a local `UsageMetadata? finalUsage = null;` before the `while (true)` loop. After
    each successful `yield return chunk;` (both the per-blank-line one and the trailing-flush one at
    the end of the method), do `finalUsage = chunk.UsageMetadata ?? finalUsage;`.
-3. After the stream completes successfully (i.e. after the `while` loop and the trailing-flush block,
-   inside the existing `try`, before the `finally`), if `finalUsage is not null`, call
-   `_costGovernor.RecordSpend(model, finalUsage)`. You'll need `model` in scope. `StreamAsync`
-   currently doesn't call `GeminiTelemetry.Parse(endpoint)` at all; add that at the top of the method
-   (same one-liner `PostAsync` already uses) purely to get `model` for this purpose. Do **not** add
-   full duration/operation telemetry to `StreamAsync` as part of this change. That's the
-   pre-existing, separately-tracked gap; stay scoped to what cost governance needs (just the model
-   name and the final usage snapshot).
-4. If the stream is cancelled or throws partway through, do **not** record spend for whatever partial
-   usage was seen. Gemini bills for what the server actually generated regardless of whether the
-   client kept reading, but this library has no way to know the true billed amount without the
-   final `usageMetadata`, so recording a partial/guessed figure would be worse than recording
-   nothing. Document this as a known limitation (a cancelled stream's actual cost won't be reflected
-   in the tracked total) rather than silently guessing.
+3. After the stream completes successfully (after the `while` loop and the trailing-flush block,
+   inside the existing `try`, before the `finally`), call `_costGovernor.RecordSpend(model,
+   finalUsage)` if `finalUsage is not null`. You need `model` in scope. `StreamAsync` currently
+   does not call `GeminiTelemetry.Parse(endpoint)` at all. Add that at the top of the method (the
+   same one-liner that `PostAsync` already uses), only to get `model` for this purpose. Do not add
+   full duration or operation telemetry to `StreamAsync` as part of this change. That is the
+   existing gap, and we track it separately. Stay within what cost governance needs: the model name
+   and the final usage snapshot.
+4. If the stream is cancelled or throws partway through, do not record spend for whatever partial
+   usage you saw. Gemini bills for what the server actually generated, whether or not the client
+   kept reading. But this library cannot know the true billed amount without the final
+   `usageMetadata`. Recording a partial or guessed figure would be worse than recording nothing.
+   Document this as a known limitation: a cancelled stream's actual cost will not appear in the
+   tracked total. Do not silently guess.
 
 ### 5.4 DI registration
 
 File: `Junaid.GoogleGemini.Net/Extensions/GeminiExtensions.cs`, inside `AddGemini(services,
 configureOptions)`.
 
-Add, near the existing rate-limiter registration (`services.AddSingleton<IRateLimiter>(...)`):
+Add the following near the existing rate-limiter registration (`services.AddSingleton<IRateLimiter>(...)`):
 
 ```csharp
 services.AddSingleton<ICostGovernor>(serviceProvider =>
@@ -266,20 +270,21 @@ services.AddSingleton<ICostGovernor>(serviceProvider =>
 });
 ```
 
-(Exact constructor shape is an implementation detail for Cursor to finalize. The point is: singleton
-lifetime, same as the rate limiter, built from `GeminiOptions.Budget`.)
+Cursor finalizes the exact constructor shape as an implementation detail. The requirements are a
+singleton lifetime, the same as the rate limiter, and a build from `GeminiOptions.Budget`.
 
-`GeminiClient` is registered via `services.AddHttpClient<GeminiClient>(...)`. Since `GeminiClient`'s
-constructor now takes `ICostGovernor` as a fourth parameter, standard constructor injection picks it
-up automatically; no explicit wiring needed beyond the `AddSingleton<ICostGovernor>` line above.
+The code registers `GeminiClient` through `services.AddHttpClient<GeminiClient>(...)`. The
+`GeminiClient` constructor now takes `ICostGovernor` as a fourth parameter. Standard constructor
+injection picks it up automatically. No explicit wiring is needed beyond the `AddSingleton<ICostGovernor>`
+line above.
 
 ## 6. New types
 
 ### 6.1 Exception
 
-New file `Junaid.GoogleGemini.Net/Exceptions/GeminiBudgetExceededException.cs`, following the exact
-pattern of the existing `GeminiRateLimitException` in `GeminiExceptions.cs` (extra properties beyond
-the message, same constructor style):
+Add a new file `Junaid.GoogleGemini.Net/Exceptions/GeminiBudgetExceededException.cs`. Follow the
+exact pattern of the existing `GeminiRateLimitException` in `GeminiExceptions.cs` (extra properties
+beyond the message, same constructor style):
 
 ```csharp
 namespace Junaid.GoogleGemini.Net.Exceptions
@@ -307,40 +312,39 @@ namespace Junaid.GoogleGemini.Net.Exceptions
 }
 ```
 
-Put it in `GeminiExceptions.cs` alongside the others (matches existing file organization: all
-non-`GeminiApiException` typed exceptions live in that one file) rather than a new file, unless
-Cursor's judgment is that the file is getting too large (currently ~68 lines; adding one more class
-keeps it well under any reasonable limit, so prefer the existing file).
+Put it in `GeminiExceptions.cs` next to the others. This matches the existing file organization: all
+typed exceptions other than `GeminiApiException` live in that one file. Use a new file only if
+Cursor judges that the file is getting too large. The file is currently ~68 lines. One more class
+keeps it well under any reasonable limit, so prefer the existing file.
 
 ### 6.2 Telemetry
 
-File: `Junaid.GoogleGemini.Net/Infrastructure/Telemetry/GeminiTelemetry.cs`. Add alongside the
-existing `TokenUsage`/`OperationDuration` histograms:
+File: `Junaid.GoogleGemini.Net/Infrastructure/Telemetry/GeminiTelemetry.cs`. Add the following next
+to the existing `TokenUsage` and `OperationDuration` histograms:
 
 ```csharp
 internal static readonly Counter<double> CostUsd = Meter.CreateCounter<double>(
     "gemini.client.cost.usd", unit: "USD", description: "Cumulative USD cost of Gemini client operations.");
 ```
 
-**Naming note, do not get this wrong:** the existing metrics (`gen_ai.client.operation.duration`,
-`gen_ai.client.token.usage`) use the `gen_ai.*` prefix because those are *stable, official OpenTelemetry
-GenAI semantic convention* attribute names. As of this plan's writing, **there is no official
-`gen_ai.client.cost.*` metric in the OTel GenAI semconv spec**. It would be dishonest to imply
-standards compliance that doesn't exist by reusing that prefix. Use `gemini.client.cost.usd` (this
-library's own namespace, matching `GeminiTelemetry.SystemName = "gemini"`) instead. If a future OTel
-semconv version adds an official cost attribute, that's a deliberate follow-up migration, not
-something to guess at now. Before implementing, do a quick check of the current OTel GenAI semconv
-spec in case this has changed since. If an official name now exists, use that instead and note the
-change in the PR description.
+Naming note. Do not get this wrong. The existing metrics (`gen_ai.client.operation.duration` and
+`gen_ai.client.token.usage`) use the `gen_ai.*` prefix because those are stable, official
+OpenTelemetry GenAI semantic convention attribute names. As of this plan's writing, the OTel GenAI
+semconv spec has no official `gen_ai.client.cost.*` metric. Reusing that prefix would imply a
+standards compliance that does not exist. Use `gemini.client.cost.usd` instead. It uses this
+library's own namespace, which matches `GeminiTelemetry.SystemName = "gemini"`. If a future OTel
+semconv version adds an official cost attribute, migrating is a deliberate follow-up. Do not guess
+now. Before you implement, check the current OTel GenAI semconv spec in case this has changed. If an
+official name now exists, use that instead and note the change in the PR description.
 
-Use a `Counter<double>`, not a `Histogram<double>`. Cost is cumulative/additive by nature (this
-matches how billing dashboards represent spend), whereas the existing histograms model a
-distribution of individual values (duration, token count per call). Tag it the same way
-`RecordUsage`/`RecordDuration` already tag their metrics (`gen_ai.system`, `gen_ai.operation.name`,
-`gen_ai.request.model`), for consistency and so it correlates in any dashboard alongside the existing
-metrics.
+Use a `Counter<double>` and not a `Histogram<double>`. Cost is cumulative and additive by nature.
+This matches how billing dashboards represent spend. The existing histograms model a distribution of
+individual values (duration, or token count per call). Tag it in the same way that `RecordUsage` and
+`RecordDuration` tag their metrics (`gen_ai.system`, `gen_ai.operation.name`,
+`gen_ai.request.model`). This keeps it consistent, and it then correlates with the existing metrics
+in any dashboard.
 
-Add a method mirroring `RecordUsage`'s shape:
+Add a method that mirrors the shape of `RecordUsage`:
 
 ```csharp
 internal static void RecordCost(string? model, decimal costUsd)
@@ -354,7 +358,7 @@ internal static void RecordCost(string? model, decimal costUsd)
 ### 6.3 Configuration
 
 File: `Junaid.GoogleGemini.Net/Infrastructure/Options/GeminiOptions.cs`. Add a new property and a
-new nested options class, following the exact style of the existing `RateLimitOptions`:
+new nested options class. Follow the exact style of the existing `RateLimitOptions`:
 
 ```csharp
 /// <summary>Cost governance settings. Null (the default) disables the feature entirely, with zero overhead.</summary>
@@ -421,8 +425,8 @@ public class HighVolumeTier
 }
 ```
 
-**Cost formula** (implement exactly this. The two nuances below are easy to get wrong and were
-found by reading `UsageMetadata`'s actual fields, not assumed):
+Cost formula: implement exactly this. Two details below are easy to get wrong. We found them by
+reading the actual fields of `UsageMetadata`, and we did not assume them:
 
 ```
 tier = (usage.PromptTokenCount > pricing.HighVolumeTier?.ThresholdTokens)
@@ -440,11 +444,12 @@ outputCost = (usage.CandidatesTokenCount + usage.ThoughtsTokenCount) / 1_000_000
 totalCost = inputCost + cachedCost + outputCost
 ```
 
-### 6.4 XML doc / README caveat to include verbatim
+### 6.4 XML doc and README caveat to include verbatim
 
-Both `BudgetOptions` and the new docs article (§9) must state, prominently, not buried:
+Both `BudgetOptions` and the new docs article (§9) must state the following prominently. Do not
+bury it:
 
-> This budget is tracked **in-memory, per process**. If your app runs as multiple instances (e.g.
+> This budget is tracked in-memory, per process. If your app runs as multiple instances (e.g.
 > horizontally scaled), each instance tracks its own spend independently. The effective ceiling is
 > `MaxCostPerDayUsd × instance count`, not a shared global cap. For a true cross-instance cap, you'd
 > need to feed the `gemini.client.cost.usd` metric into an external system (e.g. a shared counter,
@@ -452,9 +457,10 @@ Both `BudgetOptions` and the new docs article (§9) must state, prominently, not
 
 ## 7. Pricing table: verify before merging
 
-Fetched from `https://ai.google.dev/gemini-api/docs/pricing` on 2026-08-02 (paid tier, USD per 1M
-tokens). **Re-fetch and cross-check this table against the live page before merging.** Pricing pages
-change, and this was read by an automated fetch, not hand-verified against a screenshot.
+We fetched this table from `https://ai.google.dev/gemini-api/docs/pricing` on 2026-08-02 (paid tier,
+USD per 1M tokens). Re-fetch it and cross-check it against the live page before merging. Pricing
+pages change. An automated fetch read this table, and nobody checked it by hand against a
+screenshot.
 
 | Model | Input | Output | Cached input | High-volume tier (>200k input tokens) |
 |---|---|---|---|---|
@@ -467,115 +473,126 @@ change, and this was read by an automated fetch, not hand-verified against a scr
 | `gemini-2.5-pro` | $1.25 | $10.00 | $0.125 | $2.50 / $15.00 / $0.25 |
 | `gemini-2.5-flash` | $0.30 | $2.50 | $0.03 | N/A |
 
-Models not in this table (`gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, older
-1.x/pro models, embedding models) have **no built-in pricing entry**. Decide and document one
-consistent behavior for an unpriced model in `RecordSpend`/cost calc: recommended is to skip cost
-recording for that call (record token usage as normal, just don't compute/record a cost. Do **not**
-throw, and do **not** silently assume $0, since either would corrupt the budget signal) and log a
-one-time warning (`_logger.LogWarning` on `GeminiClient`, or equivalent) so the gap is visible without
-being noisy on every call. Add image-generation model pricing as a fast-follow once that pricing is
-confirmed (image-model pricing is often per-image, not per-token, so it needs separate design, not a
-token-rate entry, do not guess a token rate for image models).
+Models that are not in this table have no built-in pricing entry. These are
+`gemini-3.1-flash-image-preview`, `gemini-3-pro-image-preview`, older 1.x and pro models, and
+embedding models. Decide on one consistent behavior for an unpriced model in the `RecordSpend` and
+cost calculation, and document it. We recommend that you skip cost recording for that call. Record
+token usage as normal, and do not compute or record a cost. Do not throw, and do not silently assume
+$0. Either would corrupt the budget signal. Log a one-time warning (`_logger.LogWarning` on
+`GeminiClient`, or equivalent) so the gap is visible without adding noise on every call. Add
+image-generation model pricing as a fast follow, once that pricing is confirmed. Image-model pricing
+is often per image and not per token. It needs separate design and not a token-rate entry. Do not
+guess a token rate for image models.
 
 ## 8. Tests to add
 
-Mirror `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/GeminiRateLimiterTests.cs` and
-`GeminiClientTests.cs` conventions (xUnit, `FakeHttpMessageHandler` for client-level tests). New file
-`tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/GeminiCostGovernorTests.cs`:
+Mirror the conventions of `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/GeminiRateLimiterTests.cs`
+and `GeminiClientTests.cs` (xUnit, and `FakeHttpMessageHandler` for client-level tests). Add a new
+file, `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/GeminiCostGovernorTests.cs`:
 
-- Cost calc is correct for a plain call (no caching, no thinking) against a known pricing entry.
-- Cost calc correctly adds `ThoughtsTokenCount` into the output side, not the input side.
-- Cost calc correctly discounts `CachedContentTokenCount` at the cached rate, not the standard input
-  rate, and does not double-charge it (i.e. `PromptTokenCount - CachedContentTokenCount` for the
-  standard-rate portion, not the full `PromptTokenCount`).
-- High-volume tier: a response with `PromptTokenCount` above the threshold prices at the higher tier;
-  at or below, the base tier.
+- The cost calculation is correct for a plain call (no caching, no thinking) against a known pricing
+  entry.
+- The cost calculation adds `ThoughtsTokenCount` to the output side and not the input side.
+- The cost calculation discounts `CachedContentTokenCount` at the cached rate and not the standard
+  input rate. It does not double-charge it. The standard-rate portion is `PromptTokenCount -
+  CachedContentTokenCount` and not the full `PromptTokenCount`.
+- High-volume tier: a response with `PromptTokenCount` above the threshold prices at the higher
+  tier. At or below the threshold, it prices at the base tier.
 - `CheckBudget()` throws `GeminiBudgetExceededException` once cumulative spend reaches
-  `MaxCostPerDayUsd`, and does not throw one cent below it (off-by-one boundary test).
-- `CreateDisabled()`-equivalent: `CheckBudget()` never throws regardless of spend; `RecordSpend`
-  still returns/records a value (observability stays on when enforcement is off).
-- Day rollover: spend recorded "yesterday" (inject/fake the clock, don't rely on real wall-clock time
-  in the test) does not count toward today's ceiling.
-- Concurrency: N parallel `RecordSpend` calls all land (no lost updates). Matches the existing
-  `GeminiResilienceTests.cs`-style concern for thread-safety under this codebase's conventions.
+  `MaxCostPerDayUsd`. It does not throw one cent below it (an off-by-one boundary test).
+- The `CreateDisabled()` equivalent: `CheckBudget()` never throws, whatever the spend. `RecordSpend`
+  still returns and records a value (observability stays on when enforcement is off).
+- Day rollover: spend recorded "yesterday" does not count toward today's ceiling. Inject or fake the
+  clock. Do not rely on real wall-clock time in the test.
+- Concurrency: N parallel `RecordSpend` calls all land, with no lost updates. This matches the
+  thread-safety concern of the existing `GeminiResilienceTests.cs`, under this codebase's
+  conventions.
 
-New/extended file `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/GeminiClientTests.cs`:
-- `PostAsync` throws `GeminiBudgetExceededException` (unwrapped, not wrapped in a generic
-  `GeminiException`) when the injected cost governor's `CheckBudget()` throws, and the fake HTTP
-  handler's call count stays at 0 (the request never actually goes out).
+Add to a new or extended file, `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/GeminiClientTests.cs`:
+- `PostAsync` throws `GeminiBudgetExceededException` when the injected cost governor's
+  `CheckBudget()` throws. The exception is unwrapped, and not wrapped in a generic
+  `GeminiException`. The call count of the fake HTTP handler stays at 0, so the request never goes
+  out.
 - `PostAsync` calls `RecordSpend` with the response's real `Usage` after a successful call.
-- `StreamAsync` calls `RecordSpend` exactly once, after the stream completes, using the last chunk's
-  `UsageMetadata` (build a `FakeHttpMessageHandler` SSE response where only the final chunk carries
-  `usageMetadata`, matching real Gemini behavior. Confirm the existing `FakeHttpMessageHandler`
-  helper in `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/FakeHttpMessageHandler.cs` supports
-  building a multi-chunk SSE body; if not, extend it minimally rather than duplicating a new helper).
-- `StreamAsync` does NOT call `RecordSpend` if the stream is cancelled before the final chunk arrives.
+- `StreamAsync` calls `RecordSpend` exactly once, after the stream completes. It uses the
+  `UsageMetadata` of the last chunk. Build a `FakeHttpMessageHandler` SSE response where only the
+  final chunk carries `usageMetadata`, to match real Gemini behavior. Confirm that the existing
+  `FakeHttpMessageHandler` helper in
+  `tests/Junaid.GoogleGemini.Net.Tests/Infrastructure/FakeHttpMessageHandler.cs` supports a
+  multi-chunk SSE body. If it does not, extend it minimally and do not duplicate a new helper.
+- `StreamAsync` does not call `RecordSpend` if the stream is cancelled before the final chunk
+  arrives.
 
-New file `tests/Junaid.GoogleGemini.Net.Tests/Services/CountTokensModelOverloadTests.cs` (or add to
-an existing relevant file): the new `CountTokensAsync(prompt, options, ct)` overload resolves the
-endpoint using `options.Model`, not `Options.DefaultModel`, when both are set and differ.
+Add a new file, `tests/Junaid.GoogleGemini.Net.Tests/Services/CountTokensModelOverloadTests.cs` (or
+add to an existing relevant file). When `options.Model` and `Options.DefaultModel` are both set and
+differ, the new `CountTokensAsync(prompt, options, ct)` overload resolves the endpoint with
+`options.Model` and not `Options.DefaultModel`.
 
 ## 9. Docs to update
 
-- New `docs/articles/cost-governance.md`, following the structure/tone of the existing
-  `docs/articles/resilience-and-rate-limiting.md` (read that file first for the house style before
-  writing this one). Cover: what it does, the cumulative-vs-per-request distinction from §4 (don't
-  oversimplify this in the docs the way the in-conversation pitch did, be precise), the pricing
-  override mechanism, and the in-memory/single-instance caveat from §6.4 verbatim or near-verbatim.
-- Add it to `docs/articles/toc.yml` and `docs/index.md`'s guide list, matching how every other
-  article is already linked from both places (verify both files' current entries before editing:
-  `toc.yml` was mid-edit in the working tree as of this plan's writing, from the unrelated image-
-  generation work; don't clobber those changes).
-- `README.md`: one new bullet in the feature-comparison table near the top (matching the existing
-  row style: "Resilience built in", "Client-side rate limiting", etc.) plus a short code sample in
-  the "Core features" section, same format as the existing `## Resilience & rate limiting` section
-  near the bottom.
-- `Junaid.GoogleGemini.Net.csproj`'s `PackageReleaseNotes`: add an entry for this version bump
-  (check the current `<Version>` in the working csproj first; it's already at `6.1.0` as of this
-  plan's writing, from the uncommitted image-generation work; this feature should ship as part of
-  that same next release rather than inventing a separate version, unless that work has already been
-  released by the time this is implemented. Check `git log`/NuGet before assuming).
+- Add `docs/articles/cost-governance.md`, following the structure and tone of the existing
+  `docs/articles/resilience-and-rate-limiting.md`. Read that file first for the house style. Cover
+  these points: what the feature does, and the difference between the cumulative budget and the
+  per-request estimate from §4. Do not oversimplify this in the docs the way the in-conversation
+  pitch did. Be precise. Cover the pricing override mechanism too. State the in-memory,
+  single-instance caveat from §6.4 verbatim or near verbatim.
+- Add it to `docs/articles/toc.yml` and to the guide list in `docs/index.md`, in the same way as
+  every other article is linked from both places. Check the current entries of both files before you
+  edit them. `toc.yml` was mid-edit in the working tree when we wrote this plan, because of the
+  unrelated image-generation work. Do not clobber those changes.
+- `README.md`: add one new row to the feature-comparison table near the top (match the existing row
+  style: "Resilience built in", "Client-side rate limiting", and so on). Add a short code sample in
+  the "Core features" section, in the same format as the existing `## Resilience & rate limiting`
+  section near the bottom.
+- `Junaid.GoogleGemini.Net.csproj`: add an entry to `PackageReleaseNotes` for this version bump.
+  Check the current `<Version>` in the working csproj first. It is already at `6.1.0` as of this
+  plan's writing, because of the uncommitted image-generation work. This feature should ship as part
+  of that same next release, and not as a separate version. The exception is if that work has
+  already been released by the time you implement this. Check `git log` and NuGet before you assume.
 
-## 10. Correctness checklist (verify each before calling this done)
+## 10. Correctness checklist (verify each item before you call this done)
 
-- [ ] `decimal` used for every money computation, never `float`/`double` (except the unavoidable
-      `(double)` cast at the OTel `Counter<double>.Record` boundary, since OTel metrics are
-      double-typed. Cast only at that final point, never earlier).
-- [ ] `GeminiBudgetExceededException` extends `GeminiException` (not bare `Exception`) so it's
-      rethrown unwrapped by `PostAsync`'s existing `catch (GeminiException) { ...; throw; }` block.
-      this exact mistake (a new exception type not extending the base, getting silently wrapped) was
-      made and caught earlier in this project's history for `CassetteException`; don't repeat it.
-- [ ] `ThoughtsTokenCount` is added to the *output* side of the cost formula, not ignored and not
-      added to input.
-- [ ] `CachedContentTokenCount` is priced at the cached rate and *subtracted* from the standard-rate
-      portion of `PromptTokenCount` (not charged twice).
-- [ ] High-volume tier selection uses the response's *actual* `PromptTokenCount`, not an estimate.
-- [ ] Streaming calls are cost-tracked (§5.3). This was the single easiest piece to accidentally
-      skip, and skipping it breaks the whole feature's guarantee.
-- [ ] Cancelled/failed streams do not record a guessed partial cost.
-- [ ] `ICostGovernor`'s disabled/no-op mode never throws, matching `IRateLimiter.CreateDisabled()`'s
-      "always succeeds" precedent, not a silent-no-op-that-does-nothing precedent.
-- [ ] `GeminiOptions.Budget = null` (the default) results in zero added overhead on the hot path.
-      confirm `CheckBudget()`/`RecordSpend()` on the disabled implementation are cheap no-ops, not
-      doing wasted dictionary/lock work.
-- [ ] New public types have XML doc comments (the core project has `TreatWarningsAsErrors=true` and
-      only suppresses `CS1591`, but every existing public member in this codebase already has a
-      proper doc comment regardless of that suppression; match that standard, don't rely on the
-      suppression).
-- [ ] Full solution build (`dotnet build Junaid.GoogleGemini.Net.sln -c Debug`) is 0 warnings, 0
-      errors, and `dotnet test` is fully green on both net8.0 and net9.0, before considering this
-      done. This codebase has zero tolerance for build warnings on the core package.
-- [ ] `netstandard2.0` build target still compiles. `ConcurrentDictionary<DateOnly, decimal>` and
-      `decimal` math are both fine on netstandard2.0, but double-check any new syntax used (e.g.
-      collection expressions, primary constructors) is either already used elsewhere in the
-      netstandard2.0-targeted parts of this codebase or is polyfilled. Check
-      `Junaid.GoogleGemini.Net.csproj`'s `PolySharp`/`Microsoft.Bcl.AsyncInterfaces` setup if unsure.
+- [ ] Every money computation uses `decimal`, never `float` or `double`. The one exception is the
+      unavoidable `(double)` cast at the OTel `Counter<double>.Record` boundary, because OTel
+      metrics are double-typed. Cast only at that final point, never earlier.
+- [ ] `GeminiBudgetExceededException` extends `GeminiException` and not bare `Exception`.
+      `PostAsync`'s existing `catch (GeminiException) { ...; throw; }` block then rethrows it
+      unwrapped. This project made this exact mistake earlier, with `CassetteException`: a new
+      exception type that did not extend the base was silently wrapped. We caught it. Do not repeat
+      it.
+- [ ] `ThoughtsTokenCount` goes on the output side of the cost formula. Do not ignore it and do not
+      add it to the input side.
+- [ ] The code prices `CachedContentTokenCount` at the cached rate and subtracts it from the
+      standard-rate portion of `PromptTokenCount`. It does not charge it twice.
+- [ ] High-volume tier selection uses the response's actual `PromptTokenCount`, and not an estimate.
+- [ ] Streaming calls are cost-tracked (§5.3). This was the easiest piece to skip by accident, and
+      skipping it breaks the guarantee of the whole feature.
+- [ ] Cancelled or failed streams do not record a guessed partial cost.
+- [ ] The disabled or no-op mode of `ICostGovernor` never throws. It matches the "always succeeds"
+      precedent of `IRateLimiter.CreateDisabled()`. It does not follow a precedent of a silent no-op
+      that does nothing.
+- [ ] `GeminiOptions.Budget = null` (the default) adds zero overhead on the hot path. Confirm that
+      `CheckBudget()` and `RecordSpend()` on the disabled implementation are cheap no-ops. They must
+      not do wasted dictionary or lock work.
+- [ ] New public types have XML doc comments. The core project has `TreatWarningsAsErrors=true` and
+      suppresses only `CS1591`. Every existing public member in this codebase already has a proper
+      doc comment regardless of that suppression. Match that standard. Do not rely on the
+      suppression.
+- [ ] The full solution build (`dotnet build Junaid.GoogleGemini.Net.sln -c Debug`) has 0 warnings
+      and 0 errors. `dotnet test` is fully green on both net8.0 and net9.0. Check this before you
+      consider the work done. This codebase has zero tolerance for build warnings on the core
+      package.
+- [ ] The `netstandard2.0` build target still compiles. `ConcurrentDictionary<DateOnly, decimal>` and
+      `decimal` math are both fine on netstandard2.0. But double-check any new syntax you use (for
+      example collection expressions or primary constructors). It must either appear already in the
+      netstandard2.0-targeted parts of this codebase or be polyfilled. If you are unsure, check the
+      `PolySharp` and `Microsoft.Bcl.AsyncInterfaces` setup in `Junaid.GoogleGemini.Net.csproj`.
 
-## 11. Out of scope / explicit follow-ups (do not implement now, just note them)
+## 11. Out of scope and explicit follow-ups (do not implement now, only note them)
 
-- Embeddings, Files API, context-caching-management cost tracking.
-- Image-generation model pricing (different pricing model, likely per-image not per-token).
-- Cross-instance/distributed budget enforcement.
-- Per-minute/per-hour budgets (only daily).
-- An official OTel GenAI semconv cost attribute, if/when one is standardized. Migrate the metric
-  name then, not now (see §6.2).
+- Cost tracking for embeddings, the Files API, and context-caching management.
+- Image-generation model pricing (a different pricing model, likely per image and not per token).
+- Cross-instance or distributed budget enforcement.
+- Per-minute and per-hour budgets (only daily budgets exist).
+- An official OTel GenAI semconv cost attribute, if and when one is standardized. Migrate the metric
+  name then, and not now (see §6.2).

@@ -1,7 +1,7 @@
 ﻿# Contributing
 Feel free to improve the library!
 
-I want to make contributing to this project as easy and transparent as possible, whether it's:
+I want to make contributing to this project as easy and transparent as possible. You can help by:
 
 - Reporting a bug
 - Documenting code
@@ -15,16 +15,17 @@ I want to make contributing to this project as easy and transparent as possible,
 1. Fork the repo and create your branch from `master`.
 2. Adhere to the established code style within the project.
 3. Use meaningful commit messages.
-4. Ensure your changes do not break existing functionality.
-5. If you've added code that should be tested, add tests.
-6. Update the documentation if you have added features.
+4. Ensure your changes do not break existing functionality. On Windows, the unit tests also run on
+   .NET Framework 4.8 (`-f net48`). CI does the same.
+5. If you add code that needs tests, add tests.
+6. If you add a feature, update the documentation.
 
 ## Report bugs using [Github issues](https://github.com/jaslam94/Junaid.GoogleGemini.Net/issues)
 We use GitHub issues to track bugs. Report a bug by [opening a new issue](https://github.com/jaslam94/Junaid.GoogleGemini.Net/issues/new). 
 
-Would appreciate if you can write a bug report in the description. An [example](https://gist.github.com/czottmann/3402842) of a bug report that would be helpful.
+Please write the bug report in the description. Here is an [example](https://gist.github.com/czottmann/3402842) of a bug report that would be helpful.
 
-**Great Bug Reports** tend to have:
+A good bug report usually has:
 
 - A quick summary and/or background
 - Steps to reproduce
@@ -36,4 +37,4 @@ Would appreciate if you can write a bug report in the description. An [example](
 - Any attachments (like screenshot)
 
 ## License
-By contributing, you agree that your contributions will be licensed under its MIT License.
+By contributing, you agree that we will license your contributions under the project's MIT License.

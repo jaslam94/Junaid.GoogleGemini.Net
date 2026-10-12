@@ -4,10 +4,10 @@ Gemini's "Nano Banana" models can return generated images from the same `generat
 used for text; the client just needs to ask for `IMAGE` output. `GenerateImageAsync` does that for you.
 
 > **Note:** `Gemini31FlashImage` (Nano Banana 2) and `Gemini3ProImage` (Nano Banana Pro) are both
-> **GA** (since May 2026, under their current unsuffixed model IDs). Earlier releases of this library
-> pointed these constants at the older `-preview`-suffixed model IDs; those were shut down June 25,
-> 2026, so upgrade if you pinned the string literal yourself instead of the constant. There's also a
-> `Gemini31FlashLiteImage` (Nano Banana 2 Lite) for the fastest/cheapest option.
+> GA since May 2026, under their current unsuffixed model IDs. Earlier releases of this library
+> pointed these constants at the older `-preview` model IDs. Google shut those down on June 25,
+> 2026. If you pinned the string literal instead of the constant, upgrade it. The library also has
+> `Gemini31FlashLiteImage` (Nano Banana 2 Lite), the fastest and cheapest option.
 
 ```csharp
 var response = await gemini.GenerateImageAsync("A watercolor painting of a lighthouse at sunset.");
@@ -90,8 +90,8 @@ var options = new GeminiRequestOptions
 };
 ```
 
-> **Note:** image generation requires a **billing-enabled** API key. The free tier has a **0 quota**
-> for `generate_content` on image models (`generate_content_free_tier_requests`, limit: 0), so calls
-> fail with a `GeminiApiException` ("You exceeded your current quota...") on a free-tier key, not just
-> a slow/expensive one. There's also no streaming support for image generation in this release; a
-> future release may add it if Google exposes partial-image streaming more broadly.
+> **Note:** image generation requires a billing-enabled API key. The free tier has a quota of 0
+> for `generate_content` on image models (`generate_content_free_tier_requests`, limit: 0). On a
+> free-tier key, calls fail with a `GeminiApiException` ("You exceeded your current quota..."). This
+> release has no streaming for image generation. A future release may add it if Google exposes
+> partial-image streaming more broadly.

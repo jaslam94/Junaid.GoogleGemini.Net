@@ -1,11 +1,11 @@
 # Plan: Gemini 3.8 TTS and the October 2026 model refresh (6.8.0)
 
-Status: implemented in `6.8.0`, not yet released. All evidence below comes from real API calls on
+Status: implemented and shipped in `6.8.0`. All evidence below comes from real API calls on
 2026-10-10.
 
 ## 1. Why this release exists
 
-Google shuts down all three TTS models this library ships on **2026-11-17**:
+Google shuts down all three TTS models this library ships on 2026-11-17:
 `gemini-2.5-flash-preview-tts`, `gemini-2.5-pro-preview-tts` and `gemini-3.1-flash-tts-preview`.
 `GenerateAudioAsync` uses the 2.5 Flash model by default. After that date, a plain call fails.
 
@@ -60,47 +60,47 @@ Other live results used by this release:
 
 ## 3. Decisions
 
-1. **Keep the public API stable.** `SpeakerVoices` stays. The same prompt text keeps working.
-2. **Auto-split multi-speaker scripts.** When `SpeakerVoices` is set and the model supports speech
+1. Keep the public API stable. `SpeakerVoices` stays. The same prompt text keeps working.
+2. Auto-split multi-speaker scripts. When `SpeakerVoices` is set and the model supports speech
    metadata, the library splits the prompt at each `Name:` marker. It sends one part per turn with
    `speechMetadata.speaker`. It drops any text before the first marker, because 3.8 reads it aloud.
-3. **Choose the shape by model.** The three legacy models keep the old shape. Every other model
+3. Choose the shape by model. The three legacy models keep the old shape. Every other model
    uses speech metadata. A new `UseSpeechMetadata` option overrides this choice.
-4. **Add `SpeechStyle`.** It maps to `speechMetadata.style`. On a legacy model it throws a clear
+4. Add `SpeechStyle`. It maps to `speechMetadata.style`. On a legacy model it throws a clear
    error, because the API would return 400.
-5. **Keep `ToWav()` working.** It returns the bytes unchanged when the audio is already WAV.
-6. **Add an `AudioFormat` option.** It maps to `responseFormat.audio.mimeType`. We planned a
+5. Keep `ToWav()` working. It returns the bytes unchanged when the audio is already WAV.
+6. Add an `AudioFormat` option. It maps to `responseFormat.audio.mimeType`. We planned a
    sample-rate option too and dropped it. Google documents `sampleRate`, but the API ignored
    requests for 16000 and 8000 in a live test (the WAV header and the PCM `mimeType` stayed at
    24000). We do not ship an option that does nothing.
-7. **Add `SpeechLanguageCode`.** It maps to `speechConfig.languageCode`.
-8. **Send custom voices correctly.** A `VoiceName` that starts with `voice_` or `voicekey_` goes in
+7. Add `SpeechLanguageCode`. It maps to `speechConfig.languageCode`.
+8. Send custom voices correctly. A `VoiceName` that starts with `voice_` or `voicekey_` goes in
    `voiceConfig.voice`. Other names stay in `prebuiltVoiceConfig`.
-9. **New default TTS model: `gemini-3.8-flash-lite-tts`.** It is the cheaper model and has a free
+9. New default TTS model: `gemini-3.8-flash-lite-tts`. It is the cheaper model and has a free
    tier. It is also Google's named replacement for the 3.1 model.
-10. **Make pricing date-aware.** `ModelPricing` gets an optional `NextPricing` and an effective
+10. Make pricing date-aware. `ModelPricing` gets an optional `NextPricing` and an effective
     date. The built-in table carries the 2027-01-01 rates. We treat the date as 00:00 UTC.
-11. **Price redirected models at their real rate.** `gemini-3.5-flash` uses the 3.6 rate.
+11. Price redirected models at their real rate. `gemini-3.5-flash` uses the 3.6 rate.
     `gemini-3.7-flash` uses the 3.8 rate.
-12. **Keep `RecommendedImage` at `gemini-3.1-flash-image`.** We first planned to move it to
+12. Keep `RecommendedImage` at `gemini-3.1-flash-image`. We first planned to move it to
     `gemini-nano-banana-2.1`, because Google deprecated the 3.1 model. The live suite changed our
     mind. Nano Banana 2.1 returned `finishReason: IMAGE_RECITATION` and no image for "a small red
     circle on a plain white background" (2 of 2 calls) and for a plain blue rectangle (1 of 6
     calls, and the same prompt worked on the next call). The old model returned an image. Nano
     Banana 2.1 stays available as an opt-in constant. We move the default when Google sets a
     shutdown date for the old model.
-13. **Wrap the Voices API as `IVoiceService`.** The first plan left it out. Custom voices are only
+13. Wrap the Voices API as `IVoiceService`. The first plan left it out. Custom voices are only
     useful if a caller can get an id, and the test for them called the endpoint by hand. The service
     lists and filters the library, pages through it, gets, designs, replicates and deletes. It uses
     the shared client, so auth, retries and telemetry apply. The Voices API uses snake_case, so every
     property names its JSON field. We read the real list, create and error shapes from live calls, and
     the filter names from Google's page. Google rejects an unknown filter name with HTTP 400, so a
     live list test proves the names. Replication follows Google's documented shape only (see section 5).
-14. **Run the unit suite on .NET Framework.** The library multi-targets `netstandard2.0`, and we had
+14. Run the unit suite on .NET Framework. The library multi-targets `netstandard2.0`, and we had
     never run that build. The tests now also target `net48` on Windows, and CI has a Windows job for
     it. The first run found a real bug (decision 15). A target that is compiled but never run can hide
     a bug like this one for as long as it exists.
-15. **Honor the cancellation token on `netstandard2.0`.** The streaming helper ignored it, because
+15. Honor the cancellation token on `netstandard2.0`. The streaming helper ignored it, because
     `StreamReader.ReadLineAsync` has no token overload there. A caller who cancelled a stream on .NET
     Framework, Mono or Unity got no cancellation, and the cost governor recorded spend for the
     abandoned stream. The helper now checks the token and stops waiting when it is cancelled. Two
