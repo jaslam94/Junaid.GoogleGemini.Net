@@ -128,11 +128,12 @@ Other live results used by this release:
 - It does not move to the Interactions API. Google documents `generateContent` as legacy but fully
   supported, and the new models work through it. The Interactions API still lacks Batch, explicit
   caching and safety settings.
-- It has not yet measured the long-video savings of `Part.MediaProcessing`. We tested the field against
-  two real clips of about 10 seconds (see section 2). It works, but Google's claim of up to 88% fewer
-  tokens is for long videos, and we had none. An opt-in live test
-  (`AgenticVideo_OnALongVideo_UsesFewerTokensThanStatic`, set `GeminiTestLongVideo`) is written and
-  waits for a clip of at least three minutes and for the spending cap to allow the calls.
+- It measures the long-video savings of `Part.MediaProcessing` on one clip only. Two clips of about 10
+  seconds used slightly more tokens in agentic mode (see section 2). One 5-minute screen recording used
+  4,483 tokens in agentic mode against 24,149 in static mode, which is 81% fewer. That is one clip, one
+  prompt and one run. Google claims up to 88%. The opt-in test
+  (`AgenticVideo_OnALongVideo_UsesFewerTokensThanStatic`, set `GeminiTestLongVideo`) passed on
+  2026-10-12.
 - It does not add the tool-use tokens to the OpenTelemetry token metrics. Those still report only
   `promptTokenCount`, so they under-report agentic video calls. The cost governor does count them.
 

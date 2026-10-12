@@ -75,7 +75,8 @@ public class Part
     /// still returns the answer. The video tokens move out of <see cref="UsageMetadata.PromptTokenCount"/>
     /// into <see cref="UsageMetadata.ToolUsePromptTokenCount"/>. On these short clips <c>AGENTIC</c> used
     /// slightly more input tokens (723 against 671). Google says it uses up to 88% fewer on long videos.
-    /// We have not tested that.
+    /// On one 5-minute screen recording it used 81% fewer (4,483 total tokens against 24,149). That is one
+    /// clip, one prompt and one run, so treat it as an example and not a guarantee.
     /// </para>
     /// <para>
     /// Use the Files API for a large video. Live-verified on 2026-10-10: a file uploaded through the Files

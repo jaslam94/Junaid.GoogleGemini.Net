@@ -40,8 +40,13 @@ We tested both on 2026-10-10 against `gemini-3.8-flash` with two real clips of a
 - `AGENTIC` reports the video as `ToolUsePromptTokenCount` and leaves `PromptTokenCount` at 11.
   Cost governance counts those tokens as input (see [Cost governance](cost-governance.md)). The
   OpenTelemetry token metrics do not (see [Observability](observability.md)).
-- On these short clips, `AGENTIC` used slightly more input tokens (723 against 671). We have not
-  tested the savings on long videos.
+- On these short clips, `AGENTIC` used slightly more input tokens (723 against 671).
+
+On 2026-10-12 we tested one long video: a 5-minute screen recording of 20 MB, with the prompt
+"Summarize what happens in this video in three sentences." The `STATIC` call used 24,149 tokens in
+total. The `AGENTIC` call used 4,483, and 3,461 of those were tool-use tokens. That is 81% fewer. It is
+one clip, one prompt and one run, so the saving on your video can differ. Short clips can cost more
+in agentic mode, so use it for long videos.
 
 Use the Files API for a large video. A file that you upload works in agentic mode with or without a
 `MimeType` on the `FileData` part. For an external URL, set `MimeType`. Without it, the API returned

@@ -542,8 +542,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>
             /// The model navigates the video on demand and asks for transcripts, frames or audio as it
             /// needs them. Google calls this "recommended for most use cases" and claims up to 88%
-            /// fewer tokens on long videos. On two 10-second clips it used slightly more, and it bills
-            /// the loaded media as tool-use tokens (<c>UsageMetadata.ToolUsePromptTokenCount</c>).
+            /// fewer tokens on long videos. On two 10-second clips it used slightly more. On one 5-minute
+            /// screen recording it used 81% fewer (4,483 tokens against 24,149). It bills the loaded media as
+            /// tool-use tokens (<c>UsageMetadata.ToolUsePromptTokenCount</c>).
             /// </summary>
             public const string Agentic = "AGENTIC";
         }

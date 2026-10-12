@@ -71,8 +71,8 @@
 			The cost governor ignored that field, so it priced an agentic video call at about a quarter
 			of its real cost. UsageMetadata now has ToolUsePromptTokenCount, and the governor prices it
 			as input. That is an assumption, because we found no per-model rate for it. On short clips,
-			agentic mode used slightly more tokens, not fewer. Google's saving is for long videos, which
-			we did not test. The OpenTelemetry token metrics still report only promptTokenCount, so they
+			agentic mode used slightly more tokens, not fewer. Google's saving is for long videos. On one
+			5-minute screen recording, agentic mode used 81% fewer tokens (4,483 against 24,149). The OpenTelemetry token metrics still report only promptTokenCount, so they
 			under-report agentic calls. The thinking docs now say that gemini-3.8-flash rejects the
 			"minimal" level with HTTP 400. They also say that ThinkingBudget = 0 was accepted on 3.6 and
 			3.8 and usually gave no thoughts, but not always (1 call in 8 on 3.8 still thought). Two doc

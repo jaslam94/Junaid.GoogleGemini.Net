@@ -690,8 +690,8 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       `UsageMetadata.ToolUsePromptTokenCount` and price those tokens as input. That is an assumption.
       Google's pricing page bills tool tokens as input for URL context, and we found no per-model rate
       for video tool tokens. Any tool that loads input has the same gap. On these short clips `AGENTIC`
-      used slightly more input tokens, not 88% fewer. Google's saving is for long videos, and we did not
-      test long ones. The OpenTelemetry token metrics still report only `promptTokenCount`, so they
+      used slightly more input tokens, not 88% fewer. Google's saving is for long videos. One 5-minute
+      screen recording used 81% fewer tokens in agentic mode (4,483 against 24,149). The OpenTelemetry token metrics still report only `promptTokenCount`, so they
       under-report agentic calls. We did not change that.
 
       We then added live tests that pin every behavior this release documents from observation
@@ -731,33 +731,29 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       through it, gets a voice, designs one, replicates one, and deletes one. We read the real list,
       create and error shapes from live calls. We checked listing, every filter name, paging across
       several pages, and the 404 for a prebuilt voice against the real API. Unit tests cover the create
-      call, built from the real response. Google's spending cap on the test project then blocked the live
-      create test, so creating through the wrapper has not run live. The earlier test that creates a voice
-      with a plain `HttpClient` did pass. Voice replication follows Google's documented shape only. It
+      call, built from the real response. After the spending cap was lifted, the live create test passed
+      through the wrapper: it made a voice, listed it, used it with both 3.8 models, deleted it, and got
+      a 404 afterward. The test that creates a voice with a plain `HttpClient` passed too. Voice replication follows Google's documented shape only. It
       needs two recordings of a real speaker, including that speaker's consent. We did not run it, and we
       did not use anyone's voice or make a fake consent recording. An opt-in live test reads two
-      recordings that the maintainer makes of their own voice. We have also not measured the long-video
-      savings, because our only clips run about 10 seconds. An opt-in live test (`GeminiTestLongVideo`) is
-      written.
+      recordings that the maintainer makes of their own voice. The long-video savings test has now run. See below.
 
       Verified: the full solution build had 0 warnings on all three targets. The unit suite has 273 tests
-      on net8.0 and net9.0 and 271 on .NET Framework 4.8 (185 before). All are green. The last complete
-      live run had 69 tests, including Batch and both video tests. 68 passed. The one failure was the
-      thinking-budget test above. We corrected it, and it passed once. Google's spending cap on the test
-      project then blocked every later billable call. So the corrected test has not had a second run, and
-      the new live tests for the Voices wrapper ran only in their free parts (5 passed). Re-run the suite
-      when the cap allows. The TTS live tests send their audio back through the transcription model, so
-      they check what was said. A well-formed file alone does not pass. That proves the style direction
-      is no longer spoken and that the preamble no longer leaks into the speech, for a unary call and for
-      a stream.
+      on net8.0 and net9.0 and 271 on .NET Framework 4.8 (185 before). All are green. After the spending
+      cap was lifted, the complete live run had 77 tests: 74 passed, 0 failed, and 3 skipped. A second
+      run of the two short-video tests with a real clip then passed, and the thinking-budget test passed
+      a second time. The TTS live tests send their audio back through the transcription model, so they
+      check what was said. A well-formed file alone does not pass. That proves the style direction is no
+      longer spoken and that the preamble no longer leaks into the speech, for a unary call and for a
+      stream. One 5-minute screen recording used 81% fewer tokens in agentic mode (4,483 against 24,149).
+      That is one clip, one prompt and one run, so it is an example and not a guarantee.
 
-      We did not verify: the long-video savings that Google claims for agentic video; voice replication;
-      the designed-voice test through the new wrapper (blocked by the cap); or the `netstandard2.0` target
-      on Mono or Unity (it runs on .NET Framework 4.8 only). The build machine has no .NET 8 runtime, so
-      the `net8.0` tests ran on the .NET 9 runtime through roll-forward. There are no breaking changes to
-      compiled code. The behavior changes are the default TTS model, `ToWav()` on WAV input, and prompts
-      that put a direction in the text.
-
+      We did not verify: voice replication, because it needs a real speaker's own recordings and consent
+      (the opt-in test skips without them); the savings on other long videos; or the `netstandard2.0`
+      target on Mono or Unity (it runs on .NET Framework 4.8 only). The build machine has no .NET 8
+      runtime, so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. There are no
+      breaking changes to compiled code. The behavior changes are the default TTS model, `ToWav()` on
+      WAV input, and prompts that put a direction in the text.
 ---
 
 ## Success metrics
