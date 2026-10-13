@@ -4,7 +4,7 @@ Gemini's dedicated transcription model, `gemini-3.5-transcribe`, turns spoken au
 adds speaker diarization, word-level timestamps, and custom vocabulary biasing on top of a plain
 transcript.
 
-This model is **not** called through `generateContent`, unlike every other feature in this library.
+Unlike every other feature in this library, this model is not called through `generateContent`.
 It lives behind a different endpoint, the Interactions API. `ITranscriptionService` wraps that for
 you, so you never build the request shape by hand.
 

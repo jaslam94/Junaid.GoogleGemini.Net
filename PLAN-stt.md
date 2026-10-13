@@ -1,67 +1,69 @@
 # Plan: Speech-to-text (STT) for Junaid.GoogleGemini.Net
 
-**Status:** Implemented and shipped in `6.6.0`. Research live-verified against the real API on
-2026-09-07 (design, before any code), then live-verified again the same session after implementation,
-through the actual `ITranscriptionService`/`IGeminiClient` code, not raw REST calls: inline
-transcription, diarization with real distinct speaker labels, file-based transcription via the
-existing Files API, streaming, and the client-side `CustomVocabulary`+`DiarizationMode` guard against
-the real API's rejection.
+Status: implemented and shipped in `6.6.0`. We verified the research live against the real API on
+2026-09-07 (design, before any code). After implementation, we verified it live again in the same
+session, through the actual `ITranscriptionService` and `IGeminiClient` code and not raw REST calls.
+The second pass covered inline transcription, diarization with real distinct speaker labels,
+file-based transcription through the existing Files API, streaming, and the client-side
+`CustomVocabulary` plus `DiarizationMode` guard against the real API's rejection.
 
-**A deep second-pass self-review, done separately from the implementation pass, found and fixed three
-real bugs before merge (§10).** None were caught by the first pass's own tests, which is exactly why
-a second pass asked for by name matters, not a formality: a single build-and-test-green pass had
-already happened and reported success, and still missed these. Full solution build 0 warnings on all
-three targets after fixes; 172/172 unit tests (16 new total: 11 from implementation, 5 more from the
-second pass's own regression tests); 39 passed/7 paid-tier-skipped/0 failed on the full live suite;
-the ASP.NET Core sample's new `/transcribe` endpoint (added during the second pass, matching TTS's
-`/speak` precedent) actually run and hit with a real request, round-tripping through TTS and STT
-together, not just compiled.
+A deep second-pass self-review, done separately from the implementation pass, found and fixed three
+real bugs before merge (§10). None of the first pass's own tests caught them. This is why a second
+pass that you ask for by name matters, and is not a formality. A single pass with a green build and
+green tests had already happened and reported success, and it still missed these bugs. After the
+fixes, the full solution build had 0 warnings on all three targets. All 172 unit tests passed (16
+new in total: 11 from implementation, and 5 more from the regression tests of the second pass). The
+full live suite had 39 passed, 7 paid-tier skipped, and 0 failed. We added the new `/transcribe`
+endpoint to the ASP.NET Core sample during the second pass, to match the `/speak` precedent of TTS.
+We ran it and called it with a real request. It round-trips through TTS and STT together. We did not
+only compile it.
 
 ## 1. Goal
 
-Let a caller turn spoken audio into text using Google's dedicated `gemini-3.5-transcribe` model,
-including its differentiated features: speaker diarization, word-level timestamps, custom
-vocabulary biasing, and language auto-detection. This is the direct mirror of the TTS feature
-shipped in `6.5.0`: TTS turns text into audio, this turns audio into text.
+Let a caller turn spoken audio into text with Google's dedicated `gemini-3.5-transcribe` model. That
+includes its differentiated features: speaker diarization, word-level timestamps, custom vocabulary
+biasing, and language auto-detection. This is the direct mirror of the TTS feature that shipped in
+`6.5.0`. TTS turns text into audio. This turns audio into text.
 
 ## 2. The architecture fork, and why this plan looks different from PLAN-tts.md
 
-TTS turned out to fit this library's existing `generateContent` shape exactly (see `PLAN-tts.md`).
-STT does not. Two paths exist, and they are genuinely different APIs, not two flavors of one call:
+TTS fit this library's existing `generateContent` shape exactly (see `PLAN-tts.md`). STT does not.
+Two paths exist. They are different APIs, and they are not two flavors of one call:
 
-**Path A: plain audio understanding via `generateContent`.** Any current chat model (tested:
-`gemini-3.8-flash`) already accepts audio as an `inlineData` part, the same mechanism
-`GenerateWithImageAsync` already uses for images. Send a prompt like "Transcribe this audio exactly"
-plus the audio bytes, and the model replies with the transcript as plain text. This library has zero
-audio-input plumbing today, since `FileObject` (the type `GenerateWithImageAsync` takes) is
-hard-validated as image-only at construction, but the underlying wire format is already
-`generateContent`, already understood by every part of this codebase.
+Path A: plain audio understanding through `generateContent`. Any current chat model (we tested
+`gemini-3.8-flash`) already accepts audio as an `inlineData` part. `GenerateWithImageAsync` already
+uses the same mechanism for images. Send a prompt such as "Transcribe this audio exactly" plus the
+audio bytes, and the model replies with the transcript as plain text. This library has no
+audio-input plumbing today. `FileObject` (the type that `GenerateWithImageAsync` takes) is validated
+as image-only at construction. But the underlying wire format is already `generateContent`, which
+every part of this codebase already understands.
 
-**Path B: the dedicated `gemini-3.5-transcribe` model via the Interactions API.** This is a newer,
-different endpoint (`POST /v1beta/interactions`, not `models/{model}:generateContent`), with its own
-request shape, response shape, error shape, and streaming protocol. It is the only way to get
-diarization, word timestamps, and custom vocabulary; Path A returns plain text with none of that.
+Path B: the dedicated `gemini-3.5-transcribe` model through the Interactions API. This is a newer,
+different endpoint (`POST /v1beta/interactions`, not `models/{model}:generateContent`). It has its
+own request shape, response shape, error shape, and streaming protocol. It is the only way to get
+diarization, word timestamps, and custom vocabulary. Path A returns plain text with none of those.
 
-`PLAN-tts.md` §9 looked at the Interactions API for TTS and deliberately walked away from it. Asked
-to choose here, the decision was the opposite: **build Path B**, accepting the larger lift, because
-diarization and timestamps are the actual differentiators of this model and Path A cannot produce
-them at all. This section exists so a future maintainer does not have to re-derive why this plan is
-shaped so differently from the TTS one right after it.
+`PLAN-tts.md` §9 looked at the Interactions API for TTS and walked away from it on purpose. We were
+asked to choose here, and the decision went the other way: build Path B. It is the larger lift. We
+accepted it, because diarization and timestamps are the real differentiators of this model, and
+Path A cannot produce them at all. This section exists so that a future maintainer does not have to
+work out again why this plan has such a different shape from the TTS plan that came right before it.
 
-## 3. What was verified live, and how
+## 3. What we verified live, and how
 
-Every request/response shape below was confirmed with real REST calls against
-`gemini-3.5-transcribe`, not read from docs alone. This mattered: a first web search and two
+We confirmed every request and response shape below with real REST calls against
+`gemini-3.5-transcribe`. We did not rely on docs alone. This mattered. A first web search and two
 doc-summarization passes each guessed at a response shape (`output_text` at the top level, speaker
-labels like `"spk_1"`, a `"mode": {"type": "verbatim", ...}` object) that turned out to be wrong or
-unconfirmed in exactly the ways described below. The real shape was found by making the calls.
+labels such as `"spk_1"`, and a `"mode": {"type": "verbatim", ...}` object). Each guess turned out to
+be wrong or unconfirmed, in the ways described below. We found the real shape by making the calls.
 
-**Test audio.** Real speech, not a synthetic tone: generated via this library's own already-shipped
-TTS (`gemini-2.5-flash-preview-tts`), decoded to a real WAV file the same way `GeneratedAudio.ToWav()`
-does. Two clips: a single-speaker sentence ("The quick brown fox jumps over the lazy dog near the
-river bank") and a two-speaker script (Joe/Jane, multi-speaker TTS) for diarization testing.
+Test audio: real speech and not a synthetic tone. We generated it with this library's own shipped TTS
+(`gemini-2.5-flash-preview-tts`) and decoded it to a real WAV file the same way that
+`GeneratedAudio.ToWav()` does. We used two clips. One is a single-speaker sentence ("The quick brown
+fox jumps over the lazy dog near the river bank"). The other is a two-speaker script (Joe and Jane,
+multi-speaker TTS) for diarization testing.
 
-### 3.1 Path A confirmed (`generateContent`, for context/comparison, not this plan's target)
+### 3.1 Path A confirmed (`generateContent`, for context and comparison, not this plan's target)
 
 ```json
 POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent
@@ -72,19 +74,20 @@ POST https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:ge
   ]}]
 }
 ```
-Returned `HTTP 200`, plain-text transcript in `candidates[0].content.parts[0].text`
-("The quick brown fox jumps over the lazy dog near the riverbank."), and `usageMetadata` with an
-`AUDIO`-modality entry in `promptTokensDetails`, exactly like every other multimodal call this
-library already parses. No new response type needed for this path; it is not being built in v1 (see
-§5), but confirming it works was necessary to make the Path A vs. B decision honestly.
+The call returned `HTTP 200`. It returned the plain-text transcript in
+`candidates[0].content.parts[0].text` ("The quick brown fox jumps over the lazy dog near the
+riverbank."). `usageMetadata` had an `AUDIO`-modality entry in `promptTokensDetails`, exactly like
+every other multimodal call that this library already parses. This path needs no new response type.
+We are not building it in v1 (see §4). But we had to confirm that it works, to make the Path A or B
+decision honestly.
 
 ### 3.2 Path B confirmed (Interactions API, this plan's target)
 
-**Confirmed real endpoint and auth:** `POST https://generativelanguage.googleapis.com/v1beta/interactions`,
-same `x-goog-api-key` header this library already sends everywhere else. No separate auth setup
-needed.
+Real endpoint and auth: `POST https://generativelanguage.googleapis.com/v1beta/interactions`. It
+uses the same `x-goog-api-key` header that this library already sends everywhere else. No separate
+auth setup is needed.
 
-**Confirmed real request shape**, inline audio:
+Real request shape, inline audio:
 ```json
 {
   "model": "gemini-3.5-transcribe",
@@ -98,20 +101,21 @@ needed.
   }
 }
 ```
-All field names are `snake_case`, unlike `generateContent`'s `camelCase`. This library already
-requires an explicit `[JsonPropertyName]` on every property regardless of endpoint (there is no
-global naming policy to lean on), so this is a data point to get right per-field, not a new
-mechanism to build.
+All field names use `snake_case`, unlike the `camelCase` of `generateContent`. This library already
+requires an explicit `[JsonPropertyName]` on every property, whatever the endpoint. It has no global
+naming policy to lean on. So this is a data point to get right per field. It is not a new mechanism
+to build.
 
-**Confirmed real request shape**, file reference instead of inline bytes: same body, with
+Real request shape, file reference instead of inline bytes: the same body, with
 `{"type": "audio", "uri": "https://generativelanguage.googleapis.com/v1beta/files/...", "mime_type": "audio/wav"}`
-in place of `data`. The `uri` is exactly what this library's existing `IFileService.UploadFileAsync`
-already returns as `FileResource.Uri`. **This means the Files API integration point is free**: no new
-upload code needed, `ITranscriptionService` just needs to accept a `FileResource`/URI the same way
-`GenerateWithImageAsync` accepts a `FileObject`. Confirmed live: uploaded a WAV via the existing
-resumable-upload flow, then transcribed it by URI, `HTTP 200`, correct transcript.
+in place of `data`. The `uri` is exactly what the existing `IFileService.UploadFileAsync` of this
+library already returns as `FileResource.Uri`. So the Files API integration point is free. It needs
+no new upload code. `ITranscriptionService` only needs to accept a `FileResource` or URI, in the
+same way that `GenerateWithImageAsync` accepts a `FileObject`. We confirmed it live. We uploaded a
+WAV through the existing resumable-upload flow and transcribed it by URI. The call returned `HTTP
+200` and the correct transcript.
 
-**Confirmed real response shape**, non-streaming:
+Real response shape, non-streaming:
 ```json
 {
   "id": "v1_Chc...",
@@ -135,28 +139,28 @@ resumable-upload flow, then transcribed it by URI, `HTTP 200`, correct transcrip
   "model": "gemini-3.5-transcribe"
 }
 ```
-No top-level `output_text` field, contrary to what both a web search summary and a doc-fetch summary
-independently guessed. The transcript lives at `steps[].content[].text`, same place regardless of
-whether diarization/timestamps were requested; `annotations` is present only when
-`timestamp_granularities` was set.
+The response has no top-level `output_text` field. A web search summary and a doc-fetch summary
+each guessed that independently. The transcript lives at `steps[].content[].text`. It is in the same
+place whether or not you requested diarization or timestamps. `annotations` is present only when you
+set `timestamp_granularities`.
 
-**Confirmed real diarization shape**, live-tested on the two-speaker Joe/Jane clip with
-`diarization_mode: "speaker"` and `timestamp_granularities: ["word"]` together: each word's
-`annotations` entry gets a `"speaker": "spk:0"` / `"spk:1"` field (zero-indexed, colon-separated).
-This is a different literal format than the docs guessed (`"spk_1"`, underscore, one-indexed);
-getting this exactly right matters for any diarized-transcript-grouping helper built on top of it.
+Real diarization shape, tested live on the two-speaker Joe and Jane clip, with `diarization_mode:
+"speaker"` and `timestamp_granularities: ["word"]` together. The `annotations` entry of each word
+gets a `"speaker": "spk:0"` or `"spk:1"` field (zero-indexed, colon-separated). This literal format
+differs from the one that the docs guessed (`"spk_1"`, with an underscore and one-indexed). Getting
+this exactly right matters for any helper that groups a diarized transcript.
 
-**Confirmed: `GET /v1beta/interactions/{id}` retrieves a completed interaction by ID**, live-tested
-immediately after a POST. Useful for polling. One real difference from the POST response: the GET
-response's `steps` array includes an extra leading `"type": "user_input"` step echoing what was sent
-(`{"uri": "...", "mime_type": "audio/wav", "type": "audio"}`), which the POST response does not
-include. Any `Interaction`-parsing code must treat `steps[].type` as a real discriminator, not assume
-every step is `model_output`.
+`GET /v1beta/interactions/{id}` retrieves a completed interaction by ID. We tested it live
+immediately after a POST. It is useful for polling. It has one real difference from the POST
+response. The `steps` array of the GET response includes an extra leading `"type": "user_input"`
+step that echoes what we sent (`{"uri": "...", "mime_type": "audio/wav", "type": "audio"}`). The
+POST response does not include it. Any code that parses `Interaction` must treat `steps[].type` as a
+real discriminator. It must not assume that every step is `model_output`.
 
-**Confirmed real streaming shape**, `POST .../interactions?alt=sse` with `"stream": true` in the
-body. This is a materially different SSE protocol than `streamGenerateContent?alt=sse`, which this
-library already parses as one `data: {GenerateContentResponse}` event per chunk. Interactions
-streaming sends a sequence of **named, differently-shaped events**:
+Real streaming shape: `POST .../interactions?alt=sse` with `"stream": true` in the body. This is a
+materially different SSE protocol than `streamGenerateContent?alt=sse`. This library already parses
+that as one `data: {GenerateContentResponse}` event per chunk. Interactions streaming sends a
+sequence of named events, each with a different shape:
 ```
 event: interaction.created      data: {"interaction": {...status: "in_progress"...}}
 event: interaction.status_update data: {"interaction_id": "...", "status": "in_progress"}
@@ -166,12 +170,12 @@ event: step.stop                data: {"index": 0}
 event: interaction.completed    data: {"interaction": {...full object, status: "completed"...}}
 event: done                     data: [DONE]
 ```
-For the short test clip, the whole transcript arrived in a single `step.delta`; a longer clip would
-presumably arrive as multiple deltas per step, but this was not tested with long audio (see §7, open
-items). A working streaming client needs a real per-event-type parser, not a reuse of the existing
-single-shape SSE loop.
+For the short test clip, the whole transcript arrived in a single `step.delta`. A longer clip would
+presumably arrive as multiple deltas per step, but we did not test that with long audio (see the
+open items in §7). A working streaming client needs a real parser for each event type. It cannot
+reuse the existing single-shape SSE loop.
 
-### 3.3 Confirmed real usage/cost quirk (read this before wiring cost governance)
+### 3.3 Real usage and cost quirk (read this before you wire cost governance)
 
 ```json
 "usage": {
@@ -189,111 +193,121 @@ single-shape SSE loop.
   }]
 }
 ```
-**`total_output_tokens` reads `0` in every single live call made in this session, including ones
-that clearly produced real output text.** The real output token count (14, in this example) is
-buried in `model_invocation_token_counts[].candidates_tokens_details[].tokens` instead. Also notice
-`total_tokens` (147) equals `total_input_tokens` (147) exactly: the top-level total does not include
-output tokens either. This is the kind of thing that looks like a copy-paste field-name bug in
-Google's own usage accounting for this endpoint, confirmed reproducible across nine separate live
-calls in this session (every probe in §3.2's testing), not a one-off glitch. **If a future
-`RecordSpend`-equivalent for this feature reads `total_output_tokens` directly, it will silently
-record $0 output cost forever.** Any usage adapter must read output tokens from
-`model_invocation_token_counts`, not the top-level `usage` fields.
+`total_output_tokens` reads `0` in every single live call that we made in this session. That
+includes calls that clearly produced real output text. The real output token count (14, in this
+example) sits in `model_invocation_token_counts[].candidates_tokens_details[].tokens` instead. Note
+also that `total_tokens` (147) equals `total_input_tokens` (147) exactly. The top-level total does not
+include output tokens either. This looks like a copy-paste field-name bug in Google's own usage
+accounting for this endpoint. It reproduced across nine separate live calls in this session (every
+probe in the testing of §3.2). It is not a one-off glitch. If a future equivalent of `RecordSpend`
+for this feature reads `total_output_tokens` directly, it will silently record $0 of output cost,
+forever. Any usage adapter must read output tokens from `model_invocation_token_counts` and not from
+the top-level `usage` fields.
 
-This is also why `GeminiCostGovernor.RecordSpend(string?, UsageMetadata)` cannot be reused as-is:
-its parameter type is `generateContent`'s `UsageMetadata` shape (`PromptTokenCount`,
-`CandidatesTokenCount`, ...), and Interactions' `usage` object has different field names and the
-quirk above. A mapping function, not a shared type, is needed. See §4.5.
+This is also why `GeminiCostGovernor.RecordSpend(string?, UsageMetadata)` cannot be reused as is.
+Its parameter type is the `UsageMetadata` shape of `generateContent` (`PromptTokenCount`,
+`CandidatesTokenCount`, ...). The `usage` object of Interactions has different field names and has
+the quirk above. We need a mapping function, and not a shared type. See §5.6.
 
-### 3.4 Confirmed error shape, and why it breaks the existing error path if reused unmodified
+### 3.4 Real error shape, and why it breaks the existing error path if you reuse it unmodified
 
 ```json
 {"error": {"message": "custom_vocabulary is incompatible with diarization.", "code": "invalid_request"}}
 ```
-This library's existing `ApiErrorResponse`/`ApiError` (`Models/GoogleApi/ApiErrorResponse.cs`) types
-`Code` as `int` (matching `generateContent`'s `{"error": {"code": 404, "message": "...", "status": "NOT_FOUND"}}`).
-Interactions' `code` is a **string** enum (`"invalid_request"`, `"not_found"`, confirmed via a bad
-model name and a bad base64 payload). Deserializing an Interactions error body with the existing
-`ApiErrorResponse` type throws a `JsonException` on the int/string mismatch; `GeminiClient.HandleResponse`
-catches that specifically and rethrows as `GeminiSerializationException("Failed to parse API response", ...)`,
-discarding the real, helpful message the API actually sent back. **Reusing the existing `PostAsync`/
-`HandleResponse` pipeline unmodified for Interactions calls would turn every clean 400 into an opaque
-serialization failure.** A new error type and a new client method are needed; see §4.2.
+The existing `ApiErrorResponse` and `ApiError` of this library (`Models/GoogleApi/ApiErrorResponse.cs`)
+type `Code` as `int`. This matches the `generateContent` shape
+`{"error": {"code": 404, "message": "...", "status": "NOT_FOUND"}}`. The `code` of Interactions is a
+string enum (`"invalid_request"`, `"not_found"`, confirmed with a bad model name and a bad base64
+payload). If you deserialize an Interactions error body with the existing `ApiErrorResponse` type,
+it throws a `JsonException` on the int and string mismatch. `GeminiClient.HandleResponse` catches
+that specific exception. It rethrows it as `GeminiSerializationException("Failed to parse API
+response", ...)`, and discards the real, helpful message that the API sent back. Reusing the
+existing `PostAsync` and `HandleResponse` pipeline unmodified for Interactions calls would turn every
+clean 400 into an opaque serialization failure. We need a new error type and a new client method.
+See §5.3.
 
-Confirmed error messages are genuinely useful and worth surfacing directly to callers:
+The confirmed error messages are useful, and callers should see them directly:
 - Bad model name: `"Model 'gemini-3.5-transcribe-nonexistent' not found. Did you mean 'gemini-3.5-transcribe'? ..."`
 - Corrupt base64: `"The value is invalid for 'input[0].data'. Expected string, corrupt base64"`
 - Missing model: `"Provide a 'agent', or 'model' parameter."`
-- Confirmed live: `custom_vocabulary` really is rejected (`HTTP 400`) when combined with
-  `diarization_mode` or (by the same message) `timestamp_granularities`, matching Google's docs.
-  Worth validating client-side before the call, not just letting the API 400.
+- We confirmed live that the API really rejects `custom_vocabulary` (`HTTP 400`) when you combine it
+  with `diarization_mode` or (by the same message) `timestamp_granularities`. This matches Google's
+  docs. The library should validate this client-side before the call. The API would return a 400
+  otherwise.
 
-### 3.5 Confirmed field acceptance (schema-only; behavioral effect not fully verified)
+### 3.5 Confirmed field acceptance (schema only; we did not fully verify the behavioral effect)
 
-Each of these was sent in `generation_config.transcription_config` and returned `HTTP 200` (vs. an
-`"Unknown parameter"` `400` for a made-up field name, which is how the two rejected guesses below
-were caught):
+We sent each of these in `generation_config.transcription_config`, and each returned `HTTP 200`. A
+made-up field name returns an `"Unknown parameter"` `400` instead. That is how we caught the two
+rejected guesses below.
 - `language_codes: ["en-US"]`: accepted.
-- `custom_vocabulary: ["Gemini"]`: accepted alone, rejected when combined with diarization (§3.4).
-- `diarization_mode: "speaker"`: accepted, and produces real per-word `speaker` labels (§3.2).
-- `timestamp_granularities: ["word"]`: accepted, produces real `start_offset`/`end_offset` (§3.2).
-- `timestamp_granularities: ["segment"]` and `["word", "segment"]`: both accepted without error, but
-  segment-level output was not confirmed to actually differ, since the test clip was one short sentence.
-- `mode: "smart"` and `mode: {"type": "verbatim"}`: both accepted without error, but neither was
-  confirmed to change output for a clean, short test clip. Re-verify behavior before documenting this
-  field as load-bearing, or drop it from v1 and let a caller pass it through opaquely if they want it.
+- `custom_vocabulary: ["Gemini"]`: accepted alone. Rejected when combined with diarization (§3.4).
+- `diarization_mode: "speaker"`: accepted. It produces real per-word `speaker` labels (§3.2).
+- `timestamp_granularities: ["word"]`: accepted. It produces real `start_offset` and `end_offset`
+  values (§3.2).
+- `timestamp_granularities: ["segment"]` and `["word", "segment"]`: both accepted without error. We
+  did not confirm that the segment-level output actually differs, because the test clip was one
+  short sentence.
+- `mode: "smart"` and `mode: {"type": "verbatim"}`: both accepted without error. We did not confirm
+  that either changes the output for a clean, short test clip. Re-verify the behavior before you
+  document this field as load-bearing. Or drop it from v1 and let a caller pass it through opaquely
+  if they want it.
 
-**Rejected as fields** (confirms they are not real top-level `transcription_config` keys):
-`diarization_config` (nested object), `enable_diarization`, `bogus_field_xyz`. The Interactions API
-does validate unknown parameters and say so clearly, which made this kind of probing reliable.
+Rejected as fields (confirms that they are not real top-level `transcription_config` keys):
+`diarization_config` (a nested object), `enable_diarization`, and `bogus_field_xyz`. The Interactions
+API does validate unknown parameters and says so clearly. That made this kind of probing reliable.
 
 ## 4. Explicit scope
 
-**In scope (v1):**
-- `TranscribeAsync`: single-call transcription of inline audio bytes or a Files-API URI, against
-  `gemini-3.5-transcribe`, via the Interactions API.
+In scope (v1):
+- `TranscribeAsync`: single-call transcription of inline audio bytes or a Files API URI, against
+  `gemini-3.5-transcribe`, through the Interactions API.
 - Diarization (`DiarizationMode`), word timestamps (`TimestampGranularities`), custom vocabulary
-  (`CustomVocabulary`), and language hints (`LanguageCodes`) as request options, all live-verified
-  in §3.2/§3.5.
-- Client-side validation that `CustomVocabulary` is not combined with `DiarizationMode`/
-  `TimestampGranularities`, throwing a clear `ArgumentException` before the call, instead of letting
-  the API 400 (confirmed real API behavior, §3.4).
-- A new `Interaction` response type with `Text()`/`TryGetText()` (concatenates `model_output` step
-  text, mirrors `GenerateContentResponse.Text()`) and a `Words()` helper flattening `word_info`
-  annotations, including `Speaker` when diarization was requested.
-- `StreamTranscribeAsync`: real incremental streaming, parsing the named-event SSE protocol from
-  §3.2, not a fake wrapper around the non-streaming call.
+  (`CustomVocabulary`), and language hints (`LanguageCodes`) as request options. We verified all of
+  them live in §3.2 and §3.5.
+- Client-side validation that `CustomVocabulary` is not combined with `DiarizationMode` or
+  `TimestampGranularities`. It throws a clear `ArgumentException` before the call, and does not let
+  the API return a 400 (confirmed real API behavior, §3.4).
+- A new `Interaction` response type with `Text()` and `TryGetText()` (they concatenate the text of
+  `model_output` steps and mirror `GenerateContentResponse.Text()`). It also has a `Words()` helper
+  that flattens the `word_info` annotations, including `Speaker` when you requested diarization.
+- `StreamTranscribeAsync`: real incremental streaming that parses the named-event SSE protocol from
+  §3.2. It is not a fake wrapper around the non-streaming call.
 - `GetInteractionAsync(id)`: wraps the confirmed `GET /v1beta/interactions/{id}`, for polling.
-- Cost governance: a `gemini-3.5-transcribe` pricing entry and a usage-mapping function that reads
-  the real output-token location from §3.3, not the misleading top-level field.
-- Reuses the existing `IFileService` unchanged for the file-URI input path (§3.2); no new upload code.
+- Cost governance: a `gemini-3.5-transcribe` pricing entry, and a usage-mapping function that reads
+  the real output-token location from §3.3 and not the misleading top-level field.
+- It reuses the existing `IFileService` unchanged for the file-URI input path (§3.2). It needs no
+  new upload code.
 
-**Explicitly out of scope for this change (do not implement):**
-- **Path A** (plain-text transcription via `generateContent` on any chat model). It works (§3.1) and
-  needs no Interactions API, but it was evaluated and passed over for v1 in favor of the dedicated
-  model's diarization/timestamps, which is the actual point of this feature. Revisit only if v1's
-  Interactions build turns out to be a bad bet (see §2's reasoning); do not build both paths at once.
-- `gemini-3.5-transcribe-live` (the Live API / WebSocket streaming variant). Separate protocol
-  entirely (WebSocket, not SSE-over-HTTP), and this library's existing "Live API's bidirectional
+Out of scope for this change (do not implement):
+- Path A (plain-text transcription through `generateContent` on any chat model). It works (§3.1),
+  and it needs no Interactions API. We evaluated it and passed it over for v1, in favor of the
+  diarization and timestamps of the dedicated model, which are the actual point of this feature.
+  Revisit it only if the Interactions build of v1 turns out to be a bad bet (see the reasoning in
+  §2). Do not build both paths at once.
+- `gemini-3.5-transcribe-live` (the Live API, the WebSocket streaming variant). It uses a separate
+  protocol entirely (WebSocket, and not SSE over HTTP). The existing "Live API's bidirectional
   audio" backlog item in `ROADMAP.md` already covers that ground. Do not fold it into this feature.
 - Batch transcription of many files in one call. The Interactions API has no batch endpoint as of
-  this writing (confirmed via two independent doc sources, not independently live-tested since there
-  is nothing to call); a caller needing to transcribe many files loops `TranscribeAsync` for now.
-- Audio longer than a few seconds was not tested. Google's docs claim up to 1 hour per request (30
-  minutes when diarization/timestamps are enabled), and that the call may not return synchronously
-  for long audio (untested: does a long request block until done, or return `"status": "in_progress"`
-  requiring a `GetInteractionAsync` poll loop?). Confirm this before shipping; every live call in this
-  plan returned `"status": "completed"` immediately because every test clip was a few seconds long.
-- 85+ language codes and the diarization speaker cap (8, per docs) as C# constants. Same reasoning as
-  TTS's voice names (`PLAN-tts.md` §3): plain strings, not an enum, so new codes/limits Google adds
-  don't require a library update.
-- `mode`/`"smart"` vs `"verbatim"` as a strongly-typed option. Accepted by the API (§3.5) but its
-  actual behavioral effect was not confirmed; expose as a passthrough `string?` if included at all,
-  don't build named constants around unverified behavior.
+  this writing (confirmed with two independent doc sources). We did not test it live, because there
+  is nothing to call. A caller who needs to transcribe many files loops over `TranscribeAsync` for
+  now.
+- Audio longer than a few seconds. We did not test it. Google's docs claim up to 1 hour per request
+  (30 minutes when diarization or timestamps are on). They also say that the call may not return
+  synchronously for long audio. We did not test this: does a long request block until it is done,
+  or return `"status": "in_progress"` and require a `GetInteractionAsync` poll loop? Confirm this
+  before shipping. Every live call in this plan returned `"status": "completed"` at once, because
+  every test clip was a few seconds long.
+- The 85+ language codes and the diarization speaker cap (8, per the docs) as C# constants. The
+  reasoning is the same as for the voice names of TTS (`PLAN-tts.md` §3). Use plain strings and not
+  an enum, so that new codes and limits from Google do not require a library update.
+- `mode` (`"smart"` or `"verbatim"`) as a strongly typed option. The API accepts it (§3.5), but we
+  did not confirm its actual behavioral effect. If you include it at all, expose it as a
+  passthrough `string?`. Do not build named constants around unverified behavior.
 
 ## 5. Architecture
 
-### 5.1 New model types (`Models/GoogleApi/`, flat, matching the existing Batch/File convention)
+### 5.1 New model types (`Models/GoogleApi/`, flat, matching the existing Batch and File convention)
 
 ```csharp
 // InteractionRequest.cs
@@ -418,31 +432,33 @@ public class InteractionsApiError
 }
 ```
 
-All new root types need `[JsonSerializable(typeof(...))]` entries in `GeminiJsonContext.cs`, same as
-every other root type (see the existing list at `GeminiJsonContext.cs:25-48`); nested types under a
-registered root are auto-discovered, same as `SpeechConfig`'s children were for TTS.
+All new root types need `[JsonSerializable(typeof(...))]` entries in `GeminiJsonContext.cs`, like
+every other root type (see the existing list at `GeminiJsonContext.cs:25-48`). The generator
+discovers nested types under a registered root automatically, as it did for the children of
+`SpeechConfig` in TTS.
 
-### 5.2 `GeminiApiException` gets a new optional field, not a new exception type
+### 5.2 `GeminiApiException` gets a new optional field, and not a new exception type
 
-Rather than inventing a parallel exception type, add one nullable property:
+Do not invent a parallel exception type. Add one nullable property:
 ```csharp
 /// <summary>Machine-readable error code from the Interactions API (e.g. "invalid_request"), if this
 /// exception came from that API. Null for generateContent-sourced exceptions; use <see cref="Status"/>
 /// for those instead.</summary>
 public string? InteractionErrorCode { get; }
 ```
-Keep `ApiError`/`Status`/`ErrorCode` meaning exactly what they already mean for `generateContent`;
-don't force-fit Interactions' string `code` into `ApiError.Code` (which is `int`) or overload
-`ApiError.Status`'s existing meaning. `StatusCode` (the HTTP status) already covers what the
-Interactions error body doesn't separately provide.
+Keep `ApiError`, `Status`, and `ErrorCode` meaning exactly what they already mean for
+`generateContent`. Do not force the string `code` of Interactions into `ApiError.Code` (which is
+`int`). Do not overload the existing meaning of `ApiError.Status`. `StatusCode` (the HTTP status)
+already covers what the Interactions error body does not provide separately.
 
-### 5.3 New `GeminiClient` methods, not a reuse of `PostAsync`/`StreamAsync`
+### 5.3 New `GeminiClient` methods, and no reuse of `PostAsync` and `StreamAsync`
 
-Two new methods on `IGeminiClient`/`GeminiClient`, parallel to the existing `PostAsync`/`StreamAsync`
-but adapted for the three confirmed differences (§3.2-§3.4): error body shape, response type, and
-telemetry model-tagging (`GeminiTelemetry.Parse` extracts the model from a `models/{model}:...` URL
-segment that Interactions requests don't have; the model lives in the JSON body instead, so it must
-be passed through explicitly rather than parsed from the endpoint string).
+Add two new methods on `IGeminiClient` and `GeminiClient`. They are parallel to the existing
+`PostAsync` and `StreamAsync`, and adapted for the three differences that we confirmed (§3.2 to
+§3.4): the error body shape, the response type, and the model tagging of telemetry.
+`GeminiTelemetry.Parse` extracts the model from a `models/{model}:...` URL segment. Interactions
+requests do not have that segment. The model lives in the JSON body. So you must pass it through
+explicitly, and not parse it from the endpoint string.
 
 ```csharp
 Task<Interaction> PostInteractionAsync(InteractionRequest request, CancellationToken cancellationToken = default);
@@ -450,18 +466,18 @@ IAsyncEnumerable<InteractionStreamEvent> StreamInteractionAsync(InteractionReque
 ```
 
 `StreamInteractionAsync` parses the real named-event protocol from §3.2 (`interaction.created`,
-`step.delta`, `interaction.completed`, etc.), not a reuse of the single-shape SSE loop
-`StreamCoreAsync` already has. A new small `InteractionStreamEvent` type (event name + whichever
-payload it carries) is the cleanest yield type; accumulating that into a running transcript is a
-concern for `TranscriptionService`, not the client.
+`step.delta`, `interaction.completed`, and so on). It does not reuse the single-shape SSE loop that
+`StreamCoreAsync` already has. A new small `InteractionStreamEvent` type (the event name plus
+whichever payload it carries) is the cleanest type to yield. Accumulating those events into a
+running transcript is a job for `TranscriptionService`, and not for the client.
 
-### 5.4 New `ITranscriptionService`, sibling to `IFileService`/`IBatchService`, not folded into `IGeminiService`
+### 5.4 New `ITranscriptionService`, a sibling to `IFileService` and `IBatchService`, and not folded into `IGeminiService`
 
-`IGeminiService`'s own doc comment calls it "the unified service interface for all Gemini content
-generation operations," and every method on it returns or streams `GenerateContentResponse`. Adding
-a method that returns `Interaction` instead would break that contract for no benefit. This codebase
-already has precedent for a focused sibling interface per distinct concern (`IFileService`,
-`IBatchService`, `ICachingService`), each registered the same way in `GeminiExtensions.cs`
+The doc comment of `IGeminiService` calls it "the unified service interface for all Gemini content
+generation operations." Every method on it returns or streams `GenerateContentResponse`. If we added
+a method that returns `Interaction`, it would break that contract for no benefit. This codebase
+already has a precedent for a focused sibling interface per distinct concern (`IFileService`,
+`IBatchService`, `ICachingService`). Each one is registered in the same way in `GeminiExtensions.cs`
 (`services.AddTransient<IXService, XService>()`). `ITranscriptionService` follows that pattern.
 
 ```csharp
@@ -512,179 +528,198 @@ public static string RecommendedTranscription => Gemini35Transcribe;
 
 ### 5.6 Cost governance
 
-New `gemini-3.5-transcribe` pricing entry: $2.00 in / $12.00 out per 1M tokens, free tier available
-(from a single fetch of the pricing page, not a live billing check; re-verify before merging, same
-standing caveat as every other pricing entry). This needs a small usage-mapping function, not a
-`UsageMetadata` reuse: `InteractionUsage` has different field names than `generateContent`'s
-`UsageMetadata`, and per §3.3, output tokens must be summed from
-`ModelInvocationTokenCounts[].CandidatesTokensDetails[].Tokens`, not read from
-`InteractionUsage.TotalOutputTokens` directly. Whether this maps into a `UsageMetadata` instance
-(reusing `RecordSpend`'s existing signature) or gets a small parallel `RecordSpend`-equivalent is an
-implementation-time call; either way, the mapping function and its rationale belong in code comments
-next to wherever it lives, given how non-obvious the quirk is.
+Add a new `gemini-3.5-transcribe` pricing entry: $2.00 in and $12.00 out per 1M tokens, with a free
+tier. The numbers came from a single fetch of the pricing page and not from a live billing check.
+Re-verify them before merging, with the same standing caveat as every other pricing entry.
+
+This needs a small usage-mapping function and not a reuse of `UsageMetadata`. `InteractionUsage`
+has different field names than the `UsageMetadata` of `generateContent`. Also, per §3.3, you must
+sum the output tokens from `ModelInvocationTokenCounts[].CandidatesTokensDetails[].Tokens`. Do not
+read them directly from `InteractionUsage.TotalOutputTokens`. Decide at implementation time whether
+the mapping produces a `UsageMetadata` instance (which reuses the existing signature of
+`RecordSpend`) or gets a small parallel equivalent of `RecordSpend`. Either way, put the mapping
+function and its rationale in code comments next to wherever it lives. The quirk is very
+non-obvious.
 
 ### 5.7 Telemetry
 
-Cannot reuse `GeminiTelemetry.Parse(endpoint)` unmodified: it extracts the model from a
-`models/{model}:operation` URL segment, and Interactions requests have neither (`endpoint` is just
-`"interactions"`, model is in the request body). `PostInteractionAsync`/`StreamInteractionAsync` need
-to pass the model through explicitly to `GeminiTelemetry.StartOperation`/`RecordUsage`/`RecordDuration`
-rather than relying on URL parsing.
+You cannot reuse `GeminiTelemetry.Parse(endpoint)` unmodified. It extracts the model from a
+`models/{model}:operation` URL segment. Interactions requests have neither. The `endpoint` is just
+`"interactions"`, and the model is in the request body. `PostInteractionAsync` and
+`StreamInteractionAsync` must pass the model explicitly to `GeminiTelemetry.StartOperation`,
+`RecordUsage`, and `RecordDuration`. They must not rely on URL parsing.
 
 ## 6. Naming and design decisions worth recording
 
-- **`ITranscriptionService`, not a method on `IGeminiService`.** See §5.4. `Interaction` is not a
-  `GenerateContentResponse`; folding it in would break that interface's own stated contract.
-- **New `PostInteractionAsync`/`StreamInteractionAsync`, not a reuse of `PostAsync`/`StreamAsync`.**
-  See §3.4, §3.2, §5.3: the error shape, response type, and telemetry model-tagging all differ in
-  ways that would silently misbehave (an opaque `GeminiSerializationException` instead of the API's
-  real message; no model tag on telemetry spans) if the existing generic methods were reused as-is.
-- **A new field on `GeminiApiException`, not a new exception type.** See §5.2. Keeps one exception
-  type for both APIs (simpler for callers doing a single `catch`), without corrupting what `ApiError`
-  already means for `generateContent`.
-- **No enum for `DiarizationMode`/`TimestampGranularities`/language codes/custom vocabulary.** Same
-  reasoning this library already applies to TTS voice names (`PLAN-tts.md` §3) and model names
-  generally: plain strings, so new values Google adds don't require a library update.
-- **Path A (`generateContent` audio understanding) deliberately not built alongside Path B.** See §2
-  and §4. Confirmed working, but building both at once means shipping two ways to do the same thing
-  with different capability levels; Path B is a strict superset of what Path A can produce for this
-  use case, so there is no reason to ship the weaker path unless Path B's larger lift turns out to be
-  a mistake.
+- `ITranscriptionService`, and not a method on `IGeminiService`. See §5.4. `Interaction` is not a
+  `GenerateContentResponse`. Folding it in would break the stated contract of that interface.
+- New `PostInteractionAsync` and `StreamInteractionAsync`, and no reuse of `PostAsync` and
+  `StreamAsync`. See §3.4, §3.2, and §5.3. The error shape, response type, and telemetry model
+  tagging all differ. If we reused the existing generic methods as is, they would misbehave
+  silently. The caller would get an opaque `GeminiSerializationException` and not the API's real
+  message. Telemetry spans would have no model tag.
+- A new field on `GeminiApiException`, and not a new exception type. See §5.2. This keeps one
+  exception type for both APIs, which is simpler for callers who write a single `catch`. It does not
+  corrupt what `ApiError` already means for `generateContent`.
+- No enum for `DiarizationMode`, `TimestampGranularities`, language codes, or custom vocabulary. The
+  reasoning is the same as this library already applies to TTS voice names (`PLAN-tts.md` §3) and to
+  model names in general. Use plain strings, so that new values from Google do not require a
+  library update.
+- We deliberately did not build Path A (`generateContent` audio understanding) next to Path B. See
+  §2 and §4. We confirmed that it works. But building both at once means that we ship two ways to do
+  the same thing, with different capability levels. For this use case, Path B is a strict superset
+  of what Path A can produce. So there is no reason to ship the weaker path, unless the larger lift
+  of Path B turns out to be a mistake.
 
-## 7. Open items to verify before writing code (do not skip)
+## 7. Open items to verify before you write code (do not skip)
 
-- [x] **Diarization producing real, distinct speaker labels through the typed client**, not just
-      accepted by the raw API. Resolved: `TranscribeAsync_WithDiarizationAndTimestamps_ReturnsDistinctSpeakerLabels`
-      (live test) confirms at least 2 distinct `"spk:N"` labels and real `StartOffset`/`EndOffset`
-      values on a real two-speaker clip, through `ITranscriptionService`/`Interaction.Words()`, not
-      raw REST.
-- [x] **The `CustomVocabulary`+`DiarizationMode` client-side guard actually matches the real API's
-      rejection**, not just assumed from the earlier raw-REST probe. Resolved:
-      `PostInteractionAsync_CustomVocabularyWithDiarization_RealApiRejectsWithInvalidRequest` (live
-      test) bypasses `TranscriptionOptions.Validate()` and calls `IGeminiClient.PostInteractionAsync`
-      directly with the conflicting combination; confirms a real `HTTP 400`/`"invalid_request"`.
-- [ ] **Long audio, synchronous or not.** Still open. Every live call made in this session (research
-      and post-implementation both) used a clip a few seconds long and got `"status": "completed"`
-      immediately. Google's docs claim up to 1 hour of audio per request. `GetInteractionAsync` exists
-      in `ITranscriptionService` for polling if long audio needs it, but this was never exercised
-      against real long audio, so whether it is actually needed remains unconfirmed.
-- [ ] **Inline `data` size limit.** Still open. Not tested with a large payload. Do not assume
-      `generateContent`'s informal ~20MB inline guidance applies to Interactions;
+- [x] Diarization produces real, distinct speaker labels through the typed client. The raw API
+      accepted it earlier. Resolved. The live test
+      `TranscribeAsync_WithDiarizationAndTimestamps_ReturnsDistinctSpeakerLabels` confirms at least 2
+      distinct `"spk:N"` labels and real `StartOffset` and `EndOffset` values on a real two-speaker
+      clip. It goes through `ITranscriptionService` and `Interaction.Words()`, and not raw REST.
+- [x] The client-side `CustomVocabulary` plus `DiarizationMode` guard actually matches the real API's
+      rejection. The earlier raw-REST probe suggested it. Resolved. The live
+      test `PostInteractionAsync_CustomVocabularyWithDiarization_RealApiRejectsWithInvalidRequest`
+      bypasses `TranscriptionOptions.Validate()` and calls `IGeminiClient.PostInteractionAsync`
+      directly with the conflicting combination. It confirms a real `HTTP 400` and
+      `"invalid_request"`.
+- [ ] Long audio, synchronous or not. Still open. Every live call that we made in this session
+      (research and post-implementation both) used a clip a few seconds long and got `"status":
+      "completed"` at once. Google's docs claim up to 1 hour of audio per request.
+      `ITranscriptionService` has `GetInteractionAsync` for polling, in case long audio needs it. We
+      never exercised it against real long audio. So we have not confirmed whether it is actually
+      needed.
+- [ ] Inline `data` size limit. Still open. We did not test a large payload. Do not assume that the
+      informal ~20MB inline guidance of `generateContent` applies to Interactions.
       `ITranscriptionService.TranscribeFileAsync` (the Files API path) exists as the documented
-      escape hatch, but no threshold for when to prefer it was established.
-- **`mode` field.** Resolved by scoping out: not implemented in v1 (`TranscriptionConfig` has no
-  `Mode` property), per §4's explicit scope decision. Revisit only with a real confirmed behavior to
-  build a typed option around.
-- [ ] **`timestamp_granularities: ["segment"]`'s actual output shape.** Still open. `TranscriptionConfig.TimestampGranularities`
-      accepts any string list (not enum-locked, see §6), so a caller can already pass `"segment"`
-      today; this library's own tests only exercised `"word"`.
-- [ ] **Custom vocabulary's actual bias effect.** Still open. Confirmed live as an accepted field and
-      confirmed incompatible with diarization (§3.4), but never tested for whether it actually changes
-      recognition of an unusual term.
-- [ ] **Streaming with a long clip.** Still open. Every streaming test made in this session (research
-      and post-implementation) returned the entire transcript as a single `step.delta`. Whether a long
-      clip arrives as multiple deltas remains unconfirmed.
+      escape hatch. But we did not establish a threshold for when to prefer it.
+- `mode` field. Resolved by scoping it out. We did not implement it in v1 (`TranscriptionConfig` has
+  no `Mode` property), per the explicit scope decision in §4. Revisit it only when you have a real,
+  confirmed behavior to build a typed option around.
+- [ ] The actual output shape of `timestamp_granularities: ["segment"]`. Still open.
+      `TranscriptionConfig.TimestampGranularities` accepts any string list (it is not locked to an
+      enum, see §6). A caller can already pass `"segment"` today. This library's own tests exercised
+      only `"word"`.
+- [ ] The actual bias effect of custom vocabulary. Still open. We confirmed it live as an accepted
+      field. We also confirmed that it is incompatible with diarization (§3.4). But we never tested
+      whether it actually changes the recognition of an unusual term.
+- [ ] Streaming with a long clip. Still open. Every streaming test that we made in this session
+      (research and post-implementation) returned the entire transcript as a single `step.delta`.
+      We have not confirmed whether a long clip arrives as multiple deltas.
 
-## 8. Tests to add (all implemented; §7's remaining open items were left as such, not force-tested)
+## 8. Tests to add (all implemented; we left the remaining open items from §7 as they are and did not force a test)
 
-**Unit** (`tests/Junaid.GoogleGemini.Net.Tests/TranscriptionTests.cs`), `FakeHttpMessageHandler`-based, 11 tests:
-- [x] `TranscribeAsync` sends the correct `InteractionRequest` shape for inline audio, and for a file URI.
+Unit tests (`tests/Junaid.GoogleGemini.Net.Tests/TranscriptionTests.cs`), based on
+`FakeHttpMessageHandler`, 11 tests:
+- [x] `TranscribeAsync` sends the correct `InteractionRequest` shape for inline audio, and for a file
+      URI.
 - [x] `TranscriptionOptions` throws `ArgumentException` when `CustomVocabulary` is combined with
-      `DiarizationMode` or `TimestampGranularities`, without making a network call.
+      `DiarizationMode` or `TimestampGranularities`. It does so without a network call.
 - [x] A fake Interactions error body (`{"error": {"code": "invalid_request", "message": "..."}}`)
-      deserializes correctly and surfaces via `GeminiApiException.InteractionErrorCode`/`.Message`,
-      not a `GeminiSerializationException`.
-- [x] The usage-mapping function reads output tokens from `ModelInvocationTokenCounts`, and a fake
-      response with `TotalOutputTokens: 0` but real `CandidatesTokensDetails` still prices output cost
-      correctly (this is the regression test for §3.3's quirk).
-- [x] `Interaction.Text()`/`Words()` correctly skip a `"user_input"` step and only aggregate
-      `"model_output"` steps.
+      deserializes correctly. It surfaces through `GeminiApiException.InteractionErrorCode` and
+      `.Message`, and not through a `GeminiSerializationException`.
+- [x] The usage-mapping function reads output tokens from `ModelInvocationTokenCounts`. A fake
+      response with `TotalOutputTokens: 0` but real `CandidatesTokensDetails` still prices the output
+      cost correctly. This is the regression test for the quirk in §3.3.
+- [x] `Interaction.Text()` and `Words()` skip a `"user_input"` step and aggregate only `"model_output"`
+      steps.
 
-**Live** (`tests/Junaid.GoogleGemini.Net.IntegrationTests/TranscriptionLiveTests.cs`), `[RequiresGeminiKey]`, 5 tests:
-- [x] `TranscribeAsync` against real inline audio (generated via this library's own TTS, same pattern
-      used in this plan's research) returns the expected transcript.
-- [x] `TranscribeAsync` with `DiarizationMode` + `TimestampGranularities` against a real two-speaker clip
-      returns per-word `Speaker` labels that actually distinguish the two speakers.
-- [x] `PostInteractionAsync` with `CustomVocabulary` + `DiarizationMode` together, called directly
-      (bypassing the client-side guard) against the real API, confirms a real `HTTP 400`/
-      `"invalid_request"` matching what the guard prevents.
+Live tests (`tests/Junaid.GoogleGemini.Net.IntegrationTests/TranscriptionLiveTests.cs`),
+`[RequiresGeminiKey]`, 5 tests:
+- [x] `TranscribeAsync` against real inline audio returns the expected transcript. The audio came
+      from this library's own TTS, the same pattern that this plan used in its research.
+- [x] `TranscribeAsync` with `DiarizationMode` and `TimestampGranularities`, against a real
+      two-speaker clip, returns per-word `Speaker` labels that actually distinguish the two
+      speakers.
+- [x] `PostInteractionAsync` with `CustomVocabulary` and `DiarizationMode` together, called directly
+      (and bypassing the client-side guard) against the real API, confirms a real `HTTP 400` and
+      `"invalid_request"`. This matches what the guard prevents.
 - [x] `TranscribeFileAsync` against a file uploaded through the existing `IFileService` succeeds.
 - [x] `StreamTranscribeAsync` yields events and a final completed `Interaction` with `Usage`.
-- [ ] Long-audio behavior (§7): not tested. No long audio sample was available in this session; left
-      as an explicit open item rather than skipped silently.
+- [ ] Long-audio behavior (§7): not tested. No long audio sample was available in this session. We
+      left it as an explicit open item and did not skip it silently.
 
-Full suite results at the time of shipping: 167/167 unit tests (11 new), full solution build 0
-warnings on all three targets, 39 passed/7 paid-tier-skipped/0 failed on the complete live suite (5
-new STT tests plus every pre-existing live test, confirming no regression).
+Full suite results at the time of shipping: 167 of 167 unit tests passed (11 new). The full solution
+build had 0 warnings on all three targets. The complete live suite had 39 passed, 7 paid-tier
+skipped, and 0 failed. That covers the 5 new STT tests and every existing live test, which confirms
+no regression.
 
 ## 9. Docs to update
 
-- [x] New `docs/articles/transcription.md`, following `docs/articles/tts.md`'s structure.
-- [x] Added to `docs/articles/toc.yml` and `docs/index.md`'s guide list.
-- [x] `README.md`: new "Speech-to-text" bullet plus a short code sample, matching the TTS section's format.
-- [x] `Junaid.GoogleGemini.Net.csproj`'s `PackageReleaseNotes`: `6.6.0` entry added.
-- [x] `ROADMAP.md`: added a `6.6.0` shipped-feature entry; there was no explicit STT-shaped backlog
-      item to remove, confirmed by checking (see this section's original note). Also annotated the
-      existing TTS-era Interactions API backlog item to point at this plan's §2 for why STT's answer
-      to "should this use the Interactions API" went the other way from TTS's.
-- [x] Written in this repo's `CLAUDE.md` style throughout: short sentences, no em dashes (checked with
-      a literal grep across every new/changed file before publishing, not just a visual scan).
+- [x] Add `docs/articles/transcription.md`, following the structure of `docs/articles/tts.md`.
+- [x] Add it to `docs/articles/toc.yml` and to the guide list in `docs/index.md`.
+- [x] `README.md`: add a new "Speech-to-text" bullet and a short code sample, matching the format of
+      the TTS section.
+- [x] `Junaid.GoogleGemini.Net.csproj`: add a `6.6.0` entry to `PackageReleaseNotes`.
+- [x] `ROADMAP.md`: add a `6.6.0` shipped-feature entry. There was no explicit STT-shaped backlog
+      item to remove (we confirmed that by checking, see the original note in this section). Also
+      annotate the existing TTS-era backlog item for the Interactions API. It should point to §2 of
+      this plan, which explains why STT answered "should this use the Interactions API" the opposite
+      way from TTS.
+- [x] Write everything in the style of this repo's `CLAUDE.md`: short sentences, no em dashes. We
+      checked this with a literal grep across every new and changed file before publishing, and not
+      only with a visual scan.
 
 ## 10. Deep second-pass review: three real bugs found and fixed before merge
 
-Asked explicitly for a second, separate review pass after the implementation was already built,
-tested (167/167 unit, 39/39 non-skipped live), and PR'd. Re-reading every changed file fresh, as if
-seeing it for the first time, found three real bugs none of the first pass's own tests caught. None
-of these were caught by "build succeeds, tests pass": all three are the kind of thing a test suite
-only catches if someone thinks to write the specific test for it, which is exactly what a second pass
-is for.
+We asked explicitly for a second, separate review pass after the implementation was already built,
+tested (167 of 167 unit tests, 39 of 39 non-skipped live tests), and in a PR. We re-read every
+changed file fresh, as if we saw it for the first time. We found three real bugs that none of the
+first pass's own tests caught. A green build and passing tests did not catch any of them. A test
+suite catches this kind of bug only if someone thinks to write the specific test for it. That is
+exactly what a second pass is for.
 
-**Bug 1: `StreamInteractionAsync` mutated the caller's own `InteractionRequest` object.**
-`request.Stream = true;` was set directly on the object the caller passed in, not a copy. This
-library's own established convention (`GenerateAudioAsync`/`StreamAudioAsync`'s doc comment: "on a
-cloned options object") exists precisely to avoid this: a caller who built one `InteractionRequest`
-and reused it for both a `PostInteractionAsync` call and a `StreamInteractionAsync` call would have
-silently gotten `"stream": true` on the non-streaming call too, since the same object got mutated in
-place. Fixed to clone. Regression test:
+Bug 1: `StreamInteractionAsync` changed the caller's own `InteractionRequest` object. It set
+`request.Stream = true;` directly on the object that the caller passed in, and not on a copy. This
+library's own established convention exists to avoid exactly this (see the doc comment of
+`GenerateAudioAsync` and `StreamAudioAsync`: "on a cloned options object"). Suppose a caller built
+one `InteractionRequest` and reused it for both a `PostInteractionAsync` call and a
+`StreamInteractionAsync` call. The non-streaming call would silently have had `"stream": true` too,
+because the same object got changed in place. We fixed it to clone the request. Regression test:
 `GeminiClientTests.StreamInteractionAsync_DoesNotMutateCallersRequestObject`.
 
-**Bug 2: `StreamTranscribeAsync` was not an async iterator, so validation threw synchronously at call
-time instead of on first `MoveNextAsync()`.** Every other `IAsyncEnumerable`-returning method in this
-codebase (`StreamAsync`, `StreamWithImageAsync`, `StreamAudioAsync`) is an `async IAsyncEnumerable`
-iterator (`yield return`), which defers everything, including argument validation, to first
-enumeration. `StreamTranscribeAsync` instead ran its validation immediately and returned the
-downstream enumerable directly. A caller who wraps only the `await foreach` in a try/catch (the
-natural pattern given how every other streaming method here behaves) would have had a validation
-`ArgumentException` escape uncaught. Fixed to a real iterator method. Regression test:
-`TranscriptionTests.StreamTranscribeAsync_DefersValidationToFirstMoveNext_NotAtCallTime`.
+Bug 2: `StreamTranscribeAsync` was not an async iterator. Its validation threw synchronously at call
+time and not on the first `MoveNextAsync()`. Every other method in this codebase that returns an
+`IAsyncEnumerable` (`StreamAsync`, `StreamWithImageAsync`, `StreamAudioAsync`) is an
+`async IAsyncEnumerable` iterator (`yield return`). It defers everything, including argument
+validation, to the first enumeration. `StreamTranscribeAsync` instead ran its validation at once and
+returned the downstream enumerable directly. A caller who wraps only the `await foreach` in a
+try/catch would have had a validation `ArgumentException` escape uncaught. That is the natural
+pattern, given how every other streaming method here behaves. We fixed it to a real iterator method.
+Regression test: `TranscriptionTests.StreamTranscribeAsync_DefersValidationToFirstMoveNext_NotAtCallTime`.
 
-**Bug 3 (minor, no observable effect, fixed anyway): `MapUsage`'s `TotalTokenCount` excluded thought
-tokens.** `generateContent`'s real `totalTokenCount` = prompt + candidates + thoughts (confirmed from
-a live call earlier this session: 8 + 2 + 96 = 106). The mapper computed only prompt + candidates.
-Harmless today, since nothing in `ComputeCost`/`RecordSpend`/telemetry actually reads
-`TotalTokenCount`, only the individual fields, but wrong if that ever changes or if a caller ever
-inspects the mapped value directly. Fixed. Also added an explicit code comment flagging that
-`CachedContentTokenCount`'s subset-of-input assumption (borrowed from `generateContent`'s semantics)
-was never actually exercised live, since every observed `TotalCachedTokens` was `0` (transcription
-requests have no way to attach cached content today). Regression test:
+Bug 3 (minor, with no observable effect, and we fixed it anyway): the `TotalTokenCount` of
+`MapUsage` excluded thought tokens. The real `totalTokenCount` of `generateContent` is prompt +
+candidates + thoughts (confirmed from a live call earlier in this session: 8 + 2 + 96 = 106). The
+mapper computed only prompt + candidates. This is harmless today, because nothing in `ComputeCost`,
+`RecordSpend`, or telemetry reads `TotalTokenCount`. They read only the individual fields. But it
+would be wrong if that ever changes, or if a caller ever inspects the mapped value directly. We
+fixed it. We also added an explicit code comment that flags a gap. The assumption that
+`CachedContentTokenCount` is a subset of the input (borrowed from the semantics of
+`generateContent`) was never exercised live, because every observed `TotalCachedTokens` was `0`.
+Transcription requests have no way to attach cached content today. Regression test:
 `GeminiClientTests.PostInteractionAsync_MapsUsage_ReadingOutputTokensFromModelInvocationTokenCounts_NotTheMisleadingTopLevelField`
 asserts the corrected value directly.
 
-**Also found during the same pass, not bugs but real gaps, both fixed:**
-- Zero unit test coverage existed for `StreamTranscribeAsync`/`StreamInteractionAsync` before this
-  pass; only a live test exercised the SSE parsing logic. Added
-  `GeminiClientTests.StreamInteractionAsync_ParsesNamedSseEventsCorrectly` (client level) and
-  `TranscriptionTests.StreamTranscribeAsync_SendsCorrectRequestShapeAndYieldsEvents` (service level).
-- The ASP.NET Core sample never demonstrated this feature. TTS's own checklist required its `/speak`
-  endpoint to be "actually run and hit with a real request, not just compiled" before considering that
-  feature done; this feature's PR had skipped the equivalent. Added `GET /transcribe`, which
-  round-trips through both audio features (speaks text via TTS, transcribes the result back), and
-  actually ran it: `curl` against a live instance returned the correct transcript, `HTTP 200`.
+The same pass also found two real gaps that were not bugs. We fixed both:
+- No unit test covered `StreamTranscribeAsync` or `StreamInteractionAsync` before this pass. Only a
+  live test exercised the SSE parsing logic. We added
+  `GeminiClientTests.StreamInteractionAsync_ParsesNamedSseEventsCorrectly` (at the client level) and
+  `TranscriptionTests.StreamTranscribeAsync_SendsCorrectRequestShapeAndYieldsEvents` (at the service
+  level).
+- The ASP.NET Core sample never demonstrated this feature. The checklist of TTS required its
+  `/speak` endpoint to be "actually run and hit with a real request, not just compiled" before we
+  considered that feature done. The PR for this feature had skipped the equivalent. We added
+  `GET /transcribe`, which round-trips through both audio features: it speaks text through TTS and
+  transcribes the result back. We ran it. `curl` against a live instance returned the correct
+  transcript with `HTTP 200`.
 
-**What this pass did not re-verify live:** the two streaming fixes (Bug 1, Bug 2) were validated by
-precise unit tests asserting the exact corrected behavior (wire body content, mutation absence,
-deferred-throw timing), not by a third live pass specifically targeting `StreamTranscribeAsync`. The
-underlying SSE-reading mechanism itself was already live-verified twice before this review (research
-phase and post-implementation phase); these fixes are narrow, mechanical corrections to object
-lifecycle and exception timing, not to wire-protocol handling. Judged sufficient rather than asking
-for the API key a fourth time in one session; noted here rather than left unstated.
+What this pass did not re-verify live: we validated the two streaming fixes (Bug 1 and Bug 2) with
+precise unit tests that assert the exact corrected behavior (the wire body content, the absence of
+mutation, and the timing of the deferred throw). We did not run a third live pass that targeted
+`StreamTranscribeAsync` specifically. Two earlier live passes (the research phase and the
+post-implementation phase) had already verified the underlying SSE-reading mechanism. These fixes
+are narrow, mechanical corrections to object lifecycle and exception timing. They do not touch
+wire-protocol handling. We judged that sufficient, and we did not ask for the API key a fourth time
+in one session. We note it here so that it is not left unstated.

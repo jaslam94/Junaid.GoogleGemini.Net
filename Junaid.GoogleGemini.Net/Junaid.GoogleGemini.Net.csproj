@@ -16,11 +16,77 @@
 
 		<!-- Package metadata -->
 		<Title>Junaid.GoogleGemini.Net</Title>
-		<Description>A production-ready .NET client for the Google Gemini API: resilient (retries + rate limiting), observable, and DI-native, with first-class ASP.NET Core ergonomics. Built with AI: the v6 modernization was implemented end-to-end by Claude (Anthropic); see the README.</Description>
+		<Description>A .NET client for the Google Gemini API. It has built-in retries and rate limiting, OpenTelemetry support, and dependency injection, and it fits naturally into ASP.NET Core. Claude (Anthropic) wrote the v6 modernization from start to finish. See the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.7.0</Version>
+		<Version>6.8.0</Version>
 		<PackageReleaseNotes>
+			6.8.0: moves text-to-speech to the Gemini 3.8 TTS models before Google shuts down the old
+			ones on 2026-11-17. It also refreshes the model lineup for Google's October 2026 changes.
+			One default changes on purpose: GenerateAudioAsync now uses gemini-3.8-flash-lite-tts.
+			Models.RecommendedImage stays gemini-3.1-flash-image. We tried gemini-nano-banana-2.1 as the
+			default and reverted it. It sometimes returns no image (finishReason IMAGE_RECITATION) for
+			simple prompts that the old model handles.
+			(1) Text-to-speech. The 3.8 models are not a drop-in swap. We checked each difference
+			against the real API on 2026-10-10 (see PLAN-tts-3-8.md). A unary call returns a WAV file
+			and not raw PCM, so GeneratedAudio.ToWav() now returns it unchanged. It used to throw. The
+			model speaks the prompt word for word, so "Say cheerfully: ..." was read aloud. The new
+			SpeechStyle option sends the direction as speech metadata instead. The 3.8 models return
+			HTTP 400 for a multi-speaker request in the 6.5.0 shape. SpeakerVoices still takes the same
+			script, "Joe: Hi Jane! Jane: Hello Joe!". The library now splits it at each name and sends
+			one part per turn, with the speaker in speech metadata. It drops any text before the first
+			name, because the model would read the old "TTS the following conversation..." preamble
+			aloud. The three old models reject speech metadata, so they keep the old shape. The library
+			picks the shape by model name, and UseSpeechMetadata overrides that choice. New options:
+			SpeechStyle, UseSpeechMetadata, AudioFormat and SpeechLanguageCode. A VoiceName that starts
+			with voice_ or voicekey_ (a custom voice) now goes in the field that Google uses for those.
+			We tested a real custom voice end to end. A voice made with Google's voice design worked
+			with both 3.8 models.
+			The new IVoiceService wraps Google's Voices API. It lists and filters the voice library,
+			gets a voice, designs a voice from a description, and deletes a voice. We checked listing,
+			filtering, paging, get and delete against the real API. Unit tests cover designing a voice,
+			built from the real response. A live test for it through the wrapper has not run yet,
+			because the test project reached its spending cap. Voice replication follows Google's
+			documented shape and has not been run, because it needs a real speaker and that speaker's
+			consent. docs/articles/tts.md explains custom voices.
+			GenerateContentResponse.ModelVersion now reports which model answered, so you can see the
+			3.5 and 3.7 routing.
+			(2) Cost governance is now date-aware. Google's introductory price for gemini-3.6-flash,
+			gemini-3.8-flash and the 3.8 TTS models ends on 2026-12-31. The standard rate (double)
+			starts on 2027-01-01. ModelPricing has new NextPricing and NextPricingEffectiveFromUtc
+			properties. The built-in table already carries the 2027 rates and switches on that date
+			(00:00 UTC, our assumption, because Google gives no time zone). Without this, a budget would
+			undercount by half from January. We added pricing for both 3.8 TTS models and for
+			gemini-nano-banana-2.1. gemini-3.5-flash and gemini-3.7-flash are priced as the models that
+			Google routes them to.
+			(3) Model lineup. Google deprecated gemini-3.5-flash and gemini-3.7-flash on 2026-10-08 and
+			routes them to 3.6 and 3.8. We confirmed that live: the response reports the new model.
+			Their constants, and the three old TTS constants, are now [Obsolete]. We added the Nano
+			Banana 2.1 model, the 1:4, 4:1, 1:8 and 8:1 aspect ratios (we checked 1:8 live), and the 512
+			image size (Nano Banana 2.1 rejects it).
+			(4) Smaller changes. FunctionCallPart and FunctionResponsePart now carry the call Id that the
+			Gemini 3 models return, so you can echo it. Part has a new MediaProcessing property (Google's
+			agentic video setting). We tested it with two real clips of about 10 seconds, and the field
+			works. Agentic mode reports the video in a separate usage field, toolUsePromptTokenCount.
+			The cost governor ignored that field, so it priced an agentic video call at about a quarter
+			of its real cost. UsageMetadata now has ToolUsePromptTokenCount, and the governor prices it
+			as input. Google's billing catalog has no separate SKU for these tokens, so the input rate is the
+			only rate that could apply. We do not know if Google bills them at all. On short clips,
+			agentic mode used slightly more tokens, not fewer. Google's saving is for long videos. On one
+			5-minute screen recording, agentic mode used 81% fewer tokens (4,483 against 24,149). The OpenTelemetry token metrics still report only promptTokenCount, so they
+			under-report agentic calls. The thinking docs now say that gemini-3.8-flash rejects the
+			"minimal" level with HTTP 400. They also say that ThinkingBudget = 0 was accepted on 3.6 and
+			3.8 and usually gave no thoughts, but not always (1 call in 8 on 3.8 still thought). Two doc
+			comments said that 3.x models default to "high" thinking. We softened them, because Google
+			documents "medium".
+			(5) Bug fix for .NET Framework, Mono and Unity (the netstandard2.0 build). Cancelling a stream
+			did nothing there. StreamReader.ReadLineAsync has no token overload on that target, and the
+			library ignored the token. The stream ran to its end, and the cost governor recorded spend
+			for a stream that the caller had abandoned. The library now honors the token. The test suite
+			also runs on .NET Framework 4.8 now (on Windows, and in a new CI job). That is how we found
+			the bug. The netstandard2.0 build had been compiled but never run.
+			Callers of GenerateAudioAsync need no code change, except for a prompt with an in-text
+			direction. The model now speaks that direction. Move it to SpeechStyle.
 			6.7.0: adds multimodal embeddings input. gemini-embedding-2 has accepted image, video,
 			audio, and PDF input since GA (April 2026), mapping all of them into one shared vector
 			space alongside text, but IEmbeddingService was still text-only. New overloads:
@@ -111,7 +177,7 @@
 			only the text of the XML docs shipped alongside the DLL for IntelliSense; no code, no
 			behavior, no API surface changed.
 			6.4.3: same-day doc-only follow-up to 6.4.2. Two GeminiRequestOptions.Factual()/.Code() XML
-			doc comments still named gemini-3.7-flash as "the recommended model" -- these ship in the
+			doc comments still named gemini-3.7-flash as "the recommended model". These ship in the
 			package's IntelliSense, so this was wrong from the moment 6.4.2 shipped. Fixed those plus
 			the same models list in GenerationConfig.Temperature and ContentRequestBuilder.WithTemperature
 			for consistency. No functional changes; no behavior differs from 6.4.2. See ROADMAP.md for
@@ -128,17 +194,17 @@
 			DefaultPricing rate as 3.7-flash ($0.75/$3.75/$0.075 per 1M tokens through 2026-12-31).
 			(2) GenerationConfig.PresencePenalty/FrequencyPenalty had no warning, but live-testing
 			against gemini-3.8-flash confirmed each causes a hard HTTP 400 INVALID_ARGUMENT ("Penalty is
-			not enabled for this model") -- unlike Temperature/TopP/TopK, which Gemini 3.x silently
+			not enabled for this model"), unlike Temperature/TopP/TopK, which Gemini 3.x silently
 			ignores rather than rejects. Both properties now document this. (CandidateCount does not
-			have this problem -- confirmed live, verified false a third-party report that it did.)
+			have this problem. Live testing confirmed that, and showed a third-party report to be false.)
 			(3) README, docs, and the ASP.NET Core / .NET Framework samples still used gemini-2.5-flash
 			or gemini-2.5-pro as copy-paste example models. Google has restricted new API keys/projects
 			from the 2.5 line since mid-2026 (existing active users are unaffected; confirmed via a
-			Google staff forum reply) -- a first-time reader following the old examples risked a 404
+			Google staff forum reply). A first-time reader who followed the old examples risked a 404
 			unrelated to this library. All example models refreshed to gemini-3.8-flash.
 			6.4.1: a full audit against the current Gemini API, including live-key verification, found
 			and fixed six bugs. No breaking changes; all fixes are corrections or additive.
-			(1) GenerateImageAsync()'s default model was broken since 6.1.0 -- Models.RecommendedImage
+			(1) GenerateImageAsync()'s default model was broken since 6.1.0. Models.RecommendedImage
 			(and Gemini31FlashImage/Gemini3ProImage) pointed at "-preview"-suffixed model IDs Google
 			promoted to GA under unsuffixed names on May 28, 2026 and shut the preview IDs down on June
 			25. Fixed to the GA names; added the previously-missing Gemini31FlashLiteImage (Nano Banana
@@ -150,7 +216,7 @@
 			three current native image-generation models (they're priced per-token, not per-image as
 			previously assumed).
 			(3) GeminiRateLimiter's below-60-RPM math floored ANY configured RequestsPerMinute under 60
-			to an effective 60 RPM via integer division -- exactly the range free/low-tier Gemini quotas
+			to an effective 60 RPM via integer division. That is exactly the range free/low-tier Gemini quotas
 			live in, so the limiter gave no real protection there. Fixed with a sub-1-token-per-second
 			replenishment branch; added null/range guards to the public constructor to keep it from
 			handing a non-finite value to TimeSpan.FromSeconds.
@@ -172,10 +238,10 @@
 			GetResultsAsync (handles both inline and file-based results transparently). Also adds
 			IFileService.DownloadFileAsync. Deliberately does not route through the shared
 			IGeminiClient/GeminiClient: that path unconditionally applies the interactive rate limiter
-			and cost governor, neither of which apply to batch's separate quota pool and pricing -- a new
+			and cost governor, neither of which apply to batch's separate quota pool and pricing. A new
 			dedicated HttpClient (GeminiHttpClients.Batches) is used instead. Not covered: cost
 			governance integration, rate limiting, batch embeddings, or client-side enforcement of
-			Google's size/concurrency limits -- see docs/articles/batch-api.md for the full scope and
+			Google's size/concurrency limits. See docs/articles/batch-api.md for the full scope and
 			known limitations, including two facts (the exact state-string prefix and the file-based
 			results field name) that Google's own docs disagree with themselves on and that are not yet
 			confirmed against a live response. No breaking changes.
@@ -187,7 +253,7 @@
 			it already covered the MessageObject[]-based ones. The cumulative daily budget
 			(MaxCostPerDayUsd) already applied to these calls regardless, since it's enforced lower down in
 			GeminiClient; only the best-effort per-request estimate was missing. No breaking changes.
-			6.3.0: a live-verification and completeness pass across the whole client -- every major
+			6.3.0: a live-verification and completeness pass across the whole client. Every major
 			feature was re-tested against the real Gemini API (not mocks) and two real response-parsing
 			gaps were found and fixed along the way.
 			(1) The code_execution tool: the API returns executableCode/codeExecutionResult parts that
@@ -199,21 +265,21 @@
 			that Candidate had no field for. New Candidate.UrlContextMetadata/UrlMetadata surface it
 			(the source URL itself was already available via the existing GroundingMetadata).
 			(3) StreamAsync now emits a real OpenTelemetry span (start/error-status/duration/token-usage
-			tags), matching PostAsync -- previously streaming calls were completely untraced.
+			tags), matching PostAsync. Previously, streaming calls were completely untraced.
 			Also live-verified and left unchanged (working as designed): safety-settings blocking,
 			multi-turn chat history, the IEmbeddingGenerator adapter's single/batch code paths, and the
 			client-side rate limiter's real rejection behavior under concurrent load. No breaking changes.
-			6.2.0: adds cost governance -- as far as we've found, no other .NET Gemini client library
+			6.2.0: adds cost governance. As far as we've found, no other .NET Gemini client library
 			offers this (checked nine, including Google's own official SDK; see
 			docs/articles/cost-governance.md). New GeminiOptions.Budget (BudgetOptions) configures:
 			(1) a cumulative daily USD ceiling (MaxCostPerDayUsd): once today's (UTC) real recorded
 			spend reaches it, the next call throws the new GeminiBudgetExceededException before being
-			sent -- no network round-trip, no cost from the rejected call itself; and (2) an opt-in
+			sent, with no network round-trip and no cost from the rejected call itself; and (2) an opt-in
 			best-effort per-request estimate ceiling (MaxCostPerRequestUsd): spends one exact
 			CountTokensAsync round-trip (skipped entirely, zero overhead, when this is unset) to bound
 			input cost precisely, bounds output cost only when the request sets MaxTokens (widened by a
 			positive ThinkingBudget), and throws the new GeminiRequestCostExceededException if the
-			estimate exceeds the ceiling -- covers GenerateAsync/GenerateWithImageAsync/ChatAsync(
+			estimate exceeds the ceiling. It covers GenerateAsync/GenerateWithImageAsync/ChatAsync(
 			MessageObject[]) and their streaming counterparts; not ChatAsync(IList&lt;Content&gt;), since
 			there's no token-counting endpoint for a raw Content list. Every call's real UsageMetadata is
 			priced (built-in rates for the current model lineup, overridable per-model via
@@ -223,7 +289,7 @@
 			loop is now budget-checked too, closing a gap where cost governance would otherwise be
 			silently bypassable via StreamAsync/StreamChatAsync). Cost accounting correctly bills
 			"thinking" tokens as output and discounts cached-content tokens at the cached rate without
-			double-charging them. Tracking is in-memory and per-process only -- see the new
+			double-charging them. Tracking is in-memory and per-process only. See the new
 			docs/articles/cost-governance.md for the multi-instance caveat and every other limitation
 			(they're documented precisely, not glossed over). Also fixes a bug found while building
 			this: IGeminiService.CountTokensAsync(prompt, ct) had no way to specify a model and always
@@ -234,7 +300,7 @@
 			locked to the legacy "AIza"/"BIza"/"CIza" prefixes; Google has since introduced a new "AQ."
 			key format (rolling out through Sep 2026, after which "AIza" keys stop working entirely) that
 			the old check rejected before the request ever reached the network. The check no longer
-			gatekeeps on prefix -- it only catches empty/too-short/whitespace-corrupted values. This bug
+			gatekeeps on prefix. It only catches empty/too-short/whitespace-corrupted values. This bug
 			affects the previous 6.0.1 release too; consider it the reason to upgrade even if you don't
 			need the feature below.
 			Also adds image generation. New GenerateImageAsync(prompt, options?, ct) on
@@ -308,8 +374,8 @@
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<!-- The shipped library must stay warning-clean. Examples/tests don't set this. -->
 		<TreatWarningsAsErrors>true</TreatWarningsAsErrors>
-		<!-- TEMPORARY: suppress "missing XML comment" until the public surface is fully documented
-		     in Phase 2/3. Docs are still generated for members that have them. -->
+		<!-- Suppress "missing XML comment" (CS1591). Many public members have no doc comment. We checked
+		     on 2026-10-12 that removing this line fails the build. DocFX still documents members that have one. -->
 		<NoWarn>$(NoWarn);CS1591</NoWarn>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>

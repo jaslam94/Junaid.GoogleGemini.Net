@@ -29,7 +29,7 @@ public class TranscriptionLiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task TranscribeAsync_InlineAudio_ReturnsExpectedTranscript()
     {
-        var wav = await GenerateSpeechWavAsync("Say clearly: The quick brown fox jumps over the lazy dog.");
+        var wav = await GenerateSpeechWavAsync("The quick brown fox jumps over the lazy dog.");
 
         var interaction = await Transcription.TranscribeAsync(wav, "audio/wav");
 
@@ -69,18 +69,25 @@ public class TranscriptionLiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task TranscribeFileAsync_AgainstAnUploadedFile_Succeeds()
     {
-        var wav = await GenerateSpeechWavAsync("Say clearly: Testing one two three.");
+        var wav = await GenerateSpeechWavAsync("Testing one two three.");
         var file = await Files.UploadFileAsync(wav, "audio/wav", "stt-live-test.wav");
+        try
+        {
+            var interaction = await Transcription.TranscribeFileAsync(file.Uri!, "audio/wav");
 
-        var interaction = await Transcription.TranscribeFileAsync(file.Uri!, "audio/wav");
-
-        Assert.Contains("testing", interaction.GetTextOrThrow(), StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("testing", interaction.GetTextOrThrow(), StringComparison.OrdinalIgnoreCase);
+        }
+        finally
+        {
+            // Uploaded files otherwise sit in the project until Google expires them after 48 hours.
+            await Files.DeleteFileAsync(file.Name!);
+        }
     }
 
     [RequiresGeminiKey]
     public async Task StreamTranscribeAsync_YieldsEventsAndAFinalCompletedInteractionWithUsage()
     {
-        var wav = await GenerateSpeechWavAsync("Say clearly: Streaming transcription test.");
+        var wav = await GenerateSpeechWavAsync("Streaming transcription test.");
 
         var events = new List<InteractionStreamEvent>();
         await foreach (var evt in Transcription.StreamTranscribeAsync(wav, "audio/wav"))
@@ -104,7 +111,7 @@ public class TranscriptionLiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task PostInteractionAsync_CustomVocabularyWithDiarization_RealApiRejectsWithInvalidRequest()
     {
-        var wav = await GenerateSpeechWavAsync("Say clearly: Vocabulary conflict test.");
+        var wav = await GenerateSpeechWavAsync("Vocabulary conflict test.");
 
         var request = new InteractionRequest
         {
@@ -130,7 +137,7 @@ public class TranscriptionLiveTests(GeminiFixture fixture)
     {
         var response = await Gemini.GenerateAudioAsync(prompt, new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
+            Model = GeminiConstants.Models.RecommendedTts,
             VoiceName = "Kore",
         });
         return response.GetAudioOrThrow().ToWav();
@@ -140,7 +147,7 @@ public class TranscriptionLiveTests(GeminiFixture fixture)
     {
         var response = await Gemini.GenerateAudioAsync(prompt, new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
+            Model = GeminiConstants.Models.RecommendedTts,
             SpeakerVoices = [("Joe", "Kore"), ("Jane", "Puck")],
         });
         return response.GetAudioOrThrow().ToWav();

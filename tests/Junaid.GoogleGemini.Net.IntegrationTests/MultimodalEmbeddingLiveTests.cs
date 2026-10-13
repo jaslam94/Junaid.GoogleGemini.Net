@@ -47,7 +47,7 @@ public class MultimodalEmbeddingLiveTests(GeminiFixture fixture)
     [RequiresGeminiKey]
     public async Task EmbedContentAsync_AudioWithoutText_ReturnsValidEmbedding()
     {
-        var audioBytes = await GenerateSpeechWavAsync("Say clearly: The stock market rallied today.");
+        var audioBytes = await GenerateSpeechWavAsync("The stock market rallied today.");
 
         var response = await Embeddings.EmbedContentAsync(GeminiConstants.Models.GeminiEmbedding2, audioBytes, "audio/wav");
 
@@ -60,10 +60,17 @@ public class MultimodalEmbeddingLiveTests(GeminiFixture fixture)
     {
         var imageBytes = await GenerateImageAsync("A blue square.");
         var file = await Files.UploadFileAsync(imageBytes, "image/jpeg", "embed-live-test.jpg");
+        try
+        {
+            var response = await Embeddings.EmbedFileAsync(GeminiConstants.Models.GeminiEmbedding2, file.Uri!, "image/jpeg", "A blue square");
 
-        var response = await Embeddings.EmbedFileAsync(GeminiConstants.Models.GeminiEmbedding2, file.Uri!, "image/jpeg", "A blue square");
-
-        Assert.NotNull(response.Embedding?.Values);
+            Assert.NotNull(response.Embedding?.Values);
+        }
+        finally
+        {
+            // Uploaded files otherwise sit in the project until Google expires them after 48 hours.
+            await Files.DeleteFileAsync(file.Name!);
+        }
     }
 
     [RequiresGeminiKey]
@@ -118,7 +125,7 @@ public class MultimodalEmbeddingLiveTests(GeminiFixture fixture)
     {
         var response = await Gemini.GenerateAudioAsync(prompt, new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini25FlashTts,
+            Model = GeminiConstants.Models.RecommendedTts,
             VoiceName = "Kore",
         });
         return response.GetAudioOrThrow().ToWav();

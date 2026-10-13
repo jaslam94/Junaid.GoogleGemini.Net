@@ -347,6 +347,68 @@ public class GeminiClientTests
         Assert.Empty(governor.RecordSpendCalls);
     }
 
+    [Fact]
+    public async Task StreamAsync_WhenCancelledWhileWaitingForData_StopsPromptly()
+    {
+        // The server has sent headers and then goes quiet. A caller who cancels must not be left waiting.
+        // On netstandard2.0 (.NET Framework, Mono, Unity) there is no token overload of ReadLineAsync, and
+        // before 6.8.0 the library ignored the token there, so this hung until the server spoke. This test
+        // fails by timing out, not by hanging the run: it waits at most 10 seconds.
+        using var quiet = new SilentStream();
+        var handler = new FakeHttpMessageHandler(_ => new HttpResponseMessage(HttpStatusCode.OK)
+        {
+            Content = new StreamContent(quiet)
+        });
+        var governor = new FakeCostGovernor();
+        var client = CreateClient(handler, governor);
+        using var cts = new CancellationTokenSource();
+        cts.CancelAfter(TimeSpan.FromMilliseconds(200));
+
+        var consume = Task.Run(async () =>
+        {
+            await foreach (var _ in client.StreamAsync(
+                "models/gemini-2.5-flash:streamGenerateContent?alt=sse", new GenerateContentRequest(), cts.Token))
+            {
+            }
+        });
+
+        var finished = await Task.WhenAny(consume, Task.Delay(TimeSpan.FromSeconds(10)));
+
+        Assert.Same(consume, finished);
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => consume);
+        Assert.Empty(governor.RecordSpendCalls);
+    }
+
+    /// <summary>A response stream that never delivers a byte, until it is disposed.</summary>
+    private sealed class SilentStream : Stream
+    {
+        private readonly TaskCompletionSource<int> _neverArrives = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            // Honor the token when the caller passes one (modern .NET does). netstandard2.0 does not pass it.
+            cancellationToken.Register(() => _neverArrives.TrySetCanceled(cancellationToken));
+            return _neverArrives.Task;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            _neverArrives.TrySetException(new ObjectDisposedException(nameof(SilentStream)));
+            base.Dispose(disposing);
+        }
+
+        public override int Read(byte[] buffer, int offset, int count) => _neverArrives.Task.GetAwaiter().GetResult();
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
+        public override void Flush() { }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+    }
+
     // PLAN-stt.md §3.3: InteractionUsage.TotalOutputTokens reads 0 in every live call observed, even
     // with real output text; the real count lives in ModelInvocationTokenCounts instead. This is the
     // client-level regression test for MapUsage (TranscriptionTests.cs has an end-to-end version of

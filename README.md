@@ -4,25 +4,25 @@
 ![NuGet](https://img.shields.io/nuget/v/Junaid.GoogleGemini.Net.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-A **production-ready** .NET client for the [Google Gemini API](https://ai.google.dev/): resilient, observable, DI-native, and built to feel right in ASP.NET Core.
+A .NET client for the [Google Gemini API](https://ai.google.dev/). It has built-in resilience, OpenTelemetry support, and dependency injection, and it fits naturally into ASP.NET Core.
 
-> **Built with AI.** The v5 to v6 modernization was implemented end-to-end by [Claude](https://www.anthropic.com/claude) (Anthropic). See [AI-assisted development](#ai-assisted-development).
+> Claude (Anthropic) wrote the v5 to v6 modernization from start to finish. See [AI-assisted development](#ai-assisted-development).
 
-It covers the modern Gemini surface (structured output, system instructions, thinking, grounding, the Files API, context caching), but what makes it worth choosing is everything *around* the API call:
+It covers the current Gemini API: structured output, system instructions, thinking, grounding, the Files API, and context caching. It also handles the work around the API call:
 
 | | This library | Typical thin wrappers |
 |---|---|---|
-| **Resilience built in** | Yes, retries and backoff on the HttpClient pipeline | No, roll your own |
-| **Client-side rate limiting** | Yes, token-bucket, configurable | No |
-| **OpenTelemetry-native** | Yes, traces and token/latency metrics (GenAI semconv), zero extra deps | No |
-| **`IChatClient` / `IEmbeddingGenerator`** | Yes, via companion package | Sometimes |
-| **Typed structured output** | Yes, `GenerateAsync<T>()` | Rare |
-| **DI-first + Options pattern** | Yes | Varies |
-| **Cost governance** | Yes, daily USD budget, per-request estimate, and cost metric | Not found in any .NET Gemini client we surveyed[^cost-governance-survey] |
+| Resilience built in | Yes, retries and backoff on the HttpClient pipeline | No, roll your own |
+| Client-side rate limiting | Yes, token-bucket, configurable | No |
+| OpenTelemetry-native | Yes, traces and token/latency metrics (GenAI semconv), zero extra deps | No |
+| `IChatClient` / `IEmbeddingGenerator` | Yes, via companion package | Sometimes |
+| Typed structured output | Yes, `GenerateAsync<T>()` | Rare |
+| DI-first + Options pattern | Yes | Varies |
+| Cost governance | Yes, daily USD budget, per-request estimate, and cost metric | Not found in any .NET Gemini client we surveyed[^cost-governance-survey] |
 
 [^cost-governance-survey]: Checked as of August 2026: Google's own [Google.GenAI](https://github.com/googleapis/dotnet-genai), [Mscc.GenerativeAI](https://github.com/mscraftsman/generative-ai), [Google_GenerativeAI](https://github.com/gunpal5/Google_GenerativeAI) (784K+ downloads, self-described "most complete" .NET Gemini SDK), [GeminiDotnet](https://github.com/rabuckley/GeminiDotnet), [Gemini.NET](https://github.com/phanxuanquang/Gemini.NET), [dotnet-gemini-sdk](https://github.com/gsilvamartin/dotnet-gemini-sdk), [Google_Generative_AI](https://github.com/tryAGI/Google_Generative_AI), and [GemiNet](https://github.com/nuskey8/GemiNet). None of them offer budget caps, cost tracking, or spend-limit enforcement. The closest any come is passing through the server's own 429 rate-limit errors as a typed exception, which is not the same thing.
 
-> **v6 is a modernization release with breaking changes** (idiomatic PascalCase models, `IAsyncEnumerable` streaming, typed exceptions). See [ROADMAP.md](ROADMAP.md).
+> v6 has breaking changes: PascalCase models, `IAsyncEnumerable` streaming, and typed exceptions. See [ROADMAP.md](ROADMAP.md).
 
 ## Installation
 
@@ -116,6 +116,7 @@ string guaranteed = response.GetTextOrThrow();  // throws GeminiContentException
 
 var reason = response.FinishReason;             // e.g. "STOP", "SAFETY"
 var usage  = response.Usage;                    // PromptTokenCount, CandidatesTokenCount, ...
+var model  = response.ModelVersion;             // the model that answered, e.g. after Google reroutes a name
 ```
 
 ### Request options (system instructions, thinking, JSON, grounding)
@@ -135,18 +136,23 @@ foreach (var q in grounded.Candidates?[0].GroundingMetadata?.WebSearchQueries ??
 
 Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`, `.Fast()`.
 
-> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.8-flash`, `gemini-3.7-flash`,
-> `gemini-3.6-flash`, and `gemini-3.5-flash-lite` (July-September 2026). Those models ignore the
-> sampling params entirely, so `.Factual()`/`.Code()` won't have the effect you'd expect on the
-> default model. Use `SystemInstruction` with explicit rules instead. Also, `PresencePenalty` and
-> `FrequencyPenalty` are not just ignored on these models. They are actively rejected with HTTP 400.
-> See the XML docs on `GenerationConfig` before setting either.
+> **Note:** Google deprecated `temperature`/`topP`/`topK` on `gemini-3.8-flash`, `gemini-3.6-flash`,
+> and `gemini-3.5-flash-lite` (July to September 2026). Those models ignore the sampling parameters,
+> so `.Factual()` and `.Code()` have no effect on the default model. Google plans to return HTTP 400
+> for these parameters on future model generations. Use `SystemInstruction` with explicit rules
+> instead. These models also reject `PresencePenalty` and `FrequencyPenalty` with HTTP 400. See the
+> XML docs on `GenerationConfig` before you set either.
 
-> **Gemini 3 ready.** Model names aren't allow-listed, so any current/future model works without a
-> library update. `ThinkingLevel` and `MediaResolution` are supported, and the model's encrypted
-> `thoughtSignature` is captured and can be replayed for multi-turn function calling via the
-> `Content`-based `ChatAsync`/`StreamChatAsync` overloads. Tip: Gemini 3 thinking models default to
-> deep reasoning, so set a lower `ThinkingLevel` for latency-sensitive calls.
+> **Note:** Google deprecated `gemini-3.5-flash` and `gemini-3.7-flash` on October 8, 2026. It routes
+> them to `gemini-3.6-flash` and `gemini-3.8-flash`. Change your model string to the new name.
+> `gemini-3.8-flash` also rejects `ThinkingLevel = "minimal"` with HTTP 400. Use `low`, `medium` or
+> `high`.
+
+> **Gemini 3.** The library does not allow-list model names, so new models work without a library
+> update. It supports `ThinkingLevel` and `MediaResolution`. It also captures the model's encrypted
+> `thoughtSignature`. You can replay it for multi-turn function calling through the `Content`-based
+> `ChatAsync` and `StreamChatAsync` overloads. Gemini 3 thinking models reason deeply by default, so
+> set a lower `ThinkingLevel` for latency-sensitive calls.
 
 ### Image generation
 
@@ -158,19 +164,31 @@ foreach (var image in response.Images())
 ```
 
 Defaults to the efficient flash image model; pass `Model = GeminiConstants.Models.Gemini3ProImage` for
-higher quality, or `ImageAspectRatio`/`ImageSize` (Gemini 3+ image models) for finer control. See
+higher quality, or `ImageAspectRatio`/`ImageSize` (Gemini 3+ image models) for finer control. Google's
+newer Nano Banana 2.1 is available as `GeminiConstants.Models.GeminiNanoBanana21`. It is not the
+default yet, because it sometimes returns no image for simple prompts. See
 [docs/articles/image-generation.md](docs/articles/image-generation.md).
 
 ### Text-to-speech
 
 ```csharp
-var response = await gemini.GenerateAudioAsync("Say cheerfully: Have a wonderful day!");
+var response = await gemini.GenerateAudioAsync("Have a wonderful day!", new GeminiRequestOptions
+{
+    VoiceName = "Kore",
+    SpeechStyle = "cheerful",
+});
 var audio = response.GetAudioOrThrow();
-await File.WriteAllBytesAsync("greeting.wav", audio.ToWav()); // adds a real WAV header to the raw PCM
+await File.WriteAllBytesAsync("greeting.wav", audio.ToWav());
 ```
 
-Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (each speaker named
-in the prompt text, mapped to a voice). See [docs/articles/tts.md](docs/articles/tts.md).
+Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (write it as
+`Joe: Hi! Jane: Hello!` and map each name to a voice). Put delivery directions in `SpeechStyle`, not in
+the prompt: the Gemini 3.8 TTS models read the prompt aloud word for word. Google shuts down the older TTS
+models on November 17, 2026. See [docs/articles/tts.md](docs/articles/tts.md).
+
+To speak with a custom voice, pass its id (`voice_...`) as `VoiceName`. `IVoiceService` wraps Google's
+Voices API. It lists and filters voices, designs a new voice from a written description, and deletes
+voices. See the custom voices section of the same guide.
 
 ### Speech-to-text
 
@@ -200,8 +218,8 @@ var batch = await embeddings.BatchEmbedContentAsync("gemini-embedding-001", text
 var embedding = await embeddings.EmbedContentAsync("gemini-embedding-2", imageBytes, "image/jpeg", "A red circle");
 ```
 
-`EmbeddingOptions.TaskType` has no effect on `gemini-embedding-2` (confirmed live: silently ignored,
-not an error); put the task instruction in the prompt text instead for that model. See
+`gemini-embedding-2` silently ignores `EmbeddingOptions.TaskType` (confirmed live, and it does not
+return an error). For that model, put the task instruction in the prompt text. See
 [docs/articles/multimodal-embeddings.md](docs/articles/multimodal-embeddings.md).
 
 ### Files API & context caching
@@ -277,7 +295,7 @@ Failures surface as typed exceptions: `GeminiApiException` (status + parsed erro
 
 ## Cost governance
 
-Cap what a Gemini integration can spend, and observe what it actually spends, without rolling your own token-counting and pricing math. As far as we've been able to find, **no other .NET Gemini client offers this** (see the footnote on the feature-comparison table at the top). It covers both non-streaming and streaming calls: a budget guardrail that silently didn't apply to `StreamAsync`/`StreamChatAsync` would let a runaway streaming loop blow through the budget completely unchecked.
+Cap what a Gemini integration can spend, and see what it actually spends, without writing your own token-counting and pricing code. We found no other .NET Gemini client that offers this (see the footnote on the comparison table at the top). The budget covers both non-streaming and streaming calls. Without streaming coverage, a runaway loop over `StreamAsync` or `StreamChatAsync` could pass the budget unchecked.
 
 ```csharp
 builder.Services.AddGemini(options =>
@@ -290,9 +308,9 @@ builder.Services.AddGemini(options =>
 });
 ```
 
-Every response's real token usage (including cached-content and "thinking" tokens, priced correctly per Gemini's billing rules) is converted to a USD cost and recorded as the `gemini.client.cost.usd` OpenTelemetry metric. Once today's (UTC) cumulative *actual* spend reaches `MaxCostPerDayUsd`, the next call throws `GeminiBudgetExceededException` before it's sent, with no network round-trip and no cost incurred by the rejected call itself. This is the primary, exact mechanism, built from real billed usage.
+The library converts each response's real token usage to a USD cost and records it as the `gemini.client.cost.usd` OpenTelemetry metric. This includes cached-content and "thinking" tokens, priced by Gemini's billing rules. When today's (UTC) actual spend reaches `MaxCostPerDayUsd`, the next call throws `GeminiBudgetExceededException` before it is sent. The rejected call makes no network round-trip and costs nothing. This is the primary mechanism, and it is exact because it uses real billed usage.
 
-`MaxCostPerRequestUsd` is a secondary, best-effort *estimate* ceiling checked before a single call: it spends one extra `CountTokensAsync` round-trip to get an exact input-token count (skipped entirely when `MaxCostPerRequestUsd` is unset, so it costs nothing when you don't use it), bounds the output side only when you set `MaxTokens`, and throws `GeminiRequestCostExceededException` if the estimate exceeds the ceiling. It can't be exact the way the daily budget is. See [Cost governance](docs/articles/cost-governance.md) for exactly what it can and can't guarantee, the multi-instance caveat, pricing overrides, and full details.
+`MaxCostPerRequestUsd` is a secondary check. It estimates the cost of one call before the library sends it. The check makes one extra `CountTokensAsync` round-trip to get an exact input-token count. It skips that round-trip when you do not set `MaxCostPerRequestUsd`. It bounds the output side only when you set `MaxTokens`. If the estimate exceeds the ceiling, the call throws `GeminiRequestCostExceededException`. An estimate cannot be as exact as the daily budget. See [Cost governance](docs/articles/cost-governance.md) for what it can and cannot guarantee, the multi-instance caveat, and pricing overrides.
 
 ## Batch API
 
@@ -300,46 +318,39 @@ Submit large volumes of `generateContent` requests for asynchronous processing a
 
 ```csharp
 var job = await batchService.CreateFromRequestsFileAsync(
-    "gemini-3.7-flash",
+    "gemini-3.8-flash",
     new List<BatchRequestLine> { new() { Key = "row-1", Request = new GenerateContentRequest { /* ... */ } } });
 
 var finished = await batchService.WaitUntilCompleteAsync(job.Name!, timeout: TimeSpan.FromHours(2));
 var results = await batchService.GetResultsAsync(finished);
 ```
 
-Requires a paid-tier Gemini project; Google's target turnaround is 24 hours (no hard SLA). Not covered by cost governance or rate limiting (batch has its own separate quota pool and pricing on Google's side). See [Batch API](docs/articles/batch-api.md) for the full picture.
+Batch needs a paid-tier Gemini project. Google targets a 24-hour turnaround but gives no hard SLA. Cost governance and rate limiting do not cover batch, because Google gives batch its own quota pool and pricing. See [Batch API](docs/articles/batch-api.md) for details.
 
 ## Performance
 
-Auth, retries, rate limiting, cost governance, and telemetry are all real work. So what does the full pipeline cost per call, versus a bare `HttpClient`? BenchmarkDotNet measured it against an in-memory fake handler, with no real network involved: a few microseconds and a handful of KB. That is noise next to a real Gemini call, which takes 200ms or more. The actual numbers, the methodology, and the caveats live in one place, so they cannot drift out of sync with a copy here. See [Performance benchmarks](docs/articles/benchmarks.md).
+Auth, retries, rate limiting, cost governance, and telemetry add work to each call. BenchmarkDotNet measured the full pipeline against a bare `HttpClient`, using an in-memory fake handler and no real network. The pipeline adds a few microseconds and a handful of KB per call. A real Gemini call takes 200ms or more, so the overhead is small by comparison. The numbers, method, and caveats live in one place so they do not drift out of sync with a copy here. See [Performance benchmarks](docs/articles/benchmarks.md).
 
 ## Documentation & samples
 
-- **Guides + full API reference**: the [`docs/`](docs/) DocFX site (Getting started, structured output, streaming, resilience, observability, M.E.AI, files & caching, image generation, TTS, cost governance, batch API, performance benchmarks, and a v5-to-v6 migration guide). Published to GitHub Pages via the Docs workflow.
-- **Runnable sample**: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample), a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
-- **Benchmarks**: [`benchmarks/Junaid.GoogleGemini.Net.Benchmarks`](benchmarks/Junaid.GoogleGemini.Net.Benchmarks), a BenchmarkDotNet project that measures the library's own overhead. See [Performance](#performance) above.
+- Guides and API reference: the [`docs/`](docs/) DocFX site. It has guides for getting started, structured output, streaming, resilience, observability, M.E.AI, files and caching, image generation, TTS, speech-to-text, multimodal embeddings, cost governance, the batch API, and performance benchmarks. It also has a v5-to-v6 migration guide. The Docs workflow publishes it to GitHub Pages.
+- Runnable sample: [`samples/Junaid.GoogleGemini.Net.AspNetCoreSample`](samples/Junaid.GoogleGemini.Net.AspNetCoreSample), a minimal ASP.NET Core API showing generation, `GenerateAsync<T>`, streaming, `IChatClient`, and OpenTelemetry.
+- Benchmarks: [`benchmarks/Junaid.GoogleGemini.Net.Benchmarks`](benchmarks/Junaid.GoogleGemini.Net.Benchmarks), a BenchmarkDotNet project that measures the library's own overhead. See [Performance](#performance) above.
 
 ## Requirements
 
-- **.NET 8.0, .NET 9.0, or any netstandard2.0 runtime** (.NET Framework 4.6.1+, Mono, Unity)
-- A **Google AI Studio API key**
+- .NET 8.0, .NET 9.0, or any netstandard2.0 runtime (.NET Framework 4.6.1+, Mono, Unity)
+- A Google AI Studio API key
 
 ## AI-assisted development
 
-This library is **heavily developed with AI**, and we want to be transparent about that. The
-**v5 to v6 modernization**, including architecture, code, tests, documentation, and this README, was
-carried out **end-to-end by [Claude](https://www.anthropic.com/claude) (Anthropic's coding agent)**
-under the maintainer's direction, rather than written by hand.
+AI develops much of this library, and we want to say so plainly. Claude ([Anthropic's coding agent](https://www.anthropic.com/claude)) carried out the v5 to v6 modernization from start to finish, under the maintainer's direction. That includes the architecture, code, tests, documentation, and this README.
 
 What that means for you:
 
-- **Shipped behind guardrails.** Changes go through an automated test suite and CI on every commit;
-  the public API surface is documented and versioned with [semantic versioning](https://semver.org/).
-- **6.0 is stable**, validated live against the Gemini API, and used as the default install for
-  existing users upgrading from 5.x. Still pin a version you've tested for your own use case, as
-  with any dependency.
-- **Transparency over polish.** We'd rather tell you how the code is produced than hide it. If you
-  spot something off, please [open an issue](https://github.com/jaslam94/Junaid.GoogleGemini.Net/issues).
+- An automated test suite and CI run on every commit. The public API is documented and follows [semantic versioning](https://semver.org/).
+- 6.0 is stable and was validated live against the Gemini API. Existing 5.x users get it as the default install. As with any dependency, pin a version you have tested for your own use case.
+- If you spot something wrong, please [open an issue](https://github.com/jaslam94/Junaid.GoogleGemini.Net/issues).
 
 ## Contributing & support
 

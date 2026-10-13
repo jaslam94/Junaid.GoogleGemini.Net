@@ -102,11 +102,11 @@ public class AudioGenerationTests
 
         await service.GenerateAudioAsync("hello", new GeminiRequestOptions
         {
-            Model = GeminiConstants.Models.Gemini31FlashTts,
+            Model = GeminiConstants.Models.Gemini38FlashTts,
             VoiceName = "Puck"
         });
 
-        Assert.Contains(GeminiConstants.Models.Gemini31FlashTts, handler.Requests[0].RequestUri!.ToString());
+        Assert.Contains(GeminiConstants.Models.Gemini38FlashTts, handler.Requests[0].RequestUri!.ToString());
         var body = handler.RequestBodies[0]!;
         Assert.Contains("\"voiceName\":\"Puck\"", body);
     }
@@ -204,7 +204,7 @@ public class AudioGenerationTests
         Assert.Equal(bitsPerSample, BitConverter.ToInt16(wav, 34));
         Assert.Equal("data", System.Text.Encoding.ASCII.GetString(wav, 36, 4));
         Assert.Equal(pcm.Length, BitConverter.ToInt32(wav, 40));
-        Assert.Equal(pcm, wav[44..]);
+        Assert.Equal(pcm, wav.Skip(44).ToArray());
     }
 
     [Fact]

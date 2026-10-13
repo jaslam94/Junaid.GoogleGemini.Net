@@ -51,7 +51,7 @@ public sealed class FakeHttpMessageHandler : HttpMessageHandler
         Requests.Add(request);
         RequestBodies.Add(request.Content is null
             ? null
-            : await request.Content.ReadAsStringAsync(cancellationToken));
+            : await request.Content.ReadAsStringAsync());
 
         return await _responder(request, attempt, cancellationToken);
     }

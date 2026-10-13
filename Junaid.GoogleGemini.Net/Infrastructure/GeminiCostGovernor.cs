@@ -63,44 +63,55 @@ public interface ICostGovernor
 /// </remarks>
 public sealed class GeminiCostGovernor : ICostGovernor
 {
+    // Google ends its introductory prices on 2026-12-31 and starts the standard prices on 2027-01-01
+    // (its pricing page says "starting January 1, 2027" and gives no time zone). We use 00:00 UTC.
+    private static readonly DateTime StandardPricingStartsUtc = new(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    // One rate card now, and one that takes over on StandardPricingStartsUtc.
+    private static ModelPricing Introductory(
+        decimal input, decimal output, decimal cached,
+        decimal standardInput, decimal standardOutput, decimal standardCached) =>
+        new()
+        {
+            InputPerMillionTokensUsd = input,
+            OutputPerMillionTokensUsd = output,
+            CachedInputPerMillionTokensUsd = cached,
+            NextPricingEffectiveFromUtc = StandardPricingStartsUtc,
+            NextPricing = new ModelPricing
+            {
+                InputPerMillionTokensUsd = standardInput,
+                OutputPerMillionTokensUsd = standardOutput,
+                CachedInputPerMillionTokensUsd = standardCached,
+            },
+        };
+
     /// <summary>
     /// Built-in USD-per-1,000,000-token pricing, re-verified against
     /// <see href="https://ai.google.dev/gemini-api/docs/pricing">Google's published pricing page</see>
-    /// on 2026-08-15 (paid tier). This snapshot WILL go stale as Google updates prices. Override via
+    /// on 2026-10-10 (paid tier, Standard rate). Entries with an introductory price carry the rate that
+    /// starts on 2027-01-01 in <see cref="ModelPricing.NextPricing"/>, and the governor switches to it
+    /// on that date. This snapshot WILL still go stale as Google updates prices. Override via
     /// <see cref="BudgetOptions.ModelPricingOverrides"/> for accuracy, especially in production.
     /// </summary>
     public static readonly IReadOnlyDictionary<string, ModelPricing> DefaultPricing =
         new Dictionary<string, ModelPricing>(StringComparer.Ordinal)
         {
-            // gemini-3.6-flash, gemini-3.7-flash, and gemini-3.8-flash all share the same introductory
-            // rate, in effect since 3.7's August 13, 2026 launch (Google moved 3.6-flash onto it at the
-            // same time; 3.8-flash launched September 2, 2026 already at this rate), through December
-            // 31, 2026. Standard rate (double these numbers: $1.50/$7.50/$0.15) resumes January 1, 2027.
-            // Re-verify and update this table again before then.
-            ["gemini-3.8-flash"] = new ModelPricing
-            {
-                InputPerMillionTokensUsd = 0.75m,
-                OutputPerMillionTokensUsd = 3.75m,
-                CachedInputPerMillionTokensUsd = 0.075m,
-            },
-            ["gemini-3.7-flash"] = new ModelPricing
-            {
-                InputPerMillionTokensUsd = 0.75m,
-                OutputPerMillionTokensUsd = 3.75m,
-                CachedInputPerMillionTokensUsd = 0.075m,
-            },
-            ["gemini-3.6-flash"] = new ModelPricing
-            {
-                InputPerMillionTokensUsd = 0.75m,
-                OutputPerMillionTokensUsd = 3.75m,
-                CachedInputPerMillionTokensUsd = 0.075m,
-            },
-            ["gemini-3.5-flash"] = new ModelPricing
-            {
-                InputPerMillionTokensUsd = 1.50m,
-                OutputPerMillionTokensUsd = 9.00m,
-                CachedInputPerMillionTokensUsd = 0.15m,
-            },
+            // gemini-3.6-flash and gemini-3.8-flash share one introductory rate through December 31,
+            // 2026: $0.75 in, $3.75 out, $0.075 cached. The standard rate ($1.50, $7.50, $0.15) starts
+            // January 1, 2027 and is already scheduled here.
+            ["gemini-3.8-flash"] = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
+            ["gemini-3.6-flash"] = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
+
+            // Deprecated on 2026-10-08. Google routes these names to the models above, and live
+            // responses confirm it (2026-10-10: gemini-3.5-flash answers as gemini-3.6-flash, and
+            // gemini-3.7-flash answers as gemini-3.8-flash). Google's billing catalog still lists
+            // gemini-3.5-flash SKUs at $1.50 in and $9.00 out. But on 2026-10-12 Cloud Monitoring counted
+            // all 40 of our gemini-3.5-flash calls (111,103 input tokens) under gemini-3.6-flash, and
+            // none under gemini-3.5-flash. So we use the rate of the model that answers the call. That
+            // evidence comes from usage metering, not from an invoice. Monitoring counted our
+            // gemini-3.7-flash calls under that name, and the catalog gives it the same rate as 3.8.
+            ["gemini-3.7-flash"] = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
+            ["gemini-3.5-flash"] = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
             ["gemini-3.5-flash-lite"] = new ModelPricing
             {
                 InputPerMillionTokensUsd = 0.30m,
@@ -168,11 +179,24 @@ public sealed class GeminiCostGovernor : ICostGovernor
             //     portions separately today. Using the image (higher) rate for 100% of output tokens
             //     overcounts any text/thinking portion, which is the safe direction for a budget
             //     ceiling (fails closed, not open). Just don't mistake this for an exact figure.
-            // (2) Only gemini-3.1-flash-image has a published cached-input rate ($0.25/1M, confirmed
-            //     directly on the pricing page). That is HALF the standard input rate, not "no discount".
+            // (2) Only gemini-3.1-flash-image carries a cached-input rate here ($0.25/1M, half the
+            //     standard input rate, read from the pricing page in August 2026). The pricing page
+            //     read on 2026-10-10 no longer shows a caching row for any image model, so treat that
+            //     one number as unconfirmed. It only matters if you cache content for that model.
             //     gemini-3-pro-image and gemini-3.1-flash-lite-image publish no cached rate at all for
             //     the standard tier, so those two fall back to "= standard input rate" (assume no
             //     discount) rather than 0, since 0 would silently price cached input as free.
+            // gemini-nano-banana-2.1 (GA 2026-10-06): $1.50 per 1M input tokens, $30.00 per 1M image
+            // output tokens, and $7.50 for text and thinking output. The same single-rate rule as the
+            // models below applies: we price all output at the image rate. Context caching is
+            // unsupported on this model, so the cached rate equals the input rate. The input rate is
+            // three times that of gemini-3.1-flash-image. The image output rate is half.
+            ["gemini-nano-banana-2.1"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 1.50m,
+                OutputPerMillionTokensUsd = 30.00m,
+                CachedInputPerMillionTokensUsd = 1.50m,
+            },
             ["gemini-3.1-flash-image"] = new ModelPricing
             {
                 InputPerMillionTokensUsd = 0.50m,
@@ -219,6 +243,14 @@ public sealed class GeminiCostGovernor : ICostGovernor
                 OutputPerMillionTokensUsd = 20.00m,
                 CachedInputPerMillionTokensUsd = 1.00m,
             },
+
+            // The two Gemini 3.8 TTS models (GA 2026-09-22). Rates read from Google's pricing page on
+            // 2026-10-10. Both have an introductory price through 2026-12-31 and a standard price from
+            // 2027-01-01, and the page publishes no cached rate (TTS has no caching), so the cached rate
+            // equals the input rate, as for the models above. Output is audio at 25 tokens per second,
+            // already counted in CandidatesTokenCount.
+            ["gemini-3.8-flash-tts"] = Introductory(0.50m, 9.00m, 0.50m, 1.00m, 18.00m, 1.00m),
+            ["gemini-3.8-flash-lite-tts"] = Introductory(0.50m, 6.00m, 0.50m, 1.00m, 12.00m, 1.00m),
 
             // Speech-to-text. Called through the Interactions API, not generateContent (see
             // PLAN-stt.md), so its usage shape (InteractionUsage) differs from UsageMetadata above:
@@ -396,7 +428,7 @@ public sealed class GeminiCostGovernor : ICostGovernor
 
     // Cost formula (see PLAN-cost-governance.md §6.3):
     //   tier = usage.PromptTokenCount > pricing.HighVolumeTier?.ThresholdTokens ? HighVolumeTier : base
-    //   billableInputTokens = PromptTokenCount - CachedContentTokenCount
+    //   billableInputTokens = PromptTokenCount - CachedContentTokenCount + ToolUsePromptTokenCount
     //   inputCost  = billableInputTokens / 1e6 * tier.InputPerMillionTokensUsd
     //   cachedCost = CachedContentTokenCount / 1e6 * tier.CachedInputPerMillionTokensUsd
     //   outputCost = (CandidatesTokenCount + ThoughtsTokenCount) / 1e6 * tier.OutputPerMillionTokensUsd
@@ -412,9 +444,17 @@ public sealed class GeminiCostGovernor : ICostGovernor
             return null;
         }
 
-        var rates = SelectRates(pricing, usage.PromptTokenCount);
+        // Tool-use prompt tokens (for example the frames an agentic video call loads) are not in
+        // PromptTokenCount. Google's billing catalog has no separate SKU for tool-use tokens. Every
+        // input SKU of gemini-3.8-flash (text, audio and video) costs the same, so the input rate is the
+        // only rate that can apply if Google bills these tokens. We do not know whether it bills them at
+        // all: Cloud Monitoring's input-token meter did not count them (664 metered input tokens against
+        // 37,297 tool-use tokens in one test). Pricing them can only make the estimate too high.
+        // Leaving them out priced a whole agentic video call as if the video were free.
+        var rates = SelectRates(pricing, usage.PromptTokenCount + usage.ToolUsePromptTokenCount);
 
-        var billableInputTokens = Math.Max(0, usage.PromptTokenCount - usage.CachedContentTokenCount);
+        var billableInputTokens = Math.Max(0, usage.PromptTokenCount - usage.CachedContentTokenCount)
+            + Math.Max(0, usage.ToolUsePromptTokenCount);
         var inputCost = billableInputTokens / 1_000_000m * rates.Input;
         var cachedCost = usage.CachedContentTokenCount / 1_000_000m * rates.Cached;
         var outputCost = (usage.CandidatesTokenCount + usage.ThoughtsTokenCount) / 1_000_000m * rates.Output;
@@ -446,10 +486,29 @@ public sealed class GeminiCostGovernor : ICostGovernor
 
         if (_options?.ModelPricingOverrides is { } overrides && overrides.TryGetValue(model, out var overridden))
         {
-            return overridden;
+            return ApplySchedule(overridden);
         }
 
-        return DefaultPricing.TryGetValue(model, out var builtin) ? builtin : null;
+        return DefaultPricing.TryGetValue(model, out var builtin) ? ApplySchedule(builtin) : null;
+    }
+
+    // Follows ModelPricing.NextPricing for every change whose date has passed. The loop handles a
+    // chained schedule. The cap stops a cycle in a hand-built override from hanging a request.
+    private ModelPricing ApplySchedule(ModelPricing pricing)
+    {
+        var now = _utcNowProvider();
+        for (var step = 0; step < 8 && pricing.NextPricing is { } next && pricing.NextPricingEffectiveFromUtc is { } from; step++)
+        {
+            var effective = from.Kind == DateTimeKind.Local ? from.ToUniversalTime() : from;
+            if (now < effective)
+            {
+                break;
+            }
+
+            pricing = next;
+        }
+
+        return pricing;
     }
 
     private void WarnUnpricedModelOnce(string? model)

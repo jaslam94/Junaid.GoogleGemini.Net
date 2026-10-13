@@ -48,9 +48,30 @@ jobs:
       - name: Test
         run: dotnet test --no-build -c Release --verbosity normal
 
+  # The library multi-targets netstandard2.0, and .NET Framework is what runs that build. Linux cannot
+  # host .NET Framework, so this runs on Windows. Before this job existed, the netstandard2.0 build was
+  # compiled but never run, and a bug that only it had (cancelling a stream did nothing) went unseen
+  # until the 6.8.0 work. The job name above ("Build & Test") is unchanged on purpose: branch
+  # protection may match it by name.
+  build-test-netfx:
+    name: Test on .NET Framework (netstandard2.0)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: |
+            8.0.x
+            9.0.x
+
+      - name: Test on .NET Framework 4.8
+        run: dotnet test tests/Junaid.GoogleGemini.Net.Tests/Junaid.GoogleGemini.Net.Tests.csproj -c Release -f net48 --verbosity normal
+
   publish:
     name: Publish to NuGet
-    needs: build-test
+    needs: [build-test, build-test-netfx]
     runs-on: ubuntu-latest
     # Real publish: a pushed version tag. Dry run (see IS_DRY_RUN): manual dispatch, or the monthly
     # schedule. Never for a plain branch push or a PR.

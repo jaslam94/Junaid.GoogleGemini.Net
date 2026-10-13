@@ -524,7 +524,9 @@ namespace Junaid.GoogleGemini.Net.Services
         // that sets both needs the two added together to avoid understating the output-side bound.
         // ThinkingBudget of 0 (disabled) or -1 (model decides, unbounded) contributes nothing extra:
         // 0 adds no tokens, and -1 can't be turned into a token count at all, so it's excluded rather
-        // than silently misread as "unlimited plus MaxTokens" or "minus one token".
+        // than silently misread as "unlimited plus MaxTokens" or "minus one token". One caveat: on
+        // gemini-3.8-flash a budget of 0 is not always obeyed (1 of 8 live calls still thought, for 67
+        // tokens), so this estimate can undercount by a small amount. It is a best-effort check anyway.
         private static int? ResolveMaxOutputTokens(GeminiRequestOptions? options)
         {
             var maxTokens = options?.MaxTokens;

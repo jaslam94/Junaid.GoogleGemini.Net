@@ -21,6 +21,16 @@ public class GenerateContentResponse
     [JsonPropertyName("usageMetadata")]
     public UsageMetadata? UsageMetadata { get; set; }
 
+    /// <summary>
+    /// The model that actually produced this response, as the API reports it (for example
+    /// <c>"gemini-3.6-flash"</c>). It can differ from the model you asked for. Google deprecated
+    /// <c>gemini-3.5-flash</c> and <c>gemini-3.7-flash</c> on 2026-10-08 and routes them to
+    /// <c>gemini-3.6-flash</c> and <c>gemini-3.8-flash</c>, and this property is how you see that happen.
+    /// Null when the API omits it.
+    /// </summary>
+    [JsonPropertyName("modelVersion")]
+    public string? ModelVersion { get; set; }
+
     /// <summary>Why generation finished for the first candidate (e.g. "STOP", "SAFETY"), if available.</summary>
     [JsonIgnore]
     public string? FinishReason => Candidates is { Length: > 0 } ? Candidates[0].FinishReason : null;
@@ -169,31 +179,39 @@ public sealed record GeneratedImage(string MimeType, byte[] Data);
 
 /// <summary>A single generated audio clip, decoded from a response <c>inlineData</c> part.</summary>
 /// <param name="MimeType">
-/// The API's exact MIME type. Two real formats are live-confirmed (see <c>PLAN-tts.md</c> §2):
-/// <c>"audio/L16;codec=pcm;rate=24000"</c> from 2.5-era TTS models, and
-/// <c>"audio/l16; rate=24000; channels=1"</c> from <c>gemini-3.1-flash-tts-preview</c>. Either way
-/// this is raw linear PCM, not a WAV or MP3 file.
+/// The API's exact MIME type. Three real formats are live-confirmed (see <c>PLAN-tts.md</c> §2 and
+/// <c>PLAN-tts-3-8.md</c> §2): <c>"audio/L16;codec=pcm;rate=24000"</c> from 2.5-era TTS models;
+/// <c>"audio/l16; rate=24000; channels=1"</c> from <c>gemini-3.1-flash-tts-preview</c> and from the
+/// Gemini 3.8 TTS models when they stream or when you ask for <c>AUDIO_L16</c>; and
+/// <c>"audio/wav"</c>, the default for a unary Gemini 3.8 TTS call. The first two are raw linear PCM.
+/// The third is a complete WAV file.
 /// </param>
 /// <param name="Data">
-/// The raw, already-decoded PCM audio bytes. NOT a playable file on its own; call
-/// <see cref="ToWav"/> for that.
+/// The raw, already-decoded audio bytes. For the PCM formats this is NOT a playable file on its own;
+/// call <see cref="ToWav"/> for that. For <c>"audio/wav"</c> it already is one.
 /// </param>
 public sealed record GeneratedAudio(string MimeType, byte[] Data)
 {
     /// <summary>
-    /// Wraps <see cref="Data"/> in a minimal 44-byte WAV header, producing a file most players and
-    /// browsers can open directly. Parses the sample rate (and channel count, when stated) from
-    /// <see cref="MimeType"/>, since two real, live-confirmed formats exist: 2.5-era TTS models
-    /// return <c>"audio/L16;codec=pcm;rate=24000"</c>, while <c>gemini-3.1-flash-tts-preview</c>
-    /// returns <c>"audio/l16; rate=24000; channels=1"</c> instead (see <c>PLAN-tts.md</c> §2). Assumes
-    /// mono when no channel count is stated, matching every model that predates the newer format.
+    /// Returns a playable WAV file. For raw PCM, this wraps <see cref="Data"/> in a minimal 44-byte
+    /// WAV header and parses the sample rate (and channel count, when stated) from
+    /// <see cref="MimeType"/>. Three real, live-confirmed formats exist (see <see cref="GeneratedAudio"/>).
+    /// Assumes mono when no channel count is stated, matching every model that predates the newer
+    /// format. When <see cref="MimeType"/> is already <c>"audio/wav"</c> (or <c>"audio/x-wav"</c>),
+    /// this returns <see cref="Data"/> unchanged, so it never adds a second header.
     /// </summary>
     /// <exception cref="FormatException">
-    /// <see cref="MimeType"/> does not start with <c>"audio/L16"</c> (case-insensitive) or has no
-    /// parseable sample rate, for example a future model returning a different codec.
+    /// <see cref="MimeType"/> is neither WAV nor <c>"audio/L16"</c> (case-insensitive), or has no
+    /// parseable sample rate. For example, a mu-law or A-law response (see
+    /// <c>GeminiConstants.AudioFormats</c>) cannot be wrapped as WAV.
     /// </exception>
     public byte[] ToWav()
     {
+        if (System.Text.RegularExpressions.Regex.IsMatch(MimeType, @"^audio/(x-)?wav\b", System.Text.RegularExpressions.RegexOptions.IgnoreCase))
+        {
+            return Data;
+        }
+
         // Two real, live-confirmed mimeType shapes exist, not one (see PLAN-tts.md §2): the 2.5-era
         // TTS models return "audio/L16;codec=pcm;rate=24000" (capital L, no spaces, explicit codec),
         // while gemini-3.1-flash-tts-preview returns "audio/l16; rate=24000; channels=1" (lowercase,
@@ -367,6 +385,21 @@ public class UsageMetadata
     /// </summary>
     [JsonPropertyName("candidatesTokensDetails")]
     public List<ModalityTokenCount>? CandidatesTokensDetails { get; set; }
+
+    /// <summary>
+    /// Input tokens that a tool loaded while it ran, such as the frames, audio and transcript that the
+    /// model asks for in agentic video mode (<c>Part.MediaProcessing = "AGENTIC"</c>). These are NOT
+    /// part of <see cref="PromptTokenCount"/>. They are part of <see cref="TotalTokenCount"/>. Live-verified
+    /// on 2026-10-10: a 660-token video sent as a plain part showed up in <see cref="PromptTokenCount"/>
+    /// (671 in all), and the same video in agentic mode showed 11 here and 712 in this field. Zero when
+    /// no tool loaded input. The cost governor prices these tokens at the input rate.
+    /// </summary>
+    [JsonPropertyName("toolUsePromptTokenCount")]
+    public int ToolUsePromptTokenCount { get; set; }
+
+    /// <summary>Per-modality breakdown of <see cref="ToolUsePromptTokenCount"/> (for example TEXT and VIDEO).</summary>
+    [JsonPropertyName("toolUsePromptTokensDetails")]
+    public List<ModalityTokenCount>? ToolUsePromptTokensDetails { get; set; }
 }
 
 /// <summary>One entry in a <see cref="UsageMetadata"/> per-modality token breakdown.</summary>

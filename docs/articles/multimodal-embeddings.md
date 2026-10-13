@@ -14,9 +14,9 @@ var embedding = await embeddings.EmbedContentAsync(
 var embedding = await embeddings.EmbedContentAsync("gemini-embedding-2", audioBytes, "audio/wav");
 ```
 
-Confirmed live: combining text and media does not just accept both and ignore one. A text-only
-embedding and a text+image embedding of the same prompt come back with a cosine similarity around
-0.5, meaningfully different but still related, real fusion, not a no-op.
+Confirmed live: the model uses both inputs. A text-only embedding and a text+image embedding of the
+same prompt have a cosine similarity of around 0.5. They differ meaningfully but stay related, so the
+model fuses the text and the media.
 
 ## Large files
 
@@ -42,12 +42,10 @@ var results = await embeddings.BatchEmbedContentAsync("gemini-embedding-2", new 
 
 ## `TaskType` does nothing on `gemini-embedding-2`
 
-> **This is the one thing in this article worth reading even if you skip the rest.**
-
 `EmbeddingOptions.TaskType` (`RETRIEVAL_QUERY`, `RETRIEVAL_DOCUMENT`, and so on) works normally on
-older embedding models. On `gemini-embedding-2` it does nothing: confirmed live, an identical request
-sent with and without `TaskType` set returned byte-for-byte identical embeddings. The API does not
-reject the field; it just silently ignores it. Google's guidance for this model is to put the task
+older embedding models. On `gemini-embedding-2` it does nothing. Confirmed live: an identical request
+sent with and without `TaskType` returned byte-for-byte identical embeddings. The API does not
+reject the field. It silently ignores it. Google's guidance for this model is to put the task
 instruction directly in the prompt text instead:
 
 ```csharp
@@ -56,18 +54,17 @@ var embedding = await embeddings.EmbedContentAsync(
     "gemini-embedding-2", "task: search result | query: What shipped in .NET 9?");
 ```
 
-Setting `TaskType` with `gemini-embedding-2` logs a one-time warning (via the standard
-`ILogger<EmbeddingService>`) rather than failing silently forever.
+Setting `TaskType` with `gemini-embedding-2` logs a one-time warning through the standard
+`ILogger<EmbeddingService>`, so the problem does not go unnoticed.
 
 ## Supported input, per Google's docs
 
-Not independently verified against these exact boundaries; this library does not enforce them
-client-side, since the API is the authoritative source on limits it can change without a library
-update. As of this writing: up to 8,192 text tokens, 6 images (PNG/JPEG), 120 seconds of video
+We did not verify these exact limits independently. The library does not enforce them client-side,
+because Google can change them without a library update. As of this writing: up to 8,192 text tokens, 6 images (PNG/JPEG), 120 seconds of video
 (MP4/MOV), 180 seconds of audio (MP3/WAV), 1 PDF up to 6 pages. Live-verified in this library's own
-test suite: image, audio, PDF, and file-based input. Video input specifically was not live-tested in
-this library's suite (a sandboxing limitation during development, not a doubt about the mechanism,
-which is identical to the confirmed image/audio path); it should work the same way.
+test suite: image, audio, PDF, and file-based input. The suite did not live-test video input. A sandboxing limitation
+during development caused that, not doubt about the mechanism. Video uses the same path as the
+confirmed image and audio input, so it should work the same way.
 
 ## Output dimensionality
 

@@ -336,6 +336,87 @@ public class LiveTests(GeminiFixture fixture)
         AssertLooksLikeAnImage(images[0]);
     }
 
+    [RequiresPaidGeminiKey]
+    public async Task GenerateImageAsync_NanoBanana21_HonorsATallStripRatio()
+    {
+        // Nano Banana 2.1 (GA 2026-10-06) added the 1:4, 4:1, 1:8 and 8:1 ratios. It returned a
+        // 352x2928 JPEG when first checked by hand on 2026-10-10.
+        //
+        // This model is NOT the library default (see Models.RecommendedImage). On 2026-10-10 it
+        // answered some simple prompts with finishReason IMAGE_RECITATION and no image, and it did so
+        // for the same prompt on one call and not the next. That filter is not what this test checks, so
+        // it tries up to 3 times. A real ratio problem would fail all 3 attempts.
+        var options = new GeminiRequestOptions
+        {
+            Model = GeminiConstants.Models.GeminiNanoBanana21,
+            ImageAspectRatio = GeminiConstants.ImageAspectRatios.Tall1x8,
+            ImageSize = GeminiConstants.ImageSizes.OneK,
+        };
+
+        GenerateContentResponse? response = null;
+        for (var attempt = 1; attempt <= 3; attempt++)
+        {
+            response = await Gemini.GenerateImageAsync("A plain solid blue rectangle, no text.", options);
+            if (response.Images().Count > 0 || response.FinishReason != "IMAGE_RECITATION")
+            {
+                break;
+            }
+        }
+
+        var image = response!.GetImagesOrThrow()[0];
+        AssertLooksLikeAnImage(image);
+        Assert.True(TryReadJpegOrPngDimensions(image, out var width, out var height), "Could not read the image size.");
+        var ratio = (double)width / height;
+        Assert.True(ratio < 0.2, $"Expected a tall strip near 1:8 (0.125), got {width}x{height} ({ratio:F3}).");
+    }
+
+    [RequiresPaidGeminiKey]
+    public async Task GenerateImageAsync_NanoBanana21_Rejects512_WithAClearApiError()
+    {
+        // Google documents 512 for gemini-3.1-flash-image only. Nano Banana 2.1 answers HTTP 400.
+        // The library passes the value through, so this pins the behavior callers will see.
+        var options = new GeminiRequestOptions
+        {
+            Model = GeminiConstants.Models.GeminiNanoBanana21,
+            ImageSize = GeminiConstants.ImageSizes.FiveTwelve,
+        };
+
+        var ex = await Assert.ThrowsAsync<GeminiApiException>(
+            () => Gemini.GenerateImageAsync("A plain solid blue rectangle, no text.", options));
+
+        Assert.Equal(System.Net.HttpStatusCode.BadRequest, ex.StatusCode);
+        Assert.Contains("512", ex.Message);
+    }
+
+    /// <summary>Reads the image size from a PNG header or a JPEG start-of-frame marker.</summary>
+    private static bool TryReadJpegOrPngDimensions(GeneratedImage image, out int width, out int height)
+    {
+        width = height = 0;
+        var d = image.Data;
+        if (d.Length > 24 && d[0] == 0x89 && d[1] == 0x50)
+        {
+            return TryReadPngDimensions(d, out width, out height);
+        }
+
+        // JPEG: walk the segments until a start-of-frame marker (C0 to CF, except C4, C8 and CC).
+        var i = 2;
+        while (i + 9 < d.Length)
+        {
+            if (d[i] != 0xFF) { i++; continue; }
+            var marker = d[i + 1];
+            if (marker is >= 0xC0 and <= 0xCF && marker is not 0xC4 and not 0xC8 and not 0xCC)
+            {
+                height = (d[i + 5] << 8) | d[i + 6];
+                width = (d[i + 7] << 8) | d[i + 8];
+                return width > 0 && height > 0;
+            }
+
+            i += 2 + ((d[i + 2] << 8) | d[i + 3]);
+        }
+
+        return false;
+    }
+
     /// <summary>Confirms the decoded bytes are actually image data. PNG/JPEG both have a well-known magic number.</summary>
     private static void AssertLooksLikeAnImage(GeneratedImage image)
     {

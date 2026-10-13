@@ -14,15 +14,15 @@ builder.Services.AddGemini(options =>
 
 ## Retries
 
-On **net8.0/net9.0** retries run on the `HttpClient` pipeline via
+On net8.0 and net9.0, retries run on the `HttpClient` pipeline via
 `Microsoft.Extensions.Http.Resilience` (Polly v8): exponential backoff with jitter, retrying HTTP
 429, 5xx, `HttpRequestException`, and timeouts.
 
-On **netstandard2.0** (where that package isn't available) an equivalent built-in
-`GeminiRetryHandler` is used instead.
+On netstandard2.0, that package is not available. The library uses an equivalent built-in
+`GeminiRetryHandler` instead.
 
-Either way, retries happen *inside* a single logical send against buffered content, so a request is
-never corrupted by being half-sent, which was the bug that plagued earlier hand-rolled retry code.
+Either way, retries happen inside a single logical send against buffered content. A request is
+never half-sent and corrupted. Earlier hand-rolled retry code had that bug.
 
 ## Client-side rate limiting
 
@@ -37,7 +37,6 @@ cancellation (your `CancellationToken`) propagates as `OperationCanceledExceptio
 
 ## Batch API is the one exception
 
-`IBatchService` calls get the same retry handling described above, but deliberately **bypass the
-client-side rate limiter**: batch draws from a wholly separate quota pool on Google's side, so gating
-it behind a limiter tuned for interactive per-minute requests would be actively wrong, not just
-redundant. See [Batch API](batch-api.md) for the full picture.
+`IBatchService` calls get the same retry handling described above, but they bypass the
+client-side rate limiter. Batch draws from a separate quota pool on Google's side. A limiter tuned
+for interactive per-minute requests would be wrong for it. See [Batch API](batch-api.md) for details.

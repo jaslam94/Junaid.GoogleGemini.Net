@@ -4,6 +4,14 @@
     <!-- Test against BOTH library target frameworks so we catch TFM-specific regressions. -->
     <TargetFrameworks>net8.0;net9.0</TargetFrameworks>
 
+    <!--
+      On Windows, also run the suite on .NET Framework 4.8. The library multi-targets netstandard2.0,
+      and a net48 app is what consumes that build. Without this the netstandard2.0 binary is compiled
+      but never run. Linux and macOS cannot host .NET Framework, so they skip this target. CI runs it
+      in its own Windows job.
+    -->
+    <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('Windows'))">$(TargetFrameworks);net48</TargetFrameworks>
+
     <!-- This is a test project: never pack it, and let the SDK wire up the test host. -->
     <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
@@ -19,11 +27,32 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Http" Version="8.0.1" />
+    <!-- ConfigurationBuilder, used by a test that binds options from configuration. -->
+    <PackageReference Include="Microsoft.Extensions.Configuration" Version="8.0.0" />
+  </ItemGroup>
+
+  <!-- net48 lacks Index, Range and a few other language-support types that the tests use. -->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <PackageReference Include="PolySharp" Version="1.14.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\Junaid.GoogleGemini.Net\Junaid.GoogleGemini.Net.csproj" />
+  </ItemGroup>
+
+  <!-- The M.E.AI adapter targets net8.0 and net9.0 only, so its tests cannot run on net48. -->
+  <ItemGroup Condition="'$(TargetFramework)' != 'net48'">
     <ProjectReference Include="..\..\Junaid.GoogleGemini.Net.Extensions.AI\Junaid.GoogleGemini.Net.Extensions.AI.csproj" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net48'">
+    <Compile Remove="ExtensionsAI\**" />
+    <!-- .NET Framework ships System.Net.Http as a framework assembly that an SDK-style project must name. -->
+    <Reference Include="System.Net.Http" />
+    <!-- The SDK adds this global using for modern .NET only. -->
+    <Using Include="System.Net.Http" />
   </ItemGroup>
 
 </Project>
