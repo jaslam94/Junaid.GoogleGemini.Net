@@ -44,11 +44,11 @@
 			with both 3.8 models.
 			The new IVoiceService wraps Google's Voices API. It lists and filters the voice library,
 			gets a voice, designs a voice from a description, and deletes a voice. We checked listing,
-			filtering, paging, get and delete against the real API. Unit tests cover designing a voice,
-			built from the real response. A live test for it through the wrapper has not run yet,
-			because the test project reached its spending cap. Voice replication follows Google's
-			documented shape and has not been run, because it needs a real speaker and that speaker's
-			consent. docs/articles/tts.md explains custom voices.
+			filtering, paging, get and delete against the real API. A live test also designed a voice
+			through the wrapper, used it with both 3.8 models, deleted it, and got a 404 afterward.
+			Unit tests cover designing a voice, built from the real response. Voice replication
+			follows Google's documented shape and has not been run, because it needs a real speaker
+			and that speaker's consent. docs/articles/tts.md explains custom voices.
 			GenerateContentResponse.ModelVersion now reports which model answered, so you can see the
 			3.5 and 3.7 routing.
 			(2) Cost governance is now date-aware. Google's introductory price for gemini-3.6-flash,
