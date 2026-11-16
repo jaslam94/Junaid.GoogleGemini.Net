@@ -13,6 +13,7 @@ name: Integration (live)
 #
 # 2. On demand (workflow_dispatch), from the Actions tab, same as before. Optionally run the FULL
 #    suite (including Batch) via the "full" input, and the paid-tier tests via the "paid" input.
+#    The "filter" input runs only matching tests and prints their output, which is how a one-off probe runs.
 #    Do not start two runs at once. They share one key, and the TTS models allow only 10 requests
 #    per minute on Tier 1, so overlapping runs fail with HTTP 429.
 #
@@ -34,6 +35,10 @@ on:
         description: 'Run the paid-tier tests too (images, caching, voices). Needs a billing-enabled key. Real cost.'
         type: boolean
         default: false
+      filter:
+        description: 'Run only the tests that match this dotnet test filter, for example FullyQualifiedName~Gemini4. Overrides "full". Prints each test output.'
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -59,12 +64,18 @@ jobs:
           # A manual run can ask for the paid-tier tests with the "paid" input. The weekly schedule
           # has no inputs, so it still reads the secret. That keeps the recurring cost unchanged.
           GeminiPaidTier: ${{ inputs.paid && '1' || secrets.GEMINI_PAID_TIER }}
+          # A string input goes in through the environment, never into the script text.
+          TEST_FILTER: ${{ inputs.filter }}
+          # Opt-in probes (see Gemini4ProbeLiveTests) run only when a filter is given.
+          GeminiProbe: ${{ inputs.filter != '' && '1' || '' }}
         run: |
           FILTER="FullyQualifiedName!~Batch"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.full }}" = "true" ]; then
             FILTER=""
           fi
-          if [ -n "$FILTER" ]; then
+          if [ -n "$TEST_FILTER" ]; then
+            dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --filter "$TEST_FILTER" --logger "console;verbosity=detailed"
+          elif [ -n "$FILTER" ]; then
             dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal --filter "$FILTER"
           else
             dotnet test tests/Junaid.GoogleGemini.Net.IntegrationTests/Junaid.GoogleGemini.Net.IntegrationTests.csproj -c Release --verbosity normal
