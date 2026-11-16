@@ -22,6 +22,10 @@ most.
      paid-tier test only means this flag was not set. It does not mean the key is free-tier. Add
      `--filter "FullyQualifiedName~Batch"` separately to cover Batch. It has a real per-job cost and
      takes about 90 seconds to poll.
+   - You can also run the live suite on GitHub, with the key in the repo secret. Run
+     `gh workflow run integration.yml --ref <branch> -f full=true -f paid=true`. Start only one run at
+     a time. All runs share one key, and the TTS models allow 10 requests per minute on Tier 1, so two
+     overlapping runs fail with HTTP 429.
    - `dotnet build -c Release` on all three targets should show 0 warnings. `TreatWarningsAsErrors`
      is on for the core package.
 
