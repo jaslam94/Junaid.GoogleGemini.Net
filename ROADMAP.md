@@ -801,15 +801,29 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
          their snapshot, which would have opened a false issue every week. The script has three exit
          codes (no change, changed, could not run), and we tested each with doctored inputs.
 
-      Verified: the build has 0 warnings on all three targets. The unit suite has 51 new tests, and
-      all pass. We mutation-checked the timeout tests. With the old `[Range(1, 300)]` put back, three
-      of them fail. We did not run the live suite, because no API key was available. We did not run
-      anything against the real API.
+      Verified: the build has 0 warnings on all three targets, rebuilt from scratch. The unit suite has
+      51 new tests. It passes on `net9.0` (324 tests), `net48` (322) and `net8.0` (324, on the .NET 9
+      runtime through roll-forward). We mutation-checked the timeout tests. With the old
+      `[Range(1, 300)]` put back, three of them fail. A second pass read Google's raw deprecations and
+      pricing pages again. The TTS date, the 2.5 routing date and every rate in the governor match.
+      That pass also found two model constants that the first pass missed (`embedding-001` and
+      `text-embedding-004`).
+
+      We ran the full live suite on GitHub with the paid-tier tests and the Batch suite (77 tests).
+      73 passed, none failed, and 4 skipped. The skipped tests need files from the maintainer's own
+      machine: a short video, a long video, and recordings of the maintainer's own voice with consent.
+      Every request in that run carried the new `x-goog-api-client` header, and Google accepted all of
+      them. Two earlier runs of the free-tier subset had failures that we traced to causes outside the
+      release. Two runs had started at the same time on one key, and the TTS models allow 10 requests
+      per minute on Tier 1, so Google answered HTTP 429. The `UrlContext` test failed in two of four
+      runs, and once on an unchanged `master`. It asks Google's URL tool to fetch a third-party page,
+      and it passed in the clean full run. Treat it as flaky until a pattern shows. The manual live
+      run now has a `paid` input, so it can run the paid-tier tests without a stored secret.
 
       We did not verify: the 2026-12-01 routing and the price change (the date is in the future, and
-      the schedule comes from Google's pages and not from a bill), the `x-goog-api-client` header
-      against a real API call (Google documents the header and does not say that it validates it), and
-      the first real run of the new workflow on GitHub. We ran its logic and its YAML locally.
+      the schedule comes from Google's pages and not from a bill), the three skipped test groups above,
+      and the first scheduled run of the new drift workflow on GitHub. We ran its logic and its YAML
+      locally, and we ran the script against Google's live pages. It reported no drift.
 ---
 
 ## Success metrics
