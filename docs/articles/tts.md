@@ -18,9 +18,11 @@ await File.WriteAllBytesAsync("greeting.wav", audio.ToWav());
 
 Both models are GA and have a free tier. Both read the input as text only, up to 8,192 tokens.
 
-Google shuts down the three older TTS models on November 17, 2026: `gemini-2.5-flash-preview-tts`,
+Google shuts down the three older TTS models on December 18, 2026: `gemini-2.5-flash-preview-tts`,
 `gemini-2.5-pro-preview-tts` and `gemini-3.1-flash-tts-preview`. The library marks their constants
-obsolete. Move to a 3.8 model before that date.
+obsolete. Move to a 3.8 model before that date. Google calls its shutdown dates the earliest
+possible, so do not wait for the last day. Google gave November 17 earlier and has since moved the
+date.
 
 > **Note:** Google's docs also describe a newer "Interactions API", with a different request shape.
 > This library uses `generateContent`, the same request shape every other feature here uses. Google

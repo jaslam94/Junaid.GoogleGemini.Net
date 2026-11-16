@@ -3,6 +3,11 @@
 Status: implemented and shipped in `6.8.0`. All evidence below comes from real API calls on
 2026-10-10.
 
+Update, November 2026: Google's deprecations page now gives 2026-12-18 as the shutdown date for all
+three old TTS models. This plan says 2026-11-17, which was the date in October. Release `6.8.1`
+changed the date in the code and the docs. The text below keeps the date that was true when we wrote
+it. Google calls its shutdown dates the earliest possible.
+
 ## 1. Why this release exists
 
 Google shuts down all three TTS models this library ships on 2026-11-17:

@@ -162,4 +162,67 @@ public class GeminiCostGovernorScheduleTests
 
         Assert.Equal(2m, governor.RecordSpend("m", new UsageMetadata { PromptTokenCount = 1_000_000, CandidatesTokenCount = 1_000_000 }));
     }
+
+    // Google deprecated gemini-2.5-pro and gemini-2.5-flash on 2026-11-02. From 2026-12-01 it routes
+    // them to gemini-3.8-flash and gemini-3.5-flash-lite and bills at those models' rates. The 2.5 Pro
+    // route uses 08:00 UTC, the end of 2026-12-01 in US Pacific time, because the change lowers the price
+    // and an early switch would undercount a budget. Rates are from Google's pricing page, 2026-11-15.
+    private static readonly DateTime LastSecondBeforeProRouting = new(2026, 12, 1, 7, 59, 59, DateTimeKind.Utc);
+    private static readonly DateTime FirstSecondOfProRouting = new(2026, 12, 1, 8, 0, 0, DateTimeKind.Utc);
+
+    [Fact]
+    public void Gemini25Pro_IsBilledAtItsOwnRate_UntilTheRoutingStarts_ThenAtTheRoutedModelsRate()
+    {
+        // 100,000 tokens each way. This is under the 200,000-token threshold of the high-volume tier, so
+        // the base rates apply. (One million prompt tokens would be above the threshold.)
+        decimal Cost(DateTime now) => new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend("gemini-2.5-pro", new UsageMetadata { PromptTokenCount = 100_000, CandidatesTokenCount = 100_000 });
+
+        Assert.Equal(1.125m, Cost(new DateTime(2026, 11, 15, 0, 0, 0, DateTimeKind.Utc))); // 0.1 x 1.25 + 0.1 x 10.00
+        Assert.Equal(1.125m, Cost(LastSecondBeforeProRouting));
+        Assert.Equal(0.450m, Cost(FirstSecondOfProRouting));  // 3.8 Flash intro: 0.1 x 0.75 + 0.1 x 3.75
+        Assert.Equal(0.450m, Cost(LastIntroSecond));
+        Assert.Equal(0.900m, Cost(FirstStandardSecond));      // 3.8 Flash standard: 0.1 x 1.50 + 0.1 x 7.50
+    }
+
+    [Fact]
+    public void Gemini25Pro_FollowsTheRoutedModelsOwnChangeOnNewYearsDay()
+    {
+        // The routed model, gemini-3.8-flash, doubles on 2027-01-01. The chained schedule must reach it.
+        Assert.Equal(9.00m, CostOfOneMillionInOneMillionOut("gemini-2.5-pro", FirstStandardSecond));    // 1.50 + 7.50
+        Assert.Equal(
+            CostOfOneMillionInOneMillionOut("gemini-3.8-flash", FirstStandardSecond),
+            CostOfOneMillionInOneMillionOut("gemini-2.5-pro", FirstStandardSecond));
+        Assert.Equal(
+            CostOfOneMillionInOneMillionOut("gemini-3.8-flash", FirstSecondOfProRouting),
+            CostOfOneMillionInOneMillionOut("gemini-2.5-pro", FirstSecondOfProRouting));
+    }
+
+    [Fact]
+    public void Gemini25Pro_LosesItsHighVolumeTier_WhenTheRoutingStarts()
+    {
+        // 300,000 prompt tokens is above the 200,000 threshold. 3.8 Flash has no high-volume tier.
+        decimal Cost(DateTime now) => new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend("gemini-2.5-pro", new UsageMetadata { PromptTokenCount = 300_000, CandidatesTokenCount = 100_000 });
+
+        Assert.Equal(2.25m, Cost(LastSecondBeforeProRouting));  // 0.3 x 2.50 + 0.1 x 15.00
+        Assert.Equal(0.60m, Cost(FirstSecondOfProRouting));     // 0.3 x 0.75 + 0.1 x 3.75
+    }
+
+    [Theory]
+    [InlineData("2026-11-15T00:00:00Z")]
+    [InlineData("2026-12-01T07:59:59Z")]
+    [InlineData("2026-12-01T08:00:00Z")]
+    [InlineData("2027-06-01T00:00:00Z")]
+    public void Gemini25Flash_HasTheSameRatesAsTheModelItRoutesTo_OnEveryDate(string instant)
+    {
+        // gemini-2.5-flash routes to gemini-3.5-flash-lite on 2026-12-01. Both cost $0.30 in, $2.50 out and
+        // $0.03 cached today, so the built-in table needs no schedule for it. If Google changes one of
+        // them, this test fails and the table needs a schedule.
+        var now = DateTime.Parse(instant, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal);
+        var governor = new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now);
+        var usage = new UsageMetadata { PromptTokenCount = 1_000_000, CandidatesTokenCount = 1_000_000, CachedContentTokenCount = 500_000 };
+
+        Assert.Equal(governor.RecordSpend("gemini-3.5-flash-lite", usage), governor.RecordSpend("gemini-2.5-flash", usage));
+    }
 }

@@ -104,9 +104,12 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             public const string Gemini31FlashLiteImage = "gemini-3.1-flash-lite-image";
 
             // Text-to-speech. The two 3.8 models are GA (September 22, 2026) and live-verified, see
-            // PLAN-tts-3-8.md. The three older models shut down on November 17, 2026. This library does
-            // not enumerate voice names (e.g. "Kore") as constants: see PLAN-tts.md for why, and Google's
-            // TTS voice list for the current full set.
+            // PLAN-tts-3-8.md. The three older models shut down on December 18, 2026, according to
+            // Google's deprecations page on 2026-11-15. We first recorded November 17 in October, and
+            // Google has since moved the date. Google calls its dates the earliest possible shutdown,
+            // so do not wait for the last day. This library does not enumerate voice names (e.g.
+            // "Kore") as constants: see PLAN-tts.md for why, and Google's TTS voice list for the
+            // current full set.
 
             /// <summary>
             /// GA (September 22, 2026): Google's flagship TTS model, built for studio-grade voice, acting
@@ -122,14 +125,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// It has a free tier.
             /// </summary>
             public const string Gemini38FlashLiteTts = "gemini-3.8-flash-lite-tts";
-            /// <summary>Shuts down November 17, 2026. Use <see cref="Gemini38FlashLiteTts"/> or <see cref="Gemini38FlashTts"/>.</summary>
-            [Obsolete("Google shuts down gemini-2.5-flash-preview-tts on 2026-11-17. Use Models.Gemini38FlashLiteTts or Models.Gemini38FlashTts.")]
+            /// <summary>Shuts down December 18, 2026. Use <see cref="Gemini38FlashLiteTts"/> or <see cref="Gemini38FlashTts"/>.</summary>
+            [Obsolete("Google shuts down gemini-2.5-flash-preview-tts on 2026-12-18. Use Models.Gemini38FlashLiteTts or Models.Gemini38FlashTts.")]
             public const string Gemini25FlashTts = "gemini-2.5-flash-preview-tts";
-            /// <summary>Shuts down November 17, 2026. Use <see cref="Gemini38FlashTts"/>.</summary>
-            [Obsolete("Google shuts down gemini-2.5-pro-preview-tts on 2026-11-17. Use Models.Gemini38FlashTts or Models.Gemini38FlashLiteTts.")]
+            /// <summary>Shuts down December 18, 2026. Use <see cref="Gemini38FlashTts"/>.</summary>
+            [Obsolete("Google shuts down gemini-2.5-pro-preview-tts on 2026-12-18. Use Models.Gemini38FlashTts or Models.Gemini38FlashLiteTts.")]
             public const string Gemini25ProTts = "gemini-2.5-pro-preview-tts";
-            /// <summary>Shuts down November 17, 2026. Use <see cref="Gemini38FlashLiteTts"/>, Google's named replacement.</summary>
-            [Obsolete("Google shuts down gemini-3.1-flash-tts-preview on 2026-11-17. Use Models.Gemini38FlashLiteTts or Models.Gemini38FlashTts.")]
+            /// <summary>Shuts down December 18, 2026. Use <see cref="Gemini38FlashLiteTts"/>, Google's named replacement.</summary>
+            [Obsolete("Google shuts down gemini-3.1-flash-tts-preview on 2026-12-18. Use Models.Gemini38FlashLiteTts or Models.Gemini38FlashTts.")]
             public const string Gemini31FlashTts = "gemini-3.1-flash-tts-preview";
 
             // Speech-to-text. This is NOT a generateContent model: it is called through the
@@ -139,17 +142,45 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             // shape, see PLAN-stt.md. Not listed in ContentGenerationModels for that reason.
             public const string Gemini35Transcribe = "gemini-3.5-transcribe";
 
-            // Gemini 2.x. Not deprecated, but since September 18, 2026 Google limits access to projects
-            // that used these models before. A new project can be refused. Use the Gemini 3 models above.
+            // Older models. Since September 18, 2026 Google limits access to the 2.5 models to projects
+            // that used them before, so a new project can be refused. Use the Gemini 3 models above.
+            /// <summary>
+            /// Deprecated by Google on November 2, 2026. From December 1, 2026 Google routes every
+            /// request for this model to <see cref="Gemini38Flash"/> and bills it at that model's
+            /// rates. Google lists these breaking changes for the move: <c>thinking_level</c> replaces
+            /// <c>thinking_budget</c>, the sampling parameters are removed, a final model turn
+            /// (prefill) is rejected, and function calling and <c>thought_signature</c> are validated.
+            /// Use <see cref="Gemini38Flash"/>.
+            /// </summary>
+            [Obsolete("Google deprecated gemini-2.5-pro on 2026-11-02. From 2026-12-01 it routes to gemini-3.8-flash and bills at that model's rates. Use Models.Gemini38Flash.")]
             public const string Gemini25Pro = "gemini-2.5-pro";
+            /// <summary>
+            /// Deprecated by Google on November 2, 2026. From December 1, 2026 Google routes every
+            /// request for this model to <see cref="Gemini35FlashLite"/> and bills it at that model's
+            /// rates. The breaking changes listed on <see cref="Gemini25Pro"/> apply here too. Use
+            /// <see cref="Gemini35FlashLite"/>, or <see cref="Gemini38Flash"/> for more capability.
+            /// </summary>
+            [Obsolete("Google deprecated gemini-2.5-flash on 2026-11-02. From 2026-12-01 it routes to gemini-3.5-flash-lite and bills at that model's rates. Use Models.Gemini35FlashLite or Models.Gemini38Flash.")]
             public const string Gemini25Flash = "gemini-2.5-flash";
+            /// <summary>Google shut this model down on September 29, 2025. Use <see cref="Gemini38Flash"/>.</summary>
+            [Obsolete("Google shut down gemini-1.5-pro on 2025-09-29. Use Models.Gemini38Flash.")]
             public const string Gemini15Pro = "gemini-1.5-pro";
+            /// <summary>Google shut this model down on September 29, 2025. Use <see cref="Gemini38Flash"/>.</summary>
+            [Obsolete("Google shut down gemini-1.5-flash on 2025-09-29. Use Models.Gemini38Flash.")]
             public const string Gemini15Flash = "gemini-1.5-flash";
+            /// <summary>Google has retired this model. It is not in Google's current model list. Use <see cref="Gemini38Flash"/>.</summary>
+            [Obsolete("Google has retired gemini-pro. Use Models.Gemini38Flash.")]
             public const string GeminiPro = "gemini-pro";
+            /// <summary>Google has retired this model. It is not in Google's current model list. Use <see cref="Gemini38Flash"/>.</summary>
+            [Obsolete("Google has retired gemini-1.0-pro. Use Models.Gemini38Flash.")]
             public const string Gemini10Pro = "gemini-1.0-pro";
 
             // Embeddings.
+            /// <summary>Google shut this model down on October 30, 2025. Use <see cref="GeminiEmbedding2"/>.</summary>
+            [Obsolete("Google shut down embedding-001 on 2025-10-30. Use Models.GeminiEmbedding2.")]
             public const string Embedding001 = "embedding-001";
+            /// <summary>Google shut this model down on January 14, 2026. Use <see cref="GeminiEmbedding2"/>.</summary>
+            [Obsolete("Google shut down text-embedding-004 on 2026-01-14. Use Models.GeminiEmbedding2.")]
             public const string TextEmbedding004 = "text-embedding-004";
             /// <summary>General-purpose text embedding model.</summary>
             public const string GeminiEmbedding001 = "gemini-embedding-001";
@@ -164,18 +195,14 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
                 Gemini31Pro,
                 Gemini3Flash,
                 Gemini35FlashLite,
-                Gemini31FlashLite,
-                Gemini25Pro,
-                Gemini25Flash
+                Gemini31FlashLite
             };
 
             /// <summary>A non-exhaustive list of common embedding models (informational).</summary>
             public static readonly string[] EmbeddingModels =
             {
                 GeminiEmbedding2,
-                GeminiEmbedding001,
-                TextEmbedding004,
-                Embedding001
+                GeminiEmbedding001
             };
 
             /// <summary>The recommended general-purpose model (GA).</summary>
@@ -204,7 +231,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// The recommended model for text-to-speech: <see cref="Gemini38FlashLiteTts"/>, the
             /// cheaper of the two 3.8 models. It has a free tier on Google's Standard rate. Pass
             /// <see cref="Gemini38FlashTts"/> explicitly for the highest voice quality. Before 6.8.0
-            /// this was <c>gemini-2.5-flash-preview-tts</c>, which shuts down on November 17, 2026.
+            /// this was <c>gemini-2.5-flash-preview-tts</c>, which shuts down on December 18, 2026.
             /// </summary>
             public static string RecommendedTts => Gemini38FlashLiteTts;
 
@@ -395,6 +422,15 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// depth; a short timeout produces spurious GeminiTimeoutExceptions.
             /// </summary>
             public const int TimeoutSeconds = 100;
+
+            /// <summary>
+            /// The largest value that <c>GeminiOptions.TimeoutSeconds</c> accepts: 3,600 seconds (one
+            /// hour). Google's own guidance needs far more than the old limit of 300 seconds. Its
+            /// Flex tier docs say to allow 10 minutes or more per call, and its Gemini 4 migration
+            /// notes say to allow at least 15 minutes for hard prompts. Raise
+            /// <c>TimeoutSeconds</c> for those calls. The default stays at <see cref="TimeoutSeconds"/>.
+            /// </summary>
+            public const int MaxTimeoutSeconds = 3600;
 
             /// <summary>
             /// Default maximum retries

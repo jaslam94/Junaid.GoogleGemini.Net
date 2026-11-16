@@ -178,6 +178,11 @@ Two models (`gemini-2.5-pro` and `gemini-3.1-pro-preview`) have a higher rate ab
 tokens. The library picks the tier from the response's actual `PromptTokenCount`. For the
 pre-flight estimate, it uses the exact counted input tokens. It never uses a guess of that count.
 
+The tier for `gemini-2.5-pro` ends on December 1, 2026. Google routes that model to
+`gemini-3.8-flash` from that day and bills it at that model's rates, and `gemini-3.8-flash` has no
+high-volume tier. The built-in table switches at 08:00 UTC on that day, which is midnight Pacific
+time. The change lowers the price, so the later time never undercounts a budget.
+
 ## Rejected calls
 
 The library throws two exceptions for rejected calls. Both derive from `GeminiException`, so you can

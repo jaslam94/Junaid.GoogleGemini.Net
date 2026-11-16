@@ -19,8 +19,38 @@
 		<Description>A .NET client for the Google Gemini API. It has built-in retries and rate limiting, OpenTelemetry support, and dependency injection, and it fits naturally into ASP.NET Core. Claude (Anthropic) wrote the v6 modernization from start to finish. See the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.8.0</Version>
+		<Version>6.8.1</Version>
 		<PackageReleaseNotes>
+			6.8.1: a maintenance release. A review of Google's pages on 2026-11-15 found dates and
+			limits that were out of date. There are no breaking changes to compiled code. One thing
+			needs your attention: the constants named in (3) now cause a compiler warning (CS0618),
+			because Google retired or rerouted those models. No constant value changed.
+			(1) TimeoutSeconds now accepts 1 to 3,600. The limit was 300, and two checks enforced it:
+			a [Range] attribute and the options validator. Google's Flex docs say to allow 10 minutes
+			or more for a call. Its Gemini 4 migration notes say to allow at least 15 minutes for hard
+			prompts. So the old limit made those calls impossible to configure. The default stays at
+			100 seconds. The value also applies to the Batch API client.
+			(2) The shutdown date of the three old TTS models is December 18, 2026, not November 17.
+			Google's deprecations page shows the new date. The [Obsolete] messages and the docs now say
+			so. Google calls its dates the earliest possible, so move to the 3.8 models now.
+			(3) gemini-2.5-pro and gemini-2.5-flash are deprecated. From December 1, 2026 Google routes
+			them to gemini-3.8-flash and gemini-3.5-flash-lite, and bills at the new model's rates.
+			Their constants are now [Obsolete], and ContentGenerationModels no longer lists them. The
+			cost governor follows the change. gemini-2.5-pro switches to the 3.8 Flash rates at 08:00
+			UTC on December 1, which is midnight Pacific time. Google gives no time zone, and the change
+			lowers the price, so the later time is the safe choice for a budget. gemini-2.5-flash needs
+			no change, because its rates equal those of gemini-3.5-flash-lite. We have not seen a bill
+			or a response from the routed models yet. The constants for gemini-1.5-pro,
+			gemini-1.5-flash, gemini-pro, gemini-1.0-pro, embedding-001 and text-embedding-004 are also
+			[Obsolete], because Google retired those models. EmbeddingModels no longer lists the two
+			embedding models.
+			(4) Every request now sends an x-goog-api-client header. Its value is junaid-googlegemini-net
+			and the package version, for example junaid-googlegemini-net/6.8.1. Google asks partners to
+			send it. The User-Agent now includes the version too. A header that you set yourself is
+			kept.
+			(5) Bug fix: the OpenTelemetry source and meter reported the version 6.4.1 in every release
+			after 6.4.1, because the version was a hand-written constant. They now read the real
+			package version. If you filter telemetry by that version, expect a change.
 			6.8.0: moves text-to-speech to the Gemini 3.8 TTS models before Google shuts down the old
 			ones on 2026-11-17. It also refreshes the model lineup for Google's October 2026 changes.
 			One default changes on purpose: GenerateAudioAsync now uses gemini-3.8-flash-lite-tts.

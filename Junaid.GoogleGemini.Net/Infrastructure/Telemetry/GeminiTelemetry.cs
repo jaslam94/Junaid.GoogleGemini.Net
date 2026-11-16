@@ -21,10 +21,11 @@ public static class GeminiTelemetry
     public const string SourceName = "Junaid.GoogleGemini.Net";
 
     internal const string SystemName = "gemini";
-    private const string Version = "6.4.1";
 
-    internal static readonly ActivitySource ActivitySource = new(SourceName, Version);
-    internal static readonly Meter Meter = new(SourceName, Version);
+    // Read from the assembly. It used to be a constant that every release had to bump by hand. Nobody
+    // did, and it said 6.4.1 for seven releases.
+    internal static readonly ActivitySource ActivitySource = new(SourceName, GeminiVersion.Current);
+    internal static readonly Meter Meter = new(SourceName, GeminiVersion.Current);
 
     internal static readonly Histogram<double> OperationDuration = Meter.CreateHistogram<double>(
         "gen_ai.client.operation.duration", unit: "s", description: "Duration of a Gemini client operation.");

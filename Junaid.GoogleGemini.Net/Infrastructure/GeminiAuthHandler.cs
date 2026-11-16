@@ -14,6 +14,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
         private readonly GeminiOptions _options;
         private const string AUTH_HEADER = "x-goog-api-key";
 
+        // Google asks partners to identify their client with this header, in the form
+        // "company-product/version" (its partner integration guide). The value is fixed for the life
+        // of the process, so build it once.
+        private const string CLIENT_HEADER = "x-goog-api-client";
+        private static readonly string ClientHeaderValue = $"junaid-googlegemini-net/{GeminiVersion.Current}";
+        private static readonly string UserAgentValue = $"Junaid.GoogleGemini.Net/{GeminiVersion.Current}";
+
         /// <summary>
         /// Initializes a new instance of the GeminiAuthHandler
         /// </summary>
@@ -47,7 +54,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure
                 {
                     request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
                 }
-                request.Headers.UserAgent.TryParseAdd("Junaid.GoogleGemini.Net");
+                request.Headers.UserAgent.TryParseAdd(UserAgentValue);
+
+                // A caller or a test handler may have set this already. Keep theirs.
+                if (!request.Headers.Contains(CLIENT_HEADER))
+                {
+                    request.Headers.TryAddWithoutValidation(CLIENT_HEADER, ClientHeaderValue);
+                }
 
                 var response = await base.SendAsync(request, cancellationToken);
 

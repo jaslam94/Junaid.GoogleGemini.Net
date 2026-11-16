@@ -97,3 +97,11 @@ most.
   reuses a GitHub issue, within a month instead of at the next real release. See `ROADMAP.md`'s
   `6.4.3` entry for why this check has to live inside `ci.yml` itself, not a separate workflow file.
   NuGet's Trusted Publishing policy is scoped to the exact workflow filename.
+- Catching a change on Google's side between releases. `google-drift-watch.yml` runs every Tuesday
+  and needs no API key. It compares Google's discovery document and deprecations page with the
+  snapshots in `.github/drift/`. When they differ, it opens an issue with the label `google-drift`.
+  Read the report, change the library if it needs a change, and then run
+  `python3 .github/scripts/google_drift_watch.py --update` and commit the new snapshots. Do this
+  before a release, so that an open drift issue does not hide a deadline. If the workflow fails
+  with no issue, the script could not run. A download failed or a page has a new format. See the
+  header of the script. `ROADMAP.md`'s `6.8.1` entry explains why the check exists.

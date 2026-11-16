@@ -757,6 +757,59 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       runtime, so the `net8.0` tests ran on the .NET 9 runtime through roll-forward. There are no
       breaking changes to compiled code. The behavior changes are the default TTS model, `ToWav()` on
       WAV input, and prompts that put a direction in the text.
+- [x] Maintenance release after a full read of Google's pages (`6.8.1`): on 2026-11-15 we read Google's
+      deprecations page, changelog, pricing page, API reference and discovery document. Google had
+      shipped Gemini 4, moved a shutdown date and rerouted two models since `6.8.0`. This release fixes
+      what was wrong or at risk. It adds no new feature. `PLAN-gemini-landscape-2026-11.md` has the full
+      research and the plan for the releases that follow.
+      1. `TimeoutSeconds` could not exceed 300. Two checks enforced that limit: a `[Range]` attribute
+         on the option and the options validator. Changing only one would have changed nothing, and a
+         test that goes through the real DI registration now covers both. The limit is 3,600. Google's
+         Flex docs say to allow 10 minutes or more, and its Gemini 4 notes say 15 minutes for hard
+         prompts. The default stays at 100.
+      2. The shutdown date of the three old TTS models is 2026-12-18. We had recorded 2026-11-17 in
+         October. Google's deprecations page gives the new date, and we read the raw page to confirm it
+         (two fetch agents agreed, and then we read the rows ourselves). The `[Obsolete]` messages, the
+         docs and the XML comments now say 2026-12-18. `PLAN-tts.md` and `PLAN-tts-3-8.md` keep their
+         original text and carry an update note.
+      3. Google deprecated `gemini-2.5-pro` and `gemini-2.5-flash` on 2026-11-02. From 2026-12-01 it
+         routes them to `gemini-3.8-flash` and `gemini-3.5-flash-lite` and bills at those rates. The
+         constants are now `[Obsolete]`, and `ContentGenerationModels` no longer lists them. The cost
+         governor has a schedule for 2.5 Pro. It uses 08:00 UTC, which is midnight Pacific time. That
+         change lowers the price, so the later time never undercounts a budget. This is the opposite
+         of the 2027-01-01 change, which raises the price and uses 00:00 UTC. The 2.5 Flash rates
+         already equal the 3.5 Flash-Lite rates, so it has no schedule, and a test fails if one of
+         them changes. We checked every built-in rate against the pricing page again. None changed.
+         We have not seen a bill or a response from the routed models. Check `ModelVersion` after the
+         date. The constants for the shut-down 1.x models are `[Obsolete]` too. So are `embedding-001`
+         (shut down 2025-10-30) and `text-embedding-004` (shut down 2026-01-14), and
+         `EmbeddingModels` no longer lists them. The first pass of this release missed these two, and
+         the second pass found them by checking every model constant against Google's deprecations
+         page.
+      4. Every request sends `x-goog-api-client: junaid-googlegemini-net/<version>`. Google's partner
+         guide asks for it. The `User-Agent` carries the version. A caller's own value is kept.
+      5. `GeminiTelemetry` reported version `6.4.1` for seven releases (6.4.2 to 6.8.0). The version was a hand-written
+         constant that no release step touched. This is the same drift that the `6.4.1` audit found
+         once already. It now reads the assembly version, through one helper that the new headers
+         share, so it cannot drift again. A test compares it with the real assembly version.
+      6. A weekly "Google drift watch" workflow (`.github/workflows/google-drift-watch.yml`). It needs
+         no API key. It downloads Google's discovery document and deprecations page, and compares
+         them with snapshots in `.github/drift/`. When something differs, it opens an issue that lists
+         the exact changes (the label is `google-drift`). The live-test run cannot do this. It needs a
+         key, it skips the paid-tier tests, and a model that answers today can be scheduled to go
+         away. Testing found a bug in our first draft. Rows with an empty last cell never matched
+         their snapshot, which would have opened a false issue every week. The script has three exit
+         codes (no change, changed, could not run), and we tested each with doctored inputs.
+
+      Verified: the build has 0 warnings on all three targets. The unit suite has 51 new tests, and
+      all pass. We mutation-checked the timeout tests. With the old `[Range(1, 300)]` put back, three
+      of them fail. We did not run the live suite, because no API key was available. We did not run
+      anything against the real API.
+
+      We did not verify: the 2026-12-01 routing and the price change (the date is in the future, and
+      the schedule comes from Google's pages and not from a bill), the `x-goog-api-client` header
+      against a real API call (Google documents the header and does not say that it validates it), and
+      the first real run of the new workflow on GitHub. We ran its logic and its YAML locally.
 ---
 
 ## Success metrics

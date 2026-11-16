@@ -21,7 +21,7 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Factories;
 /// </summary>
 internal static class SpeechScript
 {
-    // The three TTS models that Google shuts down on 2026-11-17. String literals, not the
+    // The three TTS models that Google shuts down on 2026-12-18. String literals, not the
     // GeminiConstants members, because those members are [Obsolete] and this project treats
     // warnings as errors.
     private static readonly string[] LegacyTtsModels =
