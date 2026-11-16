@@ -1,0 +1,109 @@
+name: Google drift watch
+
+# Compares two public Google pages with snapshots that are stored in this repository:
+#
+# 1. The Gemini API discovery document. It lists every method, field and enum value.
+# 2. The deprecations page. It lists every model, shutdown date and replacement.
+#
+# This check needs no API key and costs nothing. It runs once a week. When Google changed
+# something, it opens a GitHub issue that lists the exact changes.
+#
+# Why it exists. In 2026 Google shipped three Gemini 4 models, moved a TTS shutdown date by a month
+# and rerouted two models. This library learned about each change by hand, and some of them late.
+# The weekly live-test run (integration.yml) cannot catch most of these. It needs a key, it skips the
+# paid-tier tests, and a model that still answers today may be scheduled to disappear.
+#
+# What to do when it opens an issue. Read the report. Change the library if it needs a change. Then
+# update the snapshots and commit them:
+#
+#   python3 .github/scripts/google_drift_watch.py --update
+#
+# The job fails (red, no issue) if a download fails or a page has a new format. That means the
+# script needs a fix. It does not mean that Google changed something.
+on:
+  schedule:
+    # 07:00 UTC every Tuesday. The live-test run is on Monday, so the two do not overlap.
+    - cron: '0 7 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write # only used by the issue step below
+
+jobs:
+  watch:
+    name: Compare with Google's pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Compare with the snapshots
+        id: drift
+        run: |
+          # Exit code 0 means no change. 1 means Google changed something. 2 means the check could
+          # not run. Only 2 fails this step. A change (1) is reported by the next step instead.
+          set +e
+          python3 .github/scripts/google_drift_watch.py --report "$RUNNER_TEMP/drift-report.md"
+          code=$?
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "The script exited with code $code."
+          if [ "$code" -eq 2 ]; then
+            exit 2
+          fi
+          exit 0
+
+      # Only reached when the script found a change. It opens one issue, or adds a comment to the
+      # issue that is already open, so a change that nobody has handled yet does not open a new issue
+      # every week.
+      - name: File an issue when Google changed something
+        if: steps.drift.outputs.code == '1'
+        uses: actions/github-script@v7
+        env:
+          REPORT_PATH: ${{ runner.temp }}/drift-report.md
+        with:
+          script: |
+            const fs = require('fs');
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const report = fs.readFileSync(process.env.REPORT_PATH, 'utf8');
+            const runUrl = `https://github.com/${owner}/${repo}/actions/runs/${context.runId}`;
+
+            // Make sure the label exists before the issue uses it. The REST API does not create
+            // labels by itself. A repeat run gets a 422 once the label exists, so ignore that.
+            try {
+              await github.rest.issues.createLabel({
+                owner,
+                repo,
+                name: 'google-drift',
+                color: 'fbca04',
+                description: 'Google changed its API or its deprecation dates',
+              });
+            } catch (e) {
+              if (e.status !== 422) throw e;
+            }
+
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: 'google-drift',
+            });
+
+            const body = `Found by the weekly drift watch: ${runUrl}\n\n${report}`;
+
+            if (existing.length > 0) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing[0].number,
+                body: `Still different from the snapshots: ${runUrl}\n\n${report}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title: 'Google changed its API or its deprecation dates',
+                body,
+                labels: ['google-drift'],
+              });
+            }

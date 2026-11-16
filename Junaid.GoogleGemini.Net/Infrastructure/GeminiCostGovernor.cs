@@ -67,6 +67,14 @@ public sealed class GeminiCostGovernor : ICostGovernor
     // (its pricing page says "starting January 1, 2027" and gives no time zone). We use 00:00 UTC.
     private static readonly DateTime StandardPricingStartsUtc = new(2027, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    // Google says that "effective December 1, 2026" it routes API requests for gemini-2.5-pro to
+    // gemini-3.8-flash and bills them at that model's rates. It gives no time zone. This change LOWERS
+    // the price, so an early switch would undercount a budget. For that reason we use the latest
+    // plausible instant: midnight Pacific time, which is 08:00 UTC in December. The 2027 change above
+    // goes the other way (a rise), so there 00:00 UTC is the safe choice. The error here is at most
+    // eight hours of calls to a model that Google has already retired.
+    private static readonly DateTime Gemini25ProRoutingStartsUtc = new(2026, 12, 1, 8, 0, 0, DateTimeKind.Utc);
+
     // One rate card now, and one that takes over on StandardPricingStartsUtc.
     private static ModelPricing Introductory(
         decimal input, decimal output, decimal cached,
@@ -88,7 +96,8 @@ public sealed class GeminiCostGovernor : ICostGovernor
     /// <summary>
     /// Built-in USD-per-1,000,000-token pricing, re-verified against
     /// <see href="https://ai.google.dev/gemini-api/docs/pricing">Google's published pricing page</see>
-    /// on 2026-10-10 (paid tier, Standard rate). Entries with an introductory price carry the rate that
+    /// on 2026-10-10 (paid tier, Standard rate), and compared again on 2026-11-15 (no rate changed).
+    /// Entries with an introductory price carry the rate that
     /// starts on 2027-01-01 in <see cref="ModelPricing.NextPricing"/>, and the governor switches to it
     /// on that date. This snapshot WILL still go stale as Google updates prices. Override via
     /// <see cref="BudgetOptions.ModelPricingOverrides"/> for accuracy, especially in production.
@@ -143,6 +152,13 @@ public sealed class GeminiCostGovernor : ICostGovernor
                 OutputPerMillionTokensUsd = 1.50m,
                 CachedInputPerMillionTokensUsd = 0.025m,
             },
+            // Deprecated on 2026-11-02. From 2026-12-01 Google routes gemini-2.5-pro to
+            // gemini-3.8-flash and bills it at that model's rates (the deprecations page says so, and
+            // so does the 2026-11-02 changelog entry). So this entry carries today's 2.5 Pro rates and
+            // switches to the 3.8 Flash schedule, which has its own change on 2027-01-01. 3.8 Flash has
+            // no high-volume tier, so the tier ends with the switch. This is a schedule read from
+            // Google's pages. We have not seen a bill, and we have not seen a response from the routed
+            // model yet. Check GenerateContentResponse.ModelVersion after 2026-12-01.
             ["gemini-2.5-pro"] = new ModelPricing
             {
                 InputPerMillionTokensUsd = 1.25m,
@@ -155,7 +171,13 @@ public sealed class GeminiCostGovernor : ICostGovernor
                     OutputPerMillionTokensUsd = 15.00m,
                     CachedInputPerMillionTokensUsd = 0.25m,
                 },
+                NextPricingEffectiveFromUtc = Gemini25ProRoutingStartsUtc,
+                NextPricing = Introductory(0.75m, 3.75m, 0.075m, 1.50m, 7.50m, 0.15m),
             },
+            // Deprecated on 2026-11-02. From 2026-12-01 Google routes gemini-2.5-flash to
+            // gemini-3.5-flash-lite and bills it at that model's rates. Both models have the same
+            // rates today ($0.30 in, $2.50 out, $0.03 cached), so no schedule is needed. A test pins
+            // that they stay equal. If Google changes one of them, give this entry a schedule.
             ["gemini-2.5-flash"] = new ModelPricing
             {
                 InputPerMillionTokensUsd = 0.30m,

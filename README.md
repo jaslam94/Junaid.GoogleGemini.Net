@@ -184,7 +184,7 @@ await File.WriteAllBytesAsync("greeting.wav", audio.ToWav());
 Set `VoiceName` for a single voice, or `SpeakerVoices` for a multi-speaker script (write it as
 `Joe: Hi! Jane: Hello!` and map each name to a voice). Put delivery directions in `SpeechStyle`, not in
 the prompt: the Gemini 3.8 TTS models read the prompt aloud word for word. Google shuts down the older TTS
-models on November 17, 2026. See [docs/articles/tts.md](docs/articles/tts.md).
+models on December 18, 2026. See [docs/articles/tts.md](docs/articles/tts.md).
 
 To speak with a custom voice, pass its id (`voice_...`) as `VoiceName`. `IVoiceService` wraps Google's
 Voices API. It lists and filters voices, designs a new voice from a written description, and deletes

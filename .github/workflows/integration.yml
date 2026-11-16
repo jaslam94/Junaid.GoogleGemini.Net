@@ -12,7 +12,9 @@ name: Integration (live)
 #    auth, and response-shape classes of bug this exists to catch.
 #
 # 2. On demand (workflow_dispatch), from the Actions tab, same as before. Optionally run the FULL
-#    suite (including Batch) via the "full" input.
+#    suite (including Batch) via the "full" input, and the paid-tier tests via the "paid" input.
+#    Do not start two runs at once. They share one key, and the TTS models allow only 10 requests
+#    per minute on Tier 1, so overlapping runs fail with HTTP 429.
 #
 # Needs a repo secret GEMINI_API_KEY (Settings -> Secrets and variables -> Actions). Optionally also
 # GEMINI_PAID_TIER=1 if that key is billing-enabled, to also exercise image generation, context
@@ -26,6 +28,10 @@ on:
     inputs:
       full:
         description: 'Also run the Batch API suite (real cost, ~90s job poll)'
+        type: boolean
+        default: false
+      paid:
+        description: 'Run the paid-tier tests too (images, caching, voices). Needs a billing-enabled key. Real cost.'
         type: boolean
         default: false
 
@@ -50,7 +56,9 @@ jobs:
         env:
           # The library reads the key from the GeminiApiKey environment variable.
           GeminiApiKey: ${{ secrets.GEMINI_API_KEY }}
-          GeminiPaidTier: ${{ secrets.GEMINI_PAID_TIER }}
+          # A manual run can ask for the paid-tier tests with the "paid" input. The weekly schedule
+          # has no inputs, so it still reads the secret. That keeps the recurring cost unchanged.
+          GeminiPaidTier: ${{ inputs.paid && '1' || secrets.GEMINI_PAID_TIER }}
         run: |
           FILTER="FullyQualifiedName!~Batch"
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.full }}" = "true" ]; then

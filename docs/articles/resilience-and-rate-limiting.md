@@ -35,6 +35,19 @@ call you get a `GeminiRateLimitException`. Disable it with `RateLimit.Enabled = 
 `TimeoutSeconds` bounds each request; on expiry you get a `GeminiTimeoutException`. Genuine caller
 cancellation (your `CancellationToken`) propagates as `OperationCanceledException` instead.
 
+The default is 100 seconds. The allowed range is 1 to 3,600 seconds. Before 6.8.1 the upper limit
+was 300 seconds, which was too low for some of Google's own advice. Google's Flex tier docs say to
+allow 10 minutes or more for a call. Its Gemini 4 migration notes say to allow at least 15 minutes
+for hard prompts. Set the value in your options:
+
+```json
+{ "Gemini": { "TimeoutSeconds": 900 } }
+```
+
+The same value applies to the Batch API client. The Files client has its own fixed 5-minute limit,
+because it only moves bytes. A longer timeout also means a hung call holds its connection longer, so
+raise it only for the workloads that need it.
+
 ## Batch API is the one exception
 
 `IBatchService` calls get the same retry handling described above, but they bypass the

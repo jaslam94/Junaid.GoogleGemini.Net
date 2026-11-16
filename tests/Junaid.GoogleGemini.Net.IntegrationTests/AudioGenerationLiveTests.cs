@@ -9,7 +9,7 @@ namespace Junaid.GoogleGemini.Net.IntegrationTests;
 /// Live tests against the real Gemini 3.8 TTS models. See <c>PLAN-tts-3-8.md</c> for the research
 /// these tests came from, and <c>PLAN-tts.md</c> for the original feature.
 ///
-/// Google shuts down the three older TTS models (2.5 Flash, 2.5 Pro and 3.1 Flash) on 2026-11-17, so
+/// Google shuts down the three older TTS models (2.5 Flash, 2.5 Pro and 3.1 Flash) on 2026-12-18, so
 /// these tests use only the 3.8 models. The older request shape is covered by unit tests, and was
 /// checked live against the real API on 2026-10-10 before 6.8.0 shipped.
 ///

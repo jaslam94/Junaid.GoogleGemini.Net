@@ -74,9 +74,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
 
         private static void ValidateTimeouts(GeminiOptions options, List<string> errors)
         {
-            if (options.TimeoutSeconds < 1 || options.TimeoutSeconds > 300)
+            if (options.TimeoutSeconds < 1 || options.TimeoutSeconds > GeminiConstants.Defaults.MaxTimeoutSeconds)
             {
-                errors.Add("Timeout must be between 1 and 300 seconds.");
+                errors.Add($"Timeout must be between 1 and {GeminiConstants.Defaults.MaxTimeoutSeconds} seconds.");
             }
         }
 

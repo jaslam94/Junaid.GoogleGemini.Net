@@ -22,9 +22,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
         public string ApiKey { get; set; } = GetApiKeyFromEnvironment();
 
         /// <summary>
-        /// Default timeout for API requests in seconds
+        /// Timeout for API requests in seconds. The default is 100. The limit is 3,600 (one hour,
+        /// <see cref="GeminiConstants.Defaults.MaxTimeoutSeconds"/>). Raise it for calls that run
+        /// for minutes. Google's Flex tier docs say to allow 10 minutes or more, and its Gemini 4
+        /// migration notes say to allow at least 15 minutes for hard prompts. This value also
+        /// applies to the Batch API client.
         /// </summary>
-        [Range(1, 300)]
+        [Range(1, GeminiConstants.Defaults.MaxTimeoutSeconds)]
         public int TimeoutSeconds { get; set; } = GeminiConstants.Defaults.TimeoutSeconds;
 
         /// <summary>
@@ -174,8 +178,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Options
 
         /// <summary>
         /// Optional second pricing tier for models that charge more above a token threshold (currently
-        /// gemini-2.5-pro and gemini-3.1-pro-preview both do, at 200k tokens). Null = flat rate regardless
-        /// of prompt size (true for every other current model).
+        /// gemini-3.1-pro-preview does, at 200k tokens, and gemini-2.5-pro does until 2026-12-01, when
+        /// Google routes it to gemini-3.8-flash). Null = flat rate regardless of prompt size (true for
+        /// every other current model).
         /// </summary>
         public HighVolumeTier? HighVolumeTier { get; set; }
 

@@ -1,0 +1,1205 @@
+# Source: https://generativelanguage.googleapis.com/$discovery/rest?version=v1beta
+# Revision: 20261113
+# One line per method, field or enum value. Written by google_drift_watch.py --update.
+enum AudioResponseFormat.delivery DELIVERY_UNSPECIFIED
+enum AudioResponseFormat.delivery INLINE
+enum AudioResponseFormat.delivery URI
+enum AudioResponseFormat.mimeType AUDIO_ALAW
+enum AudioResponseFormat.mimeType AUDIO_L16
+enum AudioResponseFormat.mimeType AUDIO_MP3
+enum AudioResponseFormat.mimeType AUDIO_MULAW
+enum AudioResponseFormat.mimeType AUDIO_OGG_OPUS
+enum AudioResponseFormat.mimeType AUDIO_WAV
+enum AudioResponseFormat.mimeType MIME_TYPE_UNSPECIFIED
+enum AudioTranscriptionConfig.mode MODE_UNSPECIFIED
+enum AudioTranscriptionConfig.mode SMART
+enum AudioTranscriptionConfig.mode VERBATIM
+enum AutomaticActivityDetection.endOfSpeechSensitivity END_SENSITIVITY_HIGH
+enum AutomaticActivityDetection.endOfSpeechSensitivity END_SENSITIVITY_LOW
+enum AutomaticActivityDetection.endOfSpeechSensitivity END_SENSITIVITY_UNSPECIFIED
+enum AutomaticActivityDetection.startOfSpeechSensitivity START_SENSITIVITY_HIGH
+enum AutomaticActivityDetection.startOfSpeechSensitivity START_SENSITIVITY_LOW
+enum AutomaticActivityDetection.startOfSpeechSensitivity START_SENSITIVITY_UNSPECIFIED
+enum Candidate.finishReason BLOCKLIST
+enum Candidate.finishReason CONTINUATION
+enum Candidate.finishReason ESCALATION
+enum Candidate.finishReason FINISH_REASON_UNSPECIFIED
+enum Candidate.finishReason IMAGE_OTHER
+enum Candidate.finishReason IMAGE_PROHIBITED_CONTENT
+enum Candidate.finishReason IMAGE_RECITATION
+enum Candidate.finishReason IMAGE_SAFETY
+enum Candidate.finishReason LANGUAGE
+enum Candidate.finishReason MALFORMED_FUNCTION_CALL
+enum Candidate.finishReason MALFORMED_RESPONSE
+enum Candidate.finishReason MAX_TOKENS
+enum Candidate.finishReason MISSING_THOUGHT_SIGNATURE
+enum Candidate.finishReason NO_IMAGE
+enum Candidate.finishReason OTHER
+enum Candidate.finishReason PROHIBITED_CONTENT
+enum Candidate.finishReason PUP_LIMITED_DISABLED
+enum Candidate.finishReason RECITATION
+enum Candidate.finishReason SAFETY
+enum Candidate.finishReason SPII
+enum Candidate.finishReason STOP
+enum Candidate.finishReason TOO_MANY_TOOL_CALLS
+enum Candidate.finishReason UNEXPECTED_TOOL_CALL
+enum CodeExecutionResult.outcome OUTCOME_DEADLINE_EXCEEDED
+enum CodeExecutionResult.outcome OUTCOME_FAILED
+enum CodeExecutionResult.outcome OUTCOME_OK
+enum CodeExecutionResult.outcome OUTCOME_UNSPECIFIED
+enum CompositeMedia.referenceType BIGSTORE_REF
+enum CompositeMedia.referenceType BLOB_REF
+enum CompositeMedia.referenceType COSMO_BINARY_REFERENCE
+enum CompositeMedia.referenceType INLINE
+enum CompositeMedia.referenceType PATH
+enum ComputerUse.disabledSafetyPolicies ACCOUNT_CREATION
+enum ComputerUse.disabledSafetyPolicies COMMUNICATION_TOOL
+enum ComputerUse.disabledSafetyPolicies DATA_MODIFICATION
+enum ComputerUse.disabledSafetyPolicies FINANCIAL_TRANSACTIONS
+enum ComputerUse.disabledSafetyPolicies LEGAL_TERMS_AND_AGREEMENTS
+enum ComputerUse.disabledSafetyPolicies SAFETY_POLICY_UNSPECIFIED
+enum ComputerUse.disabledSafetyPolicies SENSITIVE_DATA_MODIFICATION
+enum ComputerUse.disabledSafetyPolicies USER_CONSENT_MANAGEMENT
+enum ComputerUse.environment ENVIRONMENT_BROWSER
+enum ComputerUse.environment ENVIRONMENT_DESKTOP
+enum ComputerUse.environment ENVIRONMENT_MOBILE
+enum ComputerUse.environment ENVIRONMENT_UNSPECIFIED
+enum Condition.operation EQUAL
+enum Condition.operation EXCLUDES
+enum Condition.operation GREATER
+enum Condition.operation GREATER_EQUAL
+enum Condition.operation INCLUDES
+enum Condition.operation LESS
+enum Condition.operation LESS_EQUAL
+enum Condition.operation NOT_EQUAL
+enum Condition.operation OPERATOR_UNSPECIFIED
+enum ContentFilter.reason BLOCKED_REASON_UNSPECIFIED
+enum ContentFilter.reason OTHER
+enum ContentFilter.reason SAFETY
+enum CreateEnvironmentRequest.mode ENVIRONMENT_MODE_UNSPECIFIED
+enum CreateEnvironmentRequest.mode ON_DEMAND
+enum CreateEnvironmentRequest.mode SELF_HOSTED
+enum CreateEnvironmentRequest.networkMode DISABLED
+enum CreateEnvironmentRequest.networkMode NETWORK_MODE_UNSPECIFIED
+enum Document.state STATE_ACTIVE
+enum Document.state STATE_FAILED
+enum Document.state STATE_PENDING
+enum Document.state STATE_UNSPECIFIED
+enum DynamicRetrievalConfig.mode MODE_DYNAMIC
+enum DynamicRetrievalConfig.mode MODE_UNSPECIFIED
+enum EgressRule.mode DISABLED
+enum EgressRule.mode NETWORK_MODE_UNSPECIFIED
+enum EmbedContentBatch.state BATCH_STATE_CANCELLED
+enum EmbedContentBatch.state BATCH_STATE_EXPIRED
+enum EmbedContentBatch.state BATCH_STATE_FAILED
+enum EmbedContentBatch.state BATCH_STATE_PENDING
+enum EmbedContentBatch.state BATCH_STATE_RUNNING
+enum EmbedContentBatch.state BATCH_STATE_SUCCEEDED
+enum EmbedContentBatch.state BATCH_STATE_UNSPECIFIED
+enum EmbedContentConfig.taskType CLASSIFICATION
+enum EmbedContentConfig.taskType CLUSTERING
+enum EmbedContentConfig.taskType CODE_RETRIEVAL_QUERY
+enum EmbedContentConfig.taskType FACT_VERIFICATION
+enum EmbedContentConfig.taskType QUESTION_ANSWERING
+enum EmbedContentConfig.taskType RETRIEVAL_DOCUMENT
+enum EmbedContentConfig.taskType RETRIEVAL_QUERY
+enum EmbedContentConfig.taskType SEMANTIC_SIMILARITY
+enum EmbedContentConfig.taskType TASK_TYPE_UNSPECIFIED
+enum EmbedContentRequest.taskType CLASSIFICATION
+enum EmbedContentRequest.taskType CLUSTERING
+enum EmbedContentRequest.taskType CODE_RETRIEVAL_QUERY
+enum EmbedContentRequest.taskType FACT_VERIFICATION
+enum EmbedContentRequest.taskType QUESTION_ANSWERING
+enum EmbedContentRequest.taskType RETRIEVAL_DOCUMENT
+enum EmbedContentRequest.taskType RETRIEVAL_QUERY
+enum EmbedContentRequest.taskType SEMANTIC_SIMILARITY
+enum EmbedContentRequest.taskType TASK_TYPE_UNSPECIFIED
+enum Environment.mode ENVIRONMENT_MODE_UNSPECIFIED
+enum Environment.mode ON_DEMAND
+enum Environment.mode SELF_HOSTED
+enum Environment.networkMode DISABLED
+enum Environment.networkMode NETWORK_MODE_UNSPECIFIED
+enum Environment.status ACTIVE
+enum Environment.status EXPIRED
+enum Environment.status STATUS_UNSPECIFIED
+enum EnvironmentFile.type DIRECTORY
+enum EnvironmentFile.type FILE
+enum EnvironmentFile.type TYPE_UNSPECIFIED
+enum ExecutableCode.language LANGUAGE_UNSPECIFIED
+enum ExecutableCode.language PYTHON
+enum File.source GENERATED
+enum File.source REGISTERED
+enum File.source SOURCE_UNSPECIFIED
+enum File.source UPLOADED
+enum File.state ACTIVE
+enum File.state FAILED
+enum File.state PROCESSING
+enum File.state STATE_UNSPECIFIED
+enum FunctionCallingConfig.mode ANY
+enum FunctionCallingConfig.mode AUTO
+enum FunctionCallingConfig.mode MODE_UNSPECIFIED
+enum FunctionCallingConfig.mode NONE
+enum FunctionCallingConfig.mode VALIDATED
+enum FunctionDeclaration.behavior BLOCKING
+enum FunctionDeclaration.behavior NON_BLOCKING
+enum FunctionDeclaration.behavior UNSPECIFIED
+enum FunctionResponse.scheduling INTERRUPT
+enum FunctionResponse.scheduling SCHEDULING_UNSPECIFIED
+enum FunctionResponse.scheduling SILENT
+enum FunctionResponse.scheduling WHEN_IDLE
+enum FunctionResponsePart.mediaProcessing AGENTIC
+enum FunctionResponsePart.mediaProcessing MEDIA_PROCESSING_UNSPECIFIED
+enum FunctionResponsePart.mediaProcessing STATIC
+enum GdataMedia.referenceType ARBITRARY_BYTES
+enum GdataMedia.referenceType BIGSTORE_REF
+enum GdataMedia.referenceType BLOB_REF
+enum GdataMedia.referenceType COMPOSITE_MEDIA
+enum GdataMedia.referenceType COSMO_BINARY_REFERENCE
+enum GdataMedia.referenceType DIFF_CHECKSUMS_RESPONSE
+enum GdataMedia.referenceType DIFF_DOWNLOAD_RESPONSE
+enum GdataMedia.referenceType DIFF_UPLOAD_REQUEST
+enum GdataMedia.referenceType DIFF_UPLOAD_RESPONSE
+enum GdataMedia.referenceType DIFF_VERSION_RESPONSE
+enum GdataMedia.referenceType GET_MEDIA
+enum GdataMedia.referenceType INLINE
+enum GdataMedia.referenceType PATH
+enum GenerateAnswerRequest.answerStyle ABSTRACTIVE
+enum GenerateAnswerRequest.answerStyle ANSWER_STYLE_UNSPECIFIED
+enum GenerateAnswerRequest.answerStyle EXTRACTIVE
+enum GenerateAnswerRequest.answerStyle VERBOSE
+enum GenerateContentBatch.state BATCH_STATE_CANCELLED
+enum GenerateContentBatch.state BATCH_STATE_EXPIRED
+enum GenerateContentBatch.state BATCH_STATE_FAILED
+enum GenerateContentBatch.state BATCH_STATE_PENDING
+enum GenerateContentBatch.state BATCH_STATE_RUNNING
+enum GenerateContentBatch.state BATCH_STATE_SUCCEEDED
+enum GenerateContentBatch.state BATCH_STATE_UNSPECIFIED
+enum GenerateContentRequest.serviceTier flex
+enum GenerateContentRequest.serviceTier priority
+enum GenerateContentRequest.serviceTier standard
+enum GenerateContentRequest.serviceTier unspecified
+enum GeneratedFile.state FAILED
+enum GeneratedFile.state GENERATED
+enum GeneratedFile.state GENERATING
+enum GeneratedFile.state STATE_UNSPECIFIED
+enum GenerationConfig.mediaResolution MEDIA_RESOLUTION_HIGH
+enum GenerationConfig.mediaResolution MEDIA_RESOLUTION_LOW
+enum GenerationConfig.mediaResolution MEDIA_RESOLUTION_MEDIUM
+enum GenerationConfig.mediaResolution MEDIA_RESOLUTION_UNSPECIFIED
+enum GenerationConfig.responseModalities AUDIO
+enum GenerationConfig.responseModalities IMAGE
+enum GenerationConfig.responseModalities MODALITY_UNSPECIFIED
+enum GenerationConfig.responseModalities TEXT
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_EIGHT_BY_ONE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_FIVE_BY_FOUR
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_FOUR_BY_FIVE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_FOUR_BY_ONE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_FOUR_BY_THREE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_NINE_BY_SIXTEEN
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_ONE_BY_EIGHT
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_ONE_BY_FOUR
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_ONE_BY_ONE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_SIXTEEN_BY_NINE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_THREE_BY_FOUR
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_THREE_BY_TWO
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_TWENTY_ONE_BY_NINE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_TWO_BY_THREE
+enum ImageResponseFormat.aspectRatio ASPECT_RATIO_UNSPECIFIED
+enum ImageResponseFormat.delivery DELIVERY_UNSPECIFIED
+enum ImageResponseFormat.delivery INLINE
+enum ImageResponseFormat.delivery URI
+enum ImageResponseFormat.imageSize IMAGE_SIZE_FIVE_TWELVE
+enum ImageResponseFormat.imageSize IMAGE_SIZE_FOUR_K
+enum ImageResponseFormat.imageSize IMAGE_SIZE_ONE_K
+enum ImageResponseFormat.imageSize IMAGE_SIZE_TWO_K
+enum ImageResponseFormat.imageSize IMAGE_SIZE_UNSPECIFIED
+enum ImageResponseFormat.mimeType IMAGE_JPEG
+enum ImageResponseFormat.mimeType MIME_TYPE_UNSPECIFIED
+enum InputFeedback.blockReason BLOCK_REASON_UNSPECIFIED
+enum InputFeedback.blockReason OTHER
+enum InputFeedback.blockReason SAFETY
+enum ModalityTokenCount.modality AUDIO
+enum ModalityTokenCount.modality DOCUMENT
+enum ModalityTokenCount.modality IMAGE
+enum ModalityTokenCount.modality MODALITY_UNSPECIFIED
+enum ModalityTokenCount.modality TEXT
+enum ModalityTokenCount.modality VIDEO
+enum ModelStatus.modelStage DEPRECATED
+enum ModelStatus.modelStage EXPERIMENTAL
+enum ModelStatus.modelStage LEGACY
+enum ModelStatus.modelStage MODEL_STAGE_UNSPECIFIED
+enum ModelStatus.modelStage PREVIEW
+enum ModelStatus.modelStage RETIRED
+enum ModelStatus.modelStage STABLE
+enum ModelStatus.modelStage UNSTABLE_EXPERIMENTAL
+enum Part.mediaProcessing AGENTIC
+enum Part.mediaProcessing MEDIA_PROCESSING_UNSPECIFIED
+enum Part.mediaProcessing STATIC
+enum Permission.granteeType EVERYONE
+enum Permission.granteeType GRANTEE_TYPE_UNSPECIFIED
+enum Permission.granteeType GROUP
+enum Permission.granteeType USER
+enum Permission.role OWNER
+enum Permission.role READER
+enum Permission.role ROLE_UNSPECIFIED
+enum Permission.role WRITER
+enum PromptFeedback.blockReason BLOCKLIST
+enum PromptFeedback.blockReason BLOCK_REASON_UNSPECIFIED
+enum PromptFeedback.blockReason IMAGE_SAFETY
+enum PromptFeedback.blockReason OTHER
+enum PromptFeedback.blockReason PROHIBITED_CONTENT
+enum PromptFeedback.blockReason SAFETY
+enum RealtimeInputConfig.activityHandling ACTIVITY_HANDLING_UNSPECIFIED
+enum RealtimeInputConfig.activityHandling NO_INTERRUPTION
+enum RealtimeInputConfig.activityHandling START_OF_ACTIVITY_INTERRUPTS
+enum RealtimeInputConfig.turnCoverage TURN_COVERAGE_UNSPECIFIED
+enum RealtimeInputConfig.turnCoverage TURN_INCLUDES_ALL_INPUT
+enum RealtimeInputConfig.turnCoverage TURN_INCLUDES_AUDIO_ACTIVITY_AND_ALL_VIDEO
+enum RealtimeInputConfig.turnCoverage TURN_INCLUDES_ONLY_ACTIVITY
+enum SafetyRating.category HARM_CATEGORY_CIVIC_INTEGRITY
+enum SafetyRating.category HARM_CATEGORY_DANGEROUS
+enum SafetyRating.category HARM_CATEGORY_DANGEROUS_CONTENT
+enum SafetyRating.category HARM_CATEGORY_DEROGATORY
+enum SafetyRating.category HARM_CATEGORY_HARASSMENT
+enum SafetyRating.category HARM_CATEGORY_HATE_SPEECH
+enum SafetyRating.category HARM_CATEGORY_JAILBREAK
+enum SafetyRating.category HARM_CATEGORY_MEDICAL
+enum SafetyRating.category HARM_CATEGORY_SEXUAL
+enum SafetyRating.category HARM_CATEGORY_SEXUALLY_EXPLICIT
+enum SafetyRating.category HARM_CATEGORY_TOXICITY
+enum SafetyRating.category HARM_CATEGORY_UNSPECIFIED
+enum SafetyRating.category HARM_CATEGORY_VIOLENCE
+enum SafetyRating.probability HARM_PROBABILITY_UNSPECIFIED
+enum SafetyRating.probability HIGH
+enum SafetyRating.probability LOW
+enum SafetyRating.probability MEDIUM
+enum SafetyRating.probability NEGLIGIBLE
+enum SafetySetting.category HARM_CATEGORY_CIVIC_INTEGRITY
+enum SafetySetting.category HARM_CATEGORY_DANGEROUS
+enum SafetySetting.category HARM_CATEGORY_DANGEROUS_CONTENT
+enum SafetySetting.category HARM_CATEGORY_DEROGATORY
+enum SafetySetting.category HARM_CATEGORY_HARASSMENT
+enum SafetySetting.category HARM_CATEGORY_HATE_SPEECH
+enum SafetySetting.category HARM_CATEGORY_JAILBREAK
+enum SafetySetting.category HARM_CATEGORY_MEDICAL
+enum SafetySetting.category HARM_CATEGORY_SEXUAL
+enum SafetySetting.category HARM_CATEGORY_SEXUALLY_EXPLICIT
+enum SafetySetting.category HARM_CATEGORY_TOXICITY
+enum SafetySetting.category HARM_CATEGORY_UNSPECIFIED
+enum SafetySetting.category HARM_CATEGORY_VIOLENCE
+enum SafetySetting.threshold BLOCK_LOW_AND_ABOVE
+enum SafetySetting.threshold BLOCK_MEDIUM_AND_ABOVE
+enum SafetySetting.threshold BLOCK_NONE
+enum SafetySetting.threshold BLOCK_ONLY_HIGH
+enum SafetySetting.threshold HARM_BLOCK_THRESHOLD_UNSPECIFIED
+enum SafetySetting.threshold OFF
+enum Schema.type ARRAY
+enum Schema.type BOOLEAN
+enum Schema.type INTEGER
+enum Schema.type NULL
+enum Schema.type NUMBER
+enum Schema.type OBJECT
+enum Schema.type STRING
+enum Schema.type TYPE_UNSPECIFIED
+enum Source.type GCS
+enum Source.type INLINE
+enum Source.type REPOSITORY
+enum Source.type TYPE_UNSPECIFIED
+enum TextResponseFormat.mimeType APPLICATION_JSON
+enum TextResponseFormat.mimeType MIME_TYPE_UNSPECIFIED
+enum TextResponseFormat.mimeType TEXT_PLAIN
+enum ThinkingConfig.thinkingLevel HIGH
+enum ThinkingConfig.thinkingLevel LOW
+enum ThinkingConfig.thinkingLevel MEDIUM
+enum ThinkingConfig.thinkingLevel MINIMAL
+enum ThinkingConfig.thinkingLevel THINKING_LEVEL_UNSPECIFIED
+enum ThinkingConfig.thinkingLevel XHIGH
+enum ToolCall.toolType FILE_SEARCH
+enum ToolCall.toolType GOOGLE_MAPS
+enum ToolCall.toolType GOOGLE_SEARCH_IMAGE
+enum ToolCall.toolType GOOGLE_SEARCH_WEB
+enum ToolCall.toolType MEDIA_PROCESSING
+enum ToolCall.toolType TOOL_TYPE_UNSPECIFIED
+enum ToolCall.toolType URL_CONTEXT
+enum ToolResponse.toolType FILE_SEARCH
+enum ToolResponse.toolType GOOGLE_MAPS
+enum ToolResponse.toolType GOOGLE_SEARCH_IMAGE
+enum ToolResponse.toolType GOOGLE_SEARCH_WEB
+enum ToolResponse.toolType MEDIA_PROCESSING
+enum ToolResponse.toolType TOOL_TYPE_UNSPECIFIED
+enum ToolResponse.toolType URL_CONTEXT
+enum TunedModel.state ACTIVE
+enum TunedModel.state CREATING
+enum TunedModel.state FAILED
+enum TunedModel.state STATE_UNSPECIFIED
+enum UrlMetadata.urlRetrievalStatus URL_RETRIEVAL_STATUS_ERROR
+enum UrlMetadata.urlRetrievalStatus URL_RETRIEVAL_STATUS_PAYWALL
+enum UrlMetadata.urlRetrievalStatus URL_RETRIEVAL_STATUS_SUCCESS
+enum UrlMetadata.urlRetrievalStatus URL_RETRIEVAL_STATUS_UNSAFE
+enum UrlMetadata.urlRetrievalStatus URL_RETRIEVAL_STATUS_UNSPECIFIED
+enum UsageMetadata.serviceTier flex
+enum UsageMetadata.serviceTier priority
+enum UsageMetadata.serviceTier standard
+enum UsageMetadata.serviceTier unspecified
+enum V1mainMediaResolution.level MEDIA_RESOLUTION_HIGH
+enum V1mainMediaResolution.level MEDIA_RESOLUTION_LOW
+enum V1mainMediaResolution.level MEDIA_RESOLUTION_MEDIUM
+enum V1mainMediaResolution.level MEDIA_RESOLUTION_ULTRA_HIGH
+enum V1mainMediaResolution.level MEDIA_RESOLUTION_UNSPECIFIED
+method DELETE v1beta/environments/{id}:delete
+method DELETE v1beta/{+name}
+method GET v1beta/cachedContents
+method GET v1beta/corpora
+method GET v1beta/environments/{id}:get
+method GET v1beta/environments:list
+method GET v1beta/fileSearchStores
+method GET v1beta/files
+method GET v1beta/generatedFiles
+method GET v1beta/models
+method GET v1beta/tunedModels
+method GET v1beta/{+name}
+method GET v1beta/{+name}/operations
+method GET v1beta/{+parent}/documents
+method GET v1beta/{+parent}/files
+method GET v1beta/{+parent}/permissions
+method PATCH v1beta/{+name}
+method PATCH v1beta/{+name}:updateEmbedContentBatch
+method PATCH v1beta/{+name}:updateGenerateContentBatch
+method POST v1beta/auth_tokens
+method POST v1beta/cachedContents
+method POST v1beta/corpora
+method POST v1beta/environments:create
+method POST v1beta/fileSearchStores
+method POST v1beta/files
+method POST v1beta/files:register
+method POST v1beta/tunedModels
+method POST v1beta/{+fileSearchStoreName}:importFile
+method POST v1beta/{+fileSearchStoreName}:uploadToFileSearchStore
+method POST v1beta/{+model}:asyncBatchEmbedContent
+method POST v1beta/{+model}:batchEmbedContents
+method POST v1beta/{+model}:batchEmbedText
+method POST v1beta/{+model}:batchGenerateContent
+method POST v1beta/{+model}:countMessageTokens
+method POST v1beta/{+model}:countTextTokens
+method POST v1beta/{+model}:countTokens
+method POST v1beta/{+model}:embedContent
+method POST v1beta/{+model}:embedText
+method POST v1beta/{+model}:generateAnswer
+method POST v1beta/{+model}:generateContent
+method POST v1beta/{+model}:generateMessage
+method POST v1beta/{+model}:generateText
+method POST v1beta/{+model}:predict
+method POST v1beta/{+model}:predictLongRunning
+method POST v1beta/{+model}:streamGenerateContent
+method POST v1beta/{+name}:cancel
+method POST v1beta/{+name}:transferOwnership
+method POST v1beta/{+parent}/permissions
+method PUT v1beta/{+parent}/files/{+path}
+prop AsyncBatchEmbedContentRequest.batch
+prop AttributionSourceId.groundingPassage
+prop AttributionSourceId.semanticRetrieverChunk
+prop AudioResponseFormat.bitRate
+prop AudioResponseFormat.delivery
+prop AudioResponseFormat.mimeType
+prop AudioResponseFormat.sampleRate
+prop AudioTranscription.speakerLabel
+prop AudioTranscription.text
+prop AudioTranscription.words
+prop AudioTranscriptionConfig.adaptationPhrases
+prop AudioTranscriptionConfig.customVocabulary
+prop AudioTranscriptionConfig.diarization
+prop AudioTranscriptionConfig.languageAuto
+prop AudioTranscriptionConfig.languageCodes
+prop AudioTranscriptionConfig.languageHints
+prop AudioTranscriptionConfig.mode
+prop AudioTranscriptionConfig.sourceText
+prop AudioTranscriptionConfig.wordTimestamp
+prop AuthToken.bidiGenerateContentSetup
+prop AuthToken.expireTime
+prop AuthToken.fieldMask
+prop AuthToken.name
+prop AuthToken.newSessionExpireTime
+prop AuthToken.uses
+prop AutomaticActivityDetection.disabled
+prop AutomaticActivityDetection.endOfSpeechSensitivity
+prop AutomaticActivityDetection.prefixPaddingMs
+prop AutomaticActivityDetection.silenceDurationMs
+prop AutomaticActivityDetection.startOfSpeechSensitivity
+prop BatchEmbedContentsRequest.requests
+prop BatchEmbedContentsResponse.embeddings
+prop BatchEmbedContentsResponse.usageMetadata
+prop BatchEmbedTextRequest.requests
+prop BatchEmbedTextRequest.texts
+prop BatchEmbedTextResponse.embeddings
+prop BatchGenerateContentRequest.batch
+prop BatchStats.failedRequestCount
+prop BatchStats.pendingRequestCount
+prop BatchStats.requestCount
+prop BatchStats.successfulRequestCount
+prop BidiGenerateContentSetup.contextWindowCompression
+prop BidiGenerateContentSetup.generationConfig
+prop BidiGenerateContentSetup.historyConfig
+prop BidiGenerateContentSetup.inputAudioTranscription
+prop BidiGenerateContentSetup.labels
+prop BidiGenerateContentSetup.model
+prop BidiGenerateContentSetup.outputAudioTranscription
+prop BidiGenerateContentSetup.proactivity
+prop BidiGenerateContentSetup.realtimeInputConfig
+prop BidiGenerateContentSetup.sessionResumption
+prop BidiGenerateContentSetup.systemInstruction
+prop BidiGenerateContentSetup.tools
+prop Blob.data
+prop Blob.displayName
+prop Blob.mimeType
+prop Blobstore2Info.blobGeneration
+prop Blobstore2Info.blobId
+prop Blobstore2Info.downloadExternalReadToken
+prop Blobstore2Info.downloadReadHandle
+prop Blobstore2Info.readToken
+prop Blobstore2Info.uploadFragmentListCreationInfo
+prop Blobstore2Info.uploadMetadataContainer
+prop CachedContent.contents
+prop CachedContent.createTime
+prop CachedContent.displayName
+prop CachedContent.expireTime
+prop CachedContent.model
+prop CachedContent.name
+prop CachedContent.systemInstruction
+prop CachedContent.toolConfig
+prop CachedContent.tools
+prop CachedContent.ttl
+prop CachedContent.updateTime
+prop CachedContent.usageMetadata
+prop CachedContentUsageMetadata.totalTokenCount
+prop Candidate.avgLogprobs
+prop Candidate.citationMetadata
+prop Candidate.content
+prop Candidate.continuationToken
+prop Candidate.finishMessage
+prop Candidate.finishReason
+prop Candidate.groundingAttributions
+prop Candidate.groundingMetadata
+prop Candidate.index
+prop Candidate.logprobsResult
+prop Candidate.safetyRatings
+prop Candidate.tokenCount
+prop Candidate.urlContextMetadata
+prop ChunkingConfig.whiteSpaceConfig
+prop CitationMetadata.citationSources
+prop CitationSource.endIndex
+prop CitationSource.license
+prop CitationSource.startIndex
+prop CitationSource.uri
+prop CodeExecutionResult.id
+prop CodeExecutionResult.outcome
+prop CodeExecutionResult.output
+prop CompositeMedia.blobRef
+prop CompositeMedia.blobstore2Info
+prop CompositeMedia.cosmoBinaryReference
+prop CompositeMedia.crc32cHash
+prop CompositeMedia.inline
+prop CompositeMedia.length
+prop CompositeMedia.md5Hash
+prop CompositeMedia.objectId
+prop CompositeMedia.path
+prop CompositeMedia.referenceType
+prop CompositeMedia.sha1Hash
+prop ComputerUse.disabledSafetyPolicies
+prop ComputerUse.enablePromptInjectionDetection
+prop ComputerUse.environment
+prop ComputerUse.excludedPredefinedFunctions
+prop Condition.numericValue
+prop Condition.operation
+prop Condition.stringValue
+prop Content.parts
+prop Content.role
+prop ContentEmbedding.shape
+prop ContentEmbedding.values
+prop ContentFilter.message
+prop ContentFilter.reason
+prop ContentTypeInfo.bestGuess
+prop ContentTypeInfo.fromBytes
+prop ContentTypeInfo.fromFileName
+prop ContentTypeInfo.fromFusionId
+prop ContentTypeInfo.fromHeader
+prop ContentTypeInfo.fromUrlPath
+prop ContentTypeInfo.fusionIdDetectionMetadata
+prop ContextWindowCompressionConfig.slidingWindow
+prop ContextWindowCompressionConfig.triggerTokens
+prop Corpus.createTime
+prop Corpus.displayName
+prop Corpus.name
+prop Corpus.updateTime
+prop CountMessageTokensRequest.prompt
+prop CountMessageTokensResponse.tokenCount
+prop CountTextTokensRequest.prompt
+prop CountTextTokensResponse.tokenCount
+prop CountTokensRequest.contents
+prop CountTokensRequest.generateContentRequest
+prop CountTokensResponse.cacheTokensDetails
+prop CountTokensResponse.cachedContentTokenCount
+prop CountTokensResponse.promptTokensDetails
+prop CountTokensResponse.totalTokens
+prop CreateEnvironmentRequest.customConfig
+prop CreateEnvironmentRequest.fromEnvironment
+prop CreateEnvironmentRequest.mode
+prop CreateEnvironmentRequest.networkAllowlist
+prop CreateEnvironmentRequest.networkMode
+prop CreateEnvironmentRequest.sources
+prop CreateEnvironmentRequest.systemInstruction
+prop CreateFileRequest.file
+prop CreateFileResponse.file
+prop CustomLongRunningOperation.done
+prop CustomLongRunningOperation.error
+prop CustomLongRunningOperation.metadata
+prop CustomLongRunningOperation.name
+prop CustomLongRunningOperation.response
+prop CustomMetadata.key
+prop CustomMetadata.numericValue
+prop CustomMetadata.stringListValue
+prop CustomMetadata.stringValue
+prop Dataset.examples
+prop DiffChecksumsResponse.checksumsLocation
+prop DiffChecksumsResponse.chunkSizeBytes
+prop DiffChecksumsResponse.objectLocation
+prop DiffChecksumsResponse.objectSizeBytes
+prop DiffChecksumsResponse.objectVersion
+prop DiffDownloadResponse.objectLocation
+prop DiffUploadRequest.checksumsInfo
+prop DiffUploadRequest.objectInfo
+prop DiffUploadRequest.objectVersion
+prop DiffUploadResponse.objectVersion
+prop DiffUploadResponse.originalObject
+prop DiffVersionResponse.objectSizeBytes
+prop DiffVersionResponse.objectVersion
+prop Document.createTime
+prop Document.customMetadata
+prop Document.displayName
+prop Document.mimeType
+prop Document.name
+prop Document.sizeBytes
+prop Document.state
+prop Document.updateTime
+prop DownloadMediaResponse.blob
+prop DownloadParameters.allowGzipCompression
+prop DownloadParameters.ignoreRange
+prop DynamicRetrievalConfig.dynamicThreshold
+prop DynamicRetrievalConfig.mode
+prop EgressRule.credential
+prop EgressRule.domain
+prop EgressRule.mode
+prop EgressRule.transform
+prop EmbedContentBatch.batchStats
+prop EmbedContentBatch.createTime
+prop EmbedContentBatch.displayName
+prop EmbedContentBatch.endTime
+prop EmbedContentBatch.inputConfig
+prop EmbedContentBatch.model
+prop EmbedContentBatch.name
+prop EmbedContentBatch.output
+prop EmbedContentBatch.priority
+prop EmbedContentBatch.state
+prop EmbedContentBatch.updateTime
+prop EmbedContentBatchOutput.inlinedResponses
+prop EmbedContentBatchOutput.responsesFile
+prop EmbedContentBatchStats.failedRequestCount
+prop EmbedContentBatchStats.pendingRequestCount
+prop EmbedContentBatchStats.requestCount
+prop EmbedContentBatchStats.successfulRequestCount
+prop EmbedContentConfig.audioTrackExtraction
+prop EmbedContentConfig.autoTruncate
+prop EmbedContentConfig.documentOcr
+prop EmbedContentConfig.outputDimensionality
+prop EmbedContentConfig.taskType
+prop EmbedContentConfig.title
+prop EmbedContentRequest.content
+prop EmbedContentRequest.embedContentConfig
+prop EmbedContentRequest.model
+prop EmbedContentRequest.outputDimensionality
+prop EmbedContentRequest.taskType
+prop EmbedContentRequest.title
+prop EmbedContentResponse.embedding
+prop EmbedContentResponse.usageMetadata
+prop EmbedTextRequest.model
+prop EmbedTextRequest.text
+prop EmbedTextResponse.embedding
+prop Embedding.value
+prop EmbeddingUsageMetadata.promptTokenCount
+prop EmbeddingUsageMetadata.promptTokenDetails
+prop Environment.created
+prop Environment.customConfig
+prop Environment.environmentKey
+prop Environment.fileCount
+prop Environment.id
+prop Environment.lastAccessed
+prop Environment.mode
+prop Environment.networkAllowlist
+prop Environment.networkMode
+prop Environment.sizeBytes
+prop Environment.sources
+prop Environment.status
+prop Environment.updated
+prop EnvironmentFile.created
+prop EnvironmentFile.mime_type
+prop EnvironmentFile.modified
+prop EnvironmentFile.name
+prop EnvironmentFile.path
+prop EnvironmentFile.size_bytes
+prop EnvironmentFile.type
+prop EnvironmentNetworkEgressAllowlist.allowlist
+prop Example.input
+prop Example.output
+prop ExecutableCode.code
+prop ExecutableCode.id
+prop ExecutableCode.language
+prop File.createTime
+prop File.displayName
+prop File.downloadUri
+prop File.error
+prop File.expirationTime
+prop File.mimeType
+prop File.name
+prop File.sha256Hash
+prop File.sizeBytes
+prop File.source
+prop File.state
+prop File.updateTime
+prop File.uri
+prop File.videoMetadata
+prop FileData.displayName
+prop FileData.fileUri
+prop FileData.mimeType
+prop FileSearch.fileSearchStoreNames
+prop FileSearch.metadataFilter
+prop FileSearch.topK
+prop FileSearchStore.activeDocumentsCount
+prop FileSearchStore.createTime
+prop FileSearchStore.displayName
+prop FileSearchStore.embeddingModel
+prop FileSearchStore.failedDocumentsCount
+prop FileSearchStore.name
+prop FileSearchStore.pendingDocumentsCount
+prop FileSearchStore.sizeBytes
+prop FileSearchStore.updateTime
+prop FunctionCall.args
+prop FunctionCall.id
+prop FunctionCall.name
+prop FunctionCallingConfig.allowedFunctionNames
+prop FunctionCallingConfig.mode
+prop FunctionDeclaration.behavior
+prop FunctionDeclaration.description
+prop FunctionDeclaration.name
+prop FunctionDeclaration.parameters
+prop FunctionDeclaration.parametersJsonSchema
+prop FunctionDeclaration.response
+prop FunctionDeclaration.responseJsonSchema
+prop FunctionResponse.id
+prop FunctionResponse.name
+prop FunctionResponse.parts
+prop FunctionResponse.response
+prop FunctionResponse.scheduling
+prop FunctionResponse.willContinue
+prop FunctionResponseBlob.data
+prop FunctionResponseBlob.displayName
+prop FunctionResponseBlob.mimeType
+prop FunctionResponseFileData.displayName
+prop FunctionResponseFileData.fileUri
+prop FunctionResponseFileData.mimeType
+prop FunctionResponsePart.fileData
+prop FunctionResponsePart.inlineData
+prop FunctionResponsePart.mediaProcessing
+prop GdataMedia.algorithm
+prop GdataMedia.bigstoreObjectRef
+prop GdataMedia.blobRef
+prop GdataMedia.blobstore2Info
+prop GdataMedia.compositeMedia
+prop GdataMedia.contentType
+prop GdataMedia.contentTypeInfo
+prop GdataMedia.cosmoBinaryReference
+prop GdataMedia.crc32cHash
+prop GdataMedia.diffChecksumsResponse
+prop GdataMedia.diffDownloadResponse
+prop GdataMedia.diffUploadRequest
+prop GdataMedia.diffUploadResponse
+prop GdataMedia.diffVersionResponse
+prop GdataMedia.downloadParameters
+prop GdataMedia.filename
+prop GdataMedia.hash
+prop GdataMedia.hashVerified
+prop GdataMedia.inline
+prop GdataMedia.isPotentialRetry
+prop GdataMedia.length
+prop GdataMedia.md5Hash
+prop GdataMedia.mediaId
+prop GdataMedia.objectId
+prop GdataMedia.path
+prop GdataMedia.referenceType
+prop GdataMedia.sha1Hash
+prop GdataMedia.sha256Hash
+prop GdataMedia.sha512Hash
+prop GdataMedia.timestamp
+prop GdataMedia.token
+prop GenerateAnswerRequest.answerStyle
+prop GenerateAnswerRequest.contents
+prop GenerateAnswerRequest.inlinePassages
+prop GenerateAnswerRequest.safetySettings
+prop GenerateAnswerRequest.semanticRetriever
+prop GenerateAnswerRequest.temperature
+prop GenerateAnswerResponse.answer
+prop GenerateAnswerResponse.answerableProbability
+prop GenerateAnswerResponse.inputFeedback
+prop GenerateContentBatch.batchStats
+prop GenerateContentBatch.createTime
+prop GenerateContentBatch.displayName
+prop GenerateContentBatch.endTime
+prop GenerateContentBatch.inputConfig
+prop GenerateContentBatch.model
+prop GenerateContentBatch.name
+prop GenerateContentBatch.output
+prop GenerateContentBatch.priority
+prop GenerateContentBatch.state
+prop GenerateContentBatch.updateTime
+prop GenerateContentBatchOutput.inlinedResponses
+prop GenerateContentBatchOutput.responsesFile
+prop GenerateContentRequest.cachedContent
+prop GenerateContentRequest.contents
+prop GenerateContentRequest.continuationToken
+prop GenerateContentRequest.generationConfig
+prop GenerateContentRequest.labels
+prop GenerateContentRequest.model
+prop GenerateContentRequest.safetySettings
+prop GenerateContentRequest.serviceTier
+prop GenerateContentRequest.store
+prop GenerateContentRequest.systemInstruction
+prop GenerateContentRequest.toolConfig
+prop GenerateContentRequest.tools
+prop GenerateContentResponse.candidates
+prop GenerateContentResponse.modelStatus
+prop GenerateContentResponse.modelVersion
+prop GenerateContentResponse.promptFeedback
+prop GenerateContentResponse.responseId
+prop GenerateContentResponse.usageMetadata
+prop GenerateMessageRequest.candidateCount
+prop GenerateMessageRequest.prompt
+prop GenerateMessageRequest.temperature
+prop GenerateMessageRequest.topK
+prop GenerateMessageRequest.topP
+prop GenerateMessageResponse.candidates
+prop GenerateMessageResponse.filters
+prop GenerateMessageResponse.messages
+prop GenerateTextRequest.candidateCount
+prop GenerateTextRequest.maxOutputTokens
+prop GenerateTextRequest.prompt
+prop GenerateTextRequest.safetySettings
+prop GenerateTextRequest.stopSequences
+prop GenerateTextRequest.temperature
+prop GenerateTextRequest.topK
+prop GenerateTextRequest.topP
+prop GenerateTextResponse.candidates
+prop GenerateTextResponse.filters
+prop GenerateTextResponse.safetyFeedback
+prop GeneratedFile.error
+prop GeneratedFile.mimeType
+prop GeneratedFile.name
+prop GeneratedFile.state
+prop GenerationConfig._responseJsonSchema
+prop GenerationConfig.audioTranscriptionConfig
+prop GenerationConfig.candidateCount
+prop GenerationConfig.enableAffectiveDialog
+prop GenerationConfig.enableEnhancedCivicAnswers
+prop GenerationConfig.frequencyPenalty
+prop GenerationConfig.imageConfig
+prop GenerationConfig.logprobs
+prop GenerationConfig.maxOutputTokens
+prop GenerationConfig.mediaResolution
+prop GenerationConfig.presencePenalty
+prop GenerationConfig.responseFormat
+prop GenerationConfig.responseJsonSchema
+prop GenerationConfig.responseLogprobs
+prop GenerationConfig.responseMimeType
+prop GenerationConfig.responseModalities
+prop GenerationConfig.responseSchema
+prop GenerationConfig.seed
+prop GenerationConfig.speechConfig
+prop GenerationConfig.stopSequences
+prop GenerationConfig.temperature
+prop GenerationConfig.thinkingConfig
+prop GenerationConfig.topK
+prop GenerationConfig.topP
+prop GenerationConfig.translationConfig
+prop GetEnvironmentFilesResponse.files
+prop GetEnvironmentFilesResponse.next_page_token
+prop GoogleAiGenerativelanguageV1betaGroundingSupport.confidenceScores
+prop GoogleAiGenerativelanguageV1betaGroundingSupport.groundingChunkIndices
+prop GoogleAiGenerativelanguageV1betaGroundingSupport.renderedParts
+prop GoogleAiGenerativelanguageV1betaGroundingSupport.segment
+prop GoogleAiGenerativelanguageV1betaSegment.endIndex
+prop GoogleAiGenerativelanguageV1betaSegment.partIndex
+prop GoogleAiGenerativelanguageV1betaSegment.startIndex
+prop GoogleAiGenerativelanguageV1betaSegment.text
+prop GoogleMaps.enableWidget
+prop GoogleSearch.searchTypes
+prop GoogleSearch.timeRangeFilter
+prop GoogleSearchRetrieval.dynamicRetrievalConfig
+prop GroundingAttribution.content
+prop GroundingAttribution.sourceId
+prop GroundingChunk.image
+prop GroundingChunk.maps
+prop GroundingChunk.retrievedContext
+prop GroundingChunk.web
+prop GroundingChunkCustomMetadata.key
+prop GroundingChunkCustomMetadata.numericValue
+prop GroundingChunkCustomMetadata.stringListValue
+prop GroundingChunkCustomMetadata.stringValue
+prop GroundingChunkStringList.values
+prop GroundingMetadata.googleMapsWidgetContextToken
+prop GroundingMetadata.groundingChunks
+prop GroundingMetadata.groundingSupports
+prop GroundingMetadata.imageSearchQueries
+prop GroundingMetadata.retrievalMetadata
+prop GroundingMetadata.searchEntryPoint
+prop GroundingMetadata.webSearchQueries
+prop GroundingPassage.content
+prop GroundingPassage.id
+prop GroundingPassageId.partIndex
+prop GroundingPassageId.passageId
+prop GroundingPassages.passages
+prop HistoryConfig.initialHistoryInClientContent
+prop HttpBody.contentType
+prop HttpBody.data
+prop HttpBody.extensions
+prop Hyperparameters.batchSize
+prop Hyperparameters.epochCount
+prop Hyperparameters.learningRate
+prop Hyperparameters.learningRateMultiplier
+prop Image.domain
+prop Image.imageUri
+prop Image.sourceUri
+prop Image.title
+prop ImageConfig.aspectRatio
+prop ImageConfig.imageSize
+prop ImageResponseFormat.aspectRatio
+prop ImageResponseFormat.delivery
+prop ImageResponseFormat.imageSize
+prop ImageResponseFormat.mimeType
+prop ImportFileRequest.chunkingConfig
+prop ImportFileRequest.customMetadata
+prop ImportFileRequest.fileName
+prop InlinedEmbedContentRequest.metadata
+prop InlinedEmbedContentRequest.request
+prop InlinedEmbedContentRequests.requests
+prop InlinedEmbedContentResponse.error
+prop InlinedEmbedContentResponse.metadata
+prop InlinedEmbedContentResponse.response
+prop InlinedEmbedContentResponses.inlinedResponses
+prop InlinedRequest.metadata
+prop InlinedRequest.request
+prop InlinedRequests.requests
+prop InlinedResponse.error
+prop InlinedResponse.metadata
+prop InlinedResponse.response
+prop InlinedResponses.inlinedResponses
+prop InputConfig.fileName
+prop InputConfig.requests
+prop InputEmbedContentConfig.fileName
+prop InputEmbedContentConfig.requests
+prop InputFeedback.blockReason
+prop InputFeedback.safetyRatings
+prop Interval.endTime
+prop Interval.startTime
+prop LanguageHints.languageCodes
+prop LatLng.latitude
+prop LatLng.longitude
+prop ListCachedContentsResponse.cachedContents
+prop ListCachedContentsResponse.nextPageToken
+prop ListCorporaResponse.corpora
+prop ListCorporaResponse.nextPageToken
+prop ListDocumentsResponse.documents
+prop ListDocumentsResponse.nextPageToken
+prop ListEnvironmentsResponse.environments
+prop ListEnvironmentsResponse.nextPageToken
+prop ListFileSearchStoresResponse.fileSearchStores
+prop ListFileSearchStoresResponse.nextPageToken
+prop ListFilesResponse.files
+prop ListFilesResponse.nextPageToken
+prop ListGeneratedFilesResponse.generatedFiles
+prop ListGeneratedFilesResponse.nextPageToken
+prop ListModelsResponse.models
+prop ListModelsResponse.nextPageToken
+prop ListOperationsResponse.nextPageToken
+prop ListOperationsResponse.operations
+prop ListOperationsResponse.unreachable
+prop ListPermissionsResponse.nextPageToken
+prop ListPermissionsResponse.permissions
+prop ListTunedModelsResponse.nextPageToken
+prop ListTunedModelsResponse.tunedModels
+prop LogprobsResult.chosenCandidates
+prop LogprobsResult.logProbabilitySum
+prop LogprobsResult.topCandidates
+prop LogprobsResultCandidate.logProbability
+prop LogprobsResultCandidate.token
+prop LogprobsResultCandidate.tokenId
+prop Maps.placeAnswerSources
+prop Maps.placeId
+prop Maps.text
+prop Maps.title
+prop Maps.uri
+prop McpServer.name
+prop McpServer.streamableHttpTransport
+prop Message.author
+prop Message.citationMetadata
+prop Message.content
+prop MessagePrompt.context
+prop MessagePrompt.examples
+prop MessagePrompt.messages
+prop MetadataFilter.conditions
+prop MetadataFilter.key
+prop ModalityTokenCount.modality
+prop ModalityTokenCount.tokenCount
+prop Model.baseModelId
+prop Model.description
+prop Model.displayName
+prop Model.inputTokenLimit
+prop Model.maxTemperature
+prop Model.name
+prop Model.outputTokenLimit
+prop Model.supportedGenerationMethods
+prop Model.temperature
+prop Model.thinking
+prop Model.topK
+prop Model.topP
+prop Model.version
+prop ModelStatus.message
+prop ModelStatus.modelStage
+prop ModelStatus.retirementTime
+prop MultiSpeakerVoiceConfig.speakerVoiceConfigs
+prop ObjectId.bucketName
+prop ObjectId.generation
+prop ObjectId.objectName
+prop Operation.done
+prop Operation.error
+prop Operation.metadata
+prop Operation.name
+prop Operation.response
+prop Part.audioTranscription
+prop Part.codeExecutionResult
+prop Part.executableCode
+prop Part.fileData
+prop Part.functionCall
+prop Part.functionResponse
+prop Part.inlineData
+prop Part.mediaProcessing
+prop Part.mediaResolution
+prop Part.partMetadata
+prop Part.speechMetadata
+prop Part.text
+prop Part.thought
+prop Part.thoughtSignature
+prop Part.toolCall
+prop Part.toolResponse
+prop Part.videoMetadata
+prop Permission.emailAddress
+prop Permission.granteeType
+prop Permission.name
+prop Permission.role
+prop PlaceAnswerSources.reviewSnippets
+prop PrebuiltVoiceConfig.voiceName
+prop PredictLongRunningRequest.instances
+prop PredictLongRunningRequest.labels
+prop PredictLongRunningRequest.parameters
+prop PredictRequest.instances
+prop PredictRequest.labels
+prop PredictRequest.parameters
+prop PredictResponse.predictions
+prop ProactivityConfig.proactiveAudio
+prop ProactivityConfig.proactiveVideo
+prop PromptFeedback.blockReason
+prop PromptFeedback.safetyRatings
+prop RealtimeInputConfig.activityHandling
+prop RealtimeInputConfig.automaticActivityDetection
+prop RealtimeInputConfig.interimTranscriptTimestampEnabled
+prop RealtimeInputConfig.turnCoverage
+prop RegisterFilesRequest.uris
+prop RegisterFilesResponse.files
+prop ResponseFormatConfig.audio
+prop ResponseFormatConfig.image
+prop ResponseFormatConfig.text
+prop RetrievalConfig.languageCode
+prop RetrievalConfig.latLng
+prop RetrievalMetadata.googleSearchDynamicRetrievalScore
+prop RetrievedContext.customMetadata
+prop RetrievedContext.fileSearchStore
+prop RetrievedContext.mediaId
+prop RetrievedContext.pageNumber
+prop RetrievedContext.text
+prop RetrievedContext.title
+prop RetrievedContext.uri
+prop ReviewSnippet.googleMapsUri
+prop ReviewSnippet.reviewId
+prop ReviewSnippet.title
+prop SafetyFeedback.rating
+prop SafetyFeedback.setting
+prop SafetyRating.blocked
+prop SafetyRating.category
+prop SafetyRating.probability
+prop SafetySetting.category
+prop SafetySetting.threshold
+prop Schema.anyOf
+prop Schema.default
+prop Schema.description
+prop Schema.enum
+prop Schema.example
+prop Schema.format
+prop Schema.items
+prop Schema.maxItems
+prop Schema.maxLength
+prop Schema.maxProperties
+prop Schema.maximum
+prop Schema.minItems
+prop Schema.minLength
+prop Schema.minProperties
+prop Schema.minimum
+prop Schema.nullable
+prop Schema.pattern
+prop Schema.properties
+prop Schema.propertyOrdering
+prop Schema.required
+prop Schema.title
+prop Schema.type
+prop SearchEntryPoint.renderedContent
+prop SearchEntryPoint.sdkBlob
+prop SearchTypes.imageSearch
+prop SearchTypes.webSearch
+prop SemanticRetrieverChunk.chunk
+prop SemanticRetrieverChunk.source
+prop SemanticRetrieverConfig.maxChunksCount
+prop SemanticRetrieverConfig.metadataFilters
+prop SemanticRetrieverConfig.minimumRelevanceScore
+prop SemanticRetrieverConfig.query
+prop SemanticRetrieverConfig.source
+prop SessionResumptionConfig.handle
+prop SlidingWindow.targetTokens
+prop Source.content
+prop Source.encoding
+prop Source.source
+prop Source.target
+prop Source.type
+prop SpeakerVoiceConfig.speaker
+prop SpeakerVoiceConfig.voiceConfig
+prop SpeechConfig.languageCode
+prop SpeechConfig.multiSpeakerVoiceConfig
+prop SpeechConfig.voiceConfig
+prop SpeechMetadata.speaker
+prop SpeechMetadata.style
+prop Status.code
+prop Status.details
+prop Status.message
+prop StreamableHttpTransport.headers
+prop StreamableHttpTransport.sseReadTimeout
+prop StreamableHttpTransport.terminateOnClose
+prop StreamableHttpTransport.timeout
+prop StreamableHttpTransport.url
+prop StringList.values
+prop TextCompletion.citationMetadata
+prop TextCompletion.output
+prop TextCompletion.safetyRatings
+prop TextPrompt.text
+prop TextResponseFormat.mimeType
+prop TextResponseFormat.schema
+prop ThinkingConfig.includeThoughts
+prop ThinkingConfig.thinkingBudget
+prop ThinkingConfig.thinkingLevel
+prop Tool.codeExecution
+prop Tool.computerUse
+prop Tool.fileSearch
+prop Tool.functionDeclarations
+prop Tool.googleMaps
+prop Tool.googleSearch
+prop Tool.googleSearchRetrieval
+prop Tool.mcpServers
+prop Tool.urlContext
+prop ToolCall.args
+prop ToolCall.id
+prop ToolCall.toolName
+prop ToolCall.toolType
+prop ToolConfig.functionCallingConfig
+prop ToolConfig.includeServerSideToolInvocations
+prop ToolConfig.retrievalConfig
+prop ToolResponse.id
+prop ToolResponse.response
+prop ToolResponse.toolType
+prop TopCandidates.candidates
+prop TransferOwnershipRequest.emailAddress
+prop TranslationConfig.echoTargetLanguage
+prop TranslationConfig.targetLanguageCode
+prop TunedModel.baseModel
+prop TunedModel.createTime
+prop TunedModel.description
+prop TunedModel.displayName
+prop TunedModel.name
+prop TunedModel.readerProjectNumbers
+prop TunedModel.state
+prop TunedModel.temperature
+prop TunedModel.topK
+prop TunedModel.topP
+prop TunedModel.tunedModelSource
+prop TunedModel.tuningTask
+prop TunedModel.updateTime
+prop TunedModelSource.baseModel
+prop TunedModelSource.tunedModel
+prop TuningExample.output
+prop TuningExample.textInput
+prop TuningExamples.examples
+prop TuningSnapshot.computeTime
+prop TuningSnapshot.epoch
+prop TuningSnapshot.meanLoss
+prop TuningSnapshot.step
+prop TuningTask.completeTime
+prop TuningTask.hyperparameters
+prop TuningTask.snapshots
+prop TuningTask.startTime
+prop TuningTask.trainingData
+prop UploadEnvironmentFileRequest.extract
+prop UploadEnvironmentFileRequest.overwrite
+prop UploadEnvironmentFileResponse.files
+prop UploadToFileSearchStoreRequest.chunkingConfig
+prop UploadToFileSearchStoreRequest.customMetadata
+prop UploadToFileSearchStoreRequest.displayName
+prop UploadToFileSearchStoreRequest.mimeType
+prop UrlContextMetadata.urlMetadata
+prop UrlMetadata.retrievedUrl
+prop UrlMetadata.urlRetrievalStatus
+prop UsageMetadata.cacheTokensDetails
+prop UsageMetadata.cachedContentTokenCount
+prop UsageMetadata.candidatesTokenCount
+prop UsageMetadata.candidatesTokensDetails
+prop UsageMetadata.promptTokenCount
+prop UsageMetadata.promptTokensDetails
+prop UsageMetadata.serviceTier
+prop UsageMetadata.thoughtsTokenCount
+prop UsageMetadata.toolUsePromptTokenCount
+prop UsageMetadata.toolUsePromptTokensDetails
+prop UsageMetadata.totalTokenCount
+prop V1mainCreateTunedModelMetadata.completedPercent
+prop V1mainCreateTunedModelMetadata.completedSteps
+prop V1mainCreateTunedModelMetadata.snapshots
+prop V1mainCreateTunedModelMetadata.totalSteps
+prop V1mainCreateTunedModelMetadata.tunedModel
+prop V1mainMediaResolution.level
+prop V1mainTuningSnapshot.computeTime
+prop V1mainTuningSnapshot.epoch
+prop V1mainTuningSnapshot.meanLoss
+prop V1mainTuningSnapshot.step
+prop VideoFileMetadata.videoDuration
+prop VideoMetadata.endOffset
+prop VideoMetadata.fps
+prop VideoMetadata.startOffset
+prop VoiceConfig.prebuiltVoiceConfig
+prop VoiceConfig.voice
+prop Web.title
+prop Web.uri
+prop WhiteSpaceConfig.maxOverlapTokens
+prop WhiteSpaceConfig.maxTokensPerChunk
+prop WordInfo.endOffset
+prop WordInfo.startOffset
+prop WordInfo.word

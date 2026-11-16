@@ -10,6 +10,8 @@ Update, October 2026: Google shuts down all three models this plan covers on 202
 replacement models change the request shape. `PLAN-tts-3-8.md` records what we found and what
 `6.8.0` changed. Read it before you rely on §2 below.
 
+Update, November 2026: Google moved that shutdown date to 2026-12-18. See `PLAN-tts-3-8.md`.
+
 ## 1. Goal
 
 Let a caller turn text into spoken audio with Gemini's native TTS models, with the same low friction
