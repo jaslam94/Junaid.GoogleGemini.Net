@@ -140,7 +140,8 @@ switches later, your budget counts a few hours of calls at the higher rate. That
 side. The `gemini-2.5-pro` route on the same day lowers a price, so it uses 08:00 UTC instead.
 
 Hydrogen thinks at `high` by default. A call can therefore use more tokens than the same call on
-`gemini-3.8-flash`, even though the two models cost the same per token from 2027-01-01.
+`gemini-3.8-flash`. From 2027-01-01 the two models have the same input and output rates. Hydrogen's
+cached rate is lower.
 
 You can schedule a change in your own overrides in the same way:
 

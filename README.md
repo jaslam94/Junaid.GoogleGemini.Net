@@ -155,14 +155,15 @@ Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`,
 >   `low`, `medium` and `high`, and return HTTP 400 for `xhigh`. Google says no Gemini 4 model
 >   supports `minimal`. Hydrogen and Carbon returned HTTP 400 for it in our live tests. We did not test
 >   Argon. Hydrogen thinks at `high` by default. Carbon and Argon think at `medium`.
-> - **No explicit caching.** `ICachingService.CreateAsync` returns HTTP 400 for these models. Gemini 4
->   uses implicit caching for prompts of 4,096 tokens or more.
+> - **No explicit caching.** Google says these models do not support it. `ICachingService.CreateAsync`
+>   returned HTTP 400 for Hydrogen and Carbon in our live tests. We did not test Argon. Gemini 4 uses
+>   implicit caching for prompts of 4,096 tokens or more.
 > - **Sampling fields.** The models ignore `temperature`, `topP` and `topK`.
 > - **Price change.** Carbon and Argon cost twice as much from 1 December 2026. The cost governor
 >   switches rates at 00:00 UTC on that day. See [cost governance](docs/articles/cost-governance.md).
 > - **The default model stays `gemini-3.8-flash`.** Google now recommends Hydrogen. But Hydrogen thinks
->   at `high` by default, so one call can use more tokens. It also costs twice as much per token until
->   1 January 2027. The default will change only after someone measures the same prompts on both
+>   at `high` by default, so one call can use more tokens. It also costs twice as much per input and
+>   output token until 1 January 2027. The default will change only after someone measures the same prompts on both
 >   models. To use Hydrogen now, set `Model = GeminiConstants.Models.Gemini4Hydrogen`.
 
 > **Storage.** Since 26 October 2026, Google stores `generateContent` requests by default for new paid

@@ -122,7 +122,8 @@ public sealed class GeminiCostGovernor : ICostGovernor
     /// Built-in USD-per-1,000,000-token pricing, re-verified against
     /// <see href="https://ai.google.dev/gemini-api/docs/pricing">Google's published pricing page</see>
     /// on 2026-10-10 (paid tier, Standard rate), and compared again on 2026-11-15 (no rate changed).
-    /// The three Gemini 4 models were added and checked against the same page on 2026-11-18. Entries with an introductory price carry the rate that
+    /// The three Gemini 4 models were added and checked against the same page on 2026-11-18.
+    /// Entries with an introductory price carry the rate that
     /// starts on 2027-01-01 in <see cref="ModelPricing.NextPricing"/>, and the governor switches to it
     /// on that date. This snapshot WILL still go stale as Google updates prices. Override via
     /// <see cref="BudgetOptions.ModelPricingOverrides"/> for accuracy, especially in production.

@@ -832,13 +832,13 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       1. Constants for `gemini-4-hydrogen`, `gemini-4-carbon` and `gemini-4-argon`, listed in
          `ContentGenerationModels`, and `ThinkingLevels.XHigh`. Only Hydrogen accepts `xhigh`. The default
          model stays `gemini-3.8-flash`. Google now recommends Hydrogen. But Hydrogen thinks at `high` by
-         default, so a call can use more tokens, and it costs twice as much per token until 2027-01-01.
+         default, so a call can use more tokens, and its input and output tokens cost twice as much until 2027-01-01.
          The default changes in `6.11.0`, after the same prompts run on both models.
       2. Governor prices. Hydrogen has one rate. Carbon and Argon switch at 00:00 UTC on 2026-12-01.
          Google gives no time zone. This change raises the price, so the earliest plausible hour never
          undercounts a budget. The 2.5 Pro route lowers a price and uses 08:00 UTC. None of the three
-         models has a high-volume tier. We read Google's pricing page again on 2026-11-18, and every
-         rate matched.
+         models has a high-volume tier. We read the Gemini 4 sections of Google's pricing page on
+         2026-11-18, and every rate matched. We did not re-check the other models that day.
       3. `GeminiRequestOptions.Store` (nullable). Since 2026-10-26, Google stores `generateContent`
          requests by default for new paid projects. `Store = false` opts a request out. The value
          must be copied in five places: four methods in `RequestFactory` and `Clone()`. Missing one

@@ -83,8 +83,9 @@ The response's `Usage.CachedContentTokenCount` shows how many tokens were served
 > error. Cached content also has a per-model minimum token count (for example, roughly 1,024 for Gemini 2.5 Flash).
 
 > **Note:** the Gemini 4 models (`gemini-4-hydrogen`, `gemini-4-carbon` and `gemini-4-argon`) do not
-> support explicit caching. `CreateAsync` returns HTTP 400 ("Explicit caching is not supported"). We
-> checked this live on 2026-11-16. These models use implicit caching instead. It works for prompts of
+> support explicit caching. `CreateAsync` returned HTTP 400 ("Explicit caching is not supported") for
+> Hydrogen and Carbon in our live tests on 2026-11-16. We did not test Argon, but Google's pricing
+> page says the same for it. These models use implicit caching instead. It works for prompts of
 > 4,096 tokens or more, and Google takes 95% off the cached input. You do not create anything. Google
 > advises you to put large, common content at the start of the prompt, and to send requests with a
 > similar prefix close together in time. `Usage.CachedContentTokenCount` shows what Google served from
