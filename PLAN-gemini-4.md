@@ -134,6 +134,10 @@ differ, this file is newer.
 
 ### 6.9.0: Gemini 4 and storage opt-out (ship by 25 Nov)
 
+Status, 2026-11-18: built on the branch `feat/gemini-4` (steps 1 to 9 of `PLAN-6.9.0.md`). Unit tests
+pass. The live tests have not passed yet. Run 44365964065 failed all 10 new tests with HTTP 402
+("Your prepayment credits are depleted"), which is a billing state of the key. The PR is not open yet.
+
 Goal: correct budgets before Carbon and Argon double on 1 Dec. Users need a few days to upgrade.
 
 1. Constants for the three models. `ThinkingLevels.XHigh`, documented as Hydrogen only. Add the

@@ -19,8 +19,38 @@
 		<Description>A .NET client for the Google Gemini API. It has built-in retries and rate limiting, OpenTelemetry support, and dependency injection, and it fits naturally into ASP.NET Core. Claude (Anthropic) wrote the v6 modernization from start to finish. See the README.</Description>
 		<PackageTags>GoogleGemini;Gemini;GenerativeAI;AI;LLM;GoogleAI;dotnet;aspnetcore;IChatClient</PackageTags>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
-		<Version>6.8.1</Version>
+		<Version>6.9.0</Version>
 		<PackageReleaseNotes>
+			6.9.0: adds the three Gemini 4 models and a way to keep a request out of Google's logs.
+			There are no breaking changes to compiled code. One behavior changes on purpose:
+			FileUtilities.GetMimeType now returns real MIME types for Office and OpenDocument files.
+			It returned application/octet-stream for them before. The default model stays
+			gemini-3.8-flash.
+			(1) New constants: Models.Gemini4Hydrogen, Models.Gemini4Carbon and Models.Gemini4Argon,
+			and ThinkingLevels.XHigh. ContentGenerationModels lists the three models. Hydrogen has a
+			free tier. Carbon and Argon are paid only. Only Hydrogen accepts xhigh. Carbon and Argon
+			return HTTP 400 for it. Google says no Gemini 4 model supports minimal. Hydrogen and Carbon
+			returned HTTP 400 for it in our live tests. None of the three supports explicit caching,
+			and they ignore temperature, topP and topK.
+			(2) The cost governor now prices the three models. Before, a budget did not count a
+			Gemini 4 call and logged one warning. Hydrogen costs $1.50 in, $7.50 out and $0.075 cached
+			per million tokens. Carbon and Argon cost $2.00, $10.00 and $0.10 until November 30, 2026.
+			From December 1, 2026 they cost $4.00, $20.00 and $0.20. The governor switches at 00:00
+			UTC. Google gives no time zone. The change raises the price, so the earliest hour is the
+			safe choice for a budget. Update the package before December 1 if you run Carbon or Argon
+			under a budget.
+			(3) New option GeminiRequestOptions.Store. Since October 26, 2026, Google stores
+			generateContent requests by default for new paid projects. Set Store = false to opt a
+			request out. The default is null, which sends nothing, so the project setting applies.
+			(4) FileUtilities.GetMimeType maps 17 more extensions: .docx, .doc, .dotx, .odt, .pptx,
+			.ppt, .odp, .xlsx, .xls, .ods, .aiff, .ogg, .mpeg, .mpg, .flv, .wmv and .3gp. The values
+			for .avi and .mp3 do not change.
+			We did not verify: the December 1 price change (the date is in the future, and the schedule
+			comes from Google's pages and not from a bill), minimal on Argon, the video/x-msvideo type
+			for .avi (Google lists video/avi), and the Office types against the API (we did not send an
+			Office file through the library). The new live tests ran on GitHub on 2026-11-18. Every
+			call returned HTTP 402 because the prepaid credit of the project was used up, so those
+			tests have not passed yet.
 			6.8.1: a maintenance release. A review of Google's pages on 2026-11-15 found dates and
 			limits that were out of date. There are no breaking changes to compiled code. One thing
 			needs your attention: the constants named in (3) now cause a compiler warning (CS0618),

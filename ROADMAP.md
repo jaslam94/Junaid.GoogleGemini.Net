@@ -824,6 +824,56 @@ Ships as: `6.0.0`, the release with the resilience, observability, and adapter w
       the schedule comes from Google's pages and not from a bill), the three skipped test groups above,
       and the first scheduled run of the new drift workflow on GitHub. We ran its logic and its YAML
       locally, and we ran the script against Google's live pages. It reported no drift.
+- [x] Gemini 4 and the storage opt-out (`6.9.0`): Google shipped three Gemini 4 models, and two of them
+      double in price at 00:00 UTC on 2026-12-01. Before this release, a cost budget did not count a
+      Gemini 4 call. Status: built on the branch `feat/gemini-4`, not yet merged or released. The live
+      tests have not passed yet (see below). `PLAN-gemini-4.md` has the facts and `PLAN-6.9.0.md` has the
+      build steps.
+      1. Constants for `gemini-4-hydrogen`, `gemini-4-carbon` and `gemini-4-argon`, listed in
+         `ContentGenerationModels`, and `ThinkingLevels.XHigh`. Only Hydrogen accepts `xhigh`. The default
+         model stays `gemini-3.8-flash`. Google now recommends Hydrogen. But Hydrogen thinks at `high` by
+         default, so a call can use more tokens, and it costs twice as much per token until 2027-01-01.
+         The default changes in `6.11.0`, after the same prompts run on both models.
+      2. Governor prices. Hydrogen has one rate. Carbon and Argon switch at 00:00 UTC on 2026-12-01.
+         Google gives no time zone. This change raises the price, so the earliest plausible hour never
+         undercounts a budget. The 2.5 Pro route lowers a price and uses 08:00 UTC. None of the three
+         models has a high-volume tier. We read Google's pricing page again on 2026-11-18, and every
+         rate matched.
+      3. `GeminiRequestOptions.Store` (nullable). Since 2026-10-26, Google stores `generateContent`
+         requests by default for new paid projects. `Store = false` opts a request out. The value
+         must be copied in five places: four methods in `RequestFactory` and `Clone()`. Missing one
+         would drop the opt-out on that path with no error. So each copy line has a test.
+         The `ContentRequestBuilder` also builds a request, but it takes no options and has no
+         `CachedContent` either, so `Store` does not apply to it.
+      4. `FileUtilities.GetMimeType` maps ten Office and OpenDocument types and seven audio and video
+         types. Before, it returned `application/octet-stream` for the Office types. This is a behavior
+         change for callers that relied on that value. `.avi` and `.mp3` keep their values. Google's
+         video page lists `video/avi` for `.avi`, and nobody has tested which string Google accepts.
+      5. The docs describe Gemini 4 (README, cost governance, files and caching, resilience).
+         Google's document page reads an unsliced spreadsheet differently from a Word or PowerPoint
+         file on Gemini 4, and `PLAN-gemini-4.md` section 4 records that. The plan had said that
+         `minimal` was tested live on all three models. It was tested on Hydrogen and Carbon, so the
+         code comments and the README say that.
+      6. The drift snapshots moved to discovery revision 20261118. That revision adds one item
+         beyond issue #65: `POST v1beta/{+name}/auth_tokens`, for the Live API. The library has no Live
+         API client, so no code change follows. The slicing fields from #65 come in `6.10.0`.
+      Follow-up, not in this release: `Store` in the `IChatClient` adapter. It would change the
+      `Extensions.AI` package and its version.
+
+      Verified: the build has 0 warnings, rebuilt from scratch. The unit suite has 58 new tests. It
+      passes on `net9.0` (382 tests), `net48` (380) and `net8.0` (382, on the .NET 9 runtime through
+      roll-forward). The Testing package has 6. We mutation-checked the new tests. We changed each
+      governor rate and the switch time one at a time (12 changes), and a test failed every time. We
+      removed each of the five `Store` copy lines in turn, and a test failed every time. The package
+      is version 6.9.0 and holds `net8.0`, `net9.0` and `netstandard2.0` with XML docs.
+
+      We did not verify: live behavior. On 2026-11-18 we ran the new `Gemini4BehaviorLiveTests` on
+      GitHub (run 44365964065). All 10 tests failed with HTTP 402: "Your prepayment credits are
+      depleted." That is a billing state of the key and not a library fault, but it means that no
+      live check has passed yet. That includes the check that the governor records the price that
+      Google's own usage numbers imply. We also did not verify: the 2026-12-01 price change (the date
+      is in the future, and the schedule comes from Google's pages and not from a bill), `minimal` on
+      Argon, the `.avi` type, and an Office file sent through the library.
 ---
 
 ## Success metrics
