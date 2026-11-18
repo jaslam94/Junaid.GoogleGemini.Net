@@ -120,6 +120,14 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
         public string? CachedContent { get; set; }
 
         /// <summary>
+        /// Whether Google may store this request and its response. <c>null</c> (the default) sends
+        /// nothing, so the project setting applies. <c>false</c> opts this request out. <c>true</c>
+        /// opts it in. Since 2026-10-26, Google stores <c>generateContent</c> requests by default for
+        /// new paid projects, so set <c>false</c> on each request that must stay out of Google's logs.
+        /// </summary>
+        public bool? Store { get; set; }
+
+        /// <summary>
         /// Output modalities to request (see <c>GeminiConstants.ResponseModalities</c>). Set by
         /// <c>GenerateImageAsync</c> automatically when unset; set it yourself for full control.
         /// </summary>
@@ -307,6 +315,7 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
             EnableUrlContext = EnableUrlContext,
             EnableCodeExecution = EnableCodeExecution,
             CachedContent = CachedContent,
+            Store = Store,
             ResponseModalities = ResponseModalities,
             ImageAspectRatio = ImageAspectRatio,
             ImageSize = ImageSize,

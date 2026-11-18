@@ -32,4 +32,11 @@ public class GenerateContentRequest
     /// </summary>
     [JsonPropertyName("cachedContent")]
     public string? CachedContent { get; set; }
+
+    /// <summary>
+    /// Whether Google may store this request and its response. <c>null</c> sends nothing, so the
+    /// project setting applies. <c>false</c> opts this request out. <c>true</c> opts it in.
+    /// </summary>
+    [JsonPropertyName("store")]
+    public bool? Store { get; set; }
 }
