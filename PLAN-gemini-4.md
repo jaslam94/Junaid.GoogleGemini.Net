@@ -51,7 +51,9 @@ differ, this file is newer.
 - `temperature`, `topP` and `topK` are ignored. `minimal` is rejected on all three.
 - Every token is billed, including thinking and the instructions that grounding adds.
 - On Gemini 4, an Office document with no slicing is read as page images (about 560 tokens a page).
-  Gemini 3 reads it as text. The same file can cost more on Gemini 4.
+  Gemini 3 reads it as text. The same file can cost more on Gemini 4. This holds for Word and
+  PowerPoint files only. Section 4 has Google's full table, which also covers spreadsheets.
+- Google says no Gemini 4 model supports `minimal`. We tested that live on Hydrogen and Carbon only.
 
 ### Long decode on generateContent
 
@@ -85,6 +87,8 @@ differ, this file is newer.
 | `temperature`, `topP`, `topK` on Carbon | HTTP 200. Ignored. |
 | Explicit caching for Hydrogen and for Carbon | HTTP 400: "Explicit caching is not supported for models/gemini-4-..." |
 | Continuation, Carbon | Inconclusive. The model refused the prompt after 1,006 tokens. |
+| `minimal` on Argon | Not tested. Google's thinking page says "Not supported on Gemini 4 models". Added 2026-11-18 while building 6.9.0. |
+| How Gemini 4 reads an unsliced Office file | Not a live probe. Google's document page, read 2026-11-18, says: `.docx`, `.dotx`, `.odt`, `.pptx`, `.doc`, `.ppt`, `.odp` become page or slide images (about 560 tokens a page). `.xlsx`, `.xls`, `.ods` become all sheets with values, formulas and sheet names. Gemini 3 reads `.docx`, `.dotx`, `.odt`, `.pptx` as extracted text, `.doc`, `.ppt`, `.odp` as images, `.xlsx` and `.xls` as CSV with values only, and `.ods` like Gemini 4. Added 2026-11-18. |
 
 ## 5. Corrections
 

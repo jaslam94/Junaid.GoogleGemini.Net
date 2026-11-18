@@ -81,3 +81,56 @@ The response's `Usage.CachedContentTokenCount` shows how many tokens were served
 > **Note:** context caching requires a billing-enabled API key. The free tier allows zero
 > cached-content storage, so `CreateAsync` fails there with a `TotalCachedContentStorageTokensPerModelFreeTier`
 > error. Cached content also has a per-model minimum token count (for example, roughly 1,024 for Gemini 2.5 Flash).
+
+> **Note:** the Gemini 4 models (`gemini-4-hydrogen`, `gemini-4-carbon` and `gemini-4-argon`) do not
+> support explicit caching. `CreateAsync` returns HTTP 400 ("Explicit caching is not supported"). We
+> checked this live on 2026-11-16. These models use implicit caching instead. It works for prompts of
+> 4,096 tokens or more, and Google takes 95% off the cached input. You do not create anything. Google
+> advises you to put large, common content at the start of the prompt, and to send requests with a
+> similar prefix close together in time. `Usage.CachedContentTokenCount` shows what Google served from
+> the cache.
+
+## Office and OpenDocument files
+
+Google now accepts Word, PowerPoint, Excel and OpenDocument files as input. Its document page says
+to pass them the same way as a PDF, inline or through the Files API, with the right MIME type.
+`FileUtilities.GetMimeType` maps these extensions since 6.9.0: `.docx`, `.doc`, `.dotx`, `.odt`,
+`.pptx`, `.ppt`, `.odp`, `.xlsx`, `.xls` and `.ods`. Before 6.9.0 it returned
+`application/octet-stream` for all of them.
+
+```csharp
+var bytes = await File.ReadAllBytesAsync("report.docx");
+var contents = new List<Content>
+{
+    new()
+    {
+        Role = "user",
+        Parts =
+        [
+            new Part
+            {
+                InlineData = new InlineData
+                {
+                    MimeType = FileUtilities.GetMimeType("report.docx"),
+                    Data = Convert.ToBase64String(bytes),
+                },
+            },
+            new Part { Text = "Summarize this document." },
+        ],
+    },
+};
+var response = await gemini.ChatAsync(contents);
+```
+
+We took the MIME strings and the behavior below from Google's document page (read on 2026-11-18). We
+have not sent an Office file through the library yet.
+
+- **Word and PowerPoint files.** Gemini 4 reads an unsliced `.docx`, `.dotx`, `.odt`, `.pptx`, `.doc`,
+  `.ppt` or `.odp` file as page or slide images. Google counts about 560 tokens a page. Gemini 3
+  reads `.docx`, `.dotx`, `.odt` and `.pptx` as extracted text, so the same file can cost more on
+  Gemini 4. Gemini 3 reads `.doc`, `.ppt` and `.odp` as images too.
+- **Spreadsheets.** Gemini 4 reads all sheets of an unsliced `.xlsx`, `.xls` or `.ods` file, with
+  values, formulas and sheet names. Gemini 3 reads `.xlsx` and `.xls` as CSV with values only.
+- Google can now slice a document, spreadsheet, video or audio part. You choose a page range,
+  worksheet, cell range or time interval, and Gemini bills only the slice. The library has no fields
+  for slicing yet. They are planned for 6.10.0.

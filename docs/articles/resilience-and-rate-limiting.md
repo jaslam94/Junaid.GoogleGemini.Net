@@ -38,7 +38,8 @@ cancellation (your `CancellationToken`) propagates as `OperationCanceledExceptio
 The default is 100 seconds. The allowed range is 1 to 3,600 seconds. Before 6.8.1 the upper limit
 was 300 seconds, which was too low for some of Google's own advice. Google's Flex tier docs say to
 allow 10 minutes or more for a call. Its Gemini 4 migration notes say to allow at least 15 minutes
-for hard prompts. Set the value in your options:
+for hard prompts. For hard prompts on `gemini-4-carbon` or `gemini-4-argon`, set `TimeoutSeconds` to
+900 or more. Set the value in your options:
 
 ```json
 { "Gemini": { "TimeoutSeconds": 900 } }

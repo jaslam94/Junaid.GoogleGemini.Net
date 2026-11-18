@@ -54,9 +54,10 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// The efficient Gemini 4 reasoning model. Google says it answers faster and uses fewer tokens
             /// per turn than <see cref="Gemini4Carbon"/>. It has no free tier. It thinks at
             /// <c>medium</c> by default. It accepts the thinking levels low, medium and high, and returns
-            /// HTTP 400 for minimal and for xhigh (live-verified, 2026-11-16). Explicit caching is not
-            /// supported. Implicit caching works for prompts of 4,096 tokens or more. The price doubles at
-            /// 00:00 UTC on December 1, 2026.
+            /// HTTP 400 for xhigh (live-verified, 2026-11-16). Google says no Gemini 4 model supports
+            /// minimal. We did not test minimal on this model. Explicit caching is not supported.
+            /// Implicit caching works for prompts of 4,096 tokens or more. The price doubles at 00:00 UTC
+            /// on December 1, 2026.
             /// </summary>
             public const string Gemini4Argon = "gemini-4-argon";
 
@@ -492,12 +493,13 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <c>gemini-3.8-flash</c>, <c>GeminiRequestOptions.ThinkingBudget = 0</c> was accepted (HTTP 200)
         /// and usually produced no thought tokens, but one call in eight still thought. Google's docs do not
         /// describe that, so treat it as observed behavior, not a guarantee. All three Gemini 4 models
-        /// (<c>gemini-4-hydrogen</c>, <c>gemini-4-carbon</c> and <c>gemini-4-argon</c>) return HTTP 400
-        /// for <see cref="Minimal"/> (live-verified, 2026-11-16).
+        /// (<c>gemini-4-hydrogen</c>, <c>gemini-4-carbon</c> and <c>gemini-4-argon</c>) do not support
+        /// <see cref="Minimal"/>, says Google. <c>gemini-4-hydrogen</c> and <c>gemini-4-carbon</c>
+        /// returned HTTP 400 for it in live tests on 2026-11-16. We did not test <c>gemini-4-argon</c>.
         /// </summary>
         public static class ThinkingLevels
         {
-            /// <summary>Not supported by <c>gemini-3.8-flash</c> or by any Gemini 4 model (HTTP 400).</summary>
+            /// <summary>Not supported by <c>gemini-3.8-flash</c> or by the Gemini 4 models (HTTP 400).</summary>
             public const string Minimal = "minimal";
             public const string Low = "low";
             public const string Medium = "medium";

@@ -123,6 +123,25 @@ The built-in table already knows both rates. Each entry carries its 2027 rate in
 process switches without a restart. Google's pricing page gives no time zone, so the exact hour is our
 assumption.
 
+The three Gemini 4 models have their own rates (checked against Google's pricing page on 2026-11-18):
+
+| Model | Until 2026-11-30 (input / output / cached) | From 2026-12-01 |
+|---|---|---|
+| `gemini-4-hydrogen` | $1.50 / $7.50 / $0.075 | Same. No schedule. |
+| `gemini-4-carbon` | $2.00 / $10.00 / $0.10 | $4.00 / $20.00 / $0.20 |
+| `gemini-4-argon` | $2.00 / $10.00 / $0.10 | $4.00 / $20.00 / $0.20 |
+
+Prices are per million tokens. None of the three has a high-volume tier. Google prices the full
+1M-token context at one rate. Thinking tokens bill as output, as on every other model.
+
+The governor switches Carbon and Argon to the new rates at 00:00 UTC on 2026-12-01. Google gives no
+time zone here either. This change raises the price, so we use the earliest plausible hour. If Google
+switches later, your budget counts a few hours of calls at the higher rate. That error is on the safe
+side. The `gemini-2.5-pro` route on the same day lowers a price, so it uses 08:00 UTC instead.
+
+Hydrogen thinks at `high` by default. A call can therefore use more tokens than the same call on
+`gemini-3.8-flash`, even though the two models cost the same per token from 2027-01-01.
+
 You can schedule a change in your own overrides in the same way:
 
 ```csharp

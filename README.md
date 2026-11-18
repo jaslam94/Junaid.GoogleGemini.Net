@@ -148,6 +148,27 @@ Convenience presets: `GeminiRequestOptions.Creative()`, `.Factual()`, `.Code()`,
 > `gemini-3.8-flash` also rejects `ThinkingLevel = "minimal"` with HTTP 400. Use `low`, `medium` or
 > `high`.
 
+> **Gemini 4.** Version 6.9.0 adds three constants: `GeminiConstants.Models.Gemini4Hydrogen`,
+> `Gemini4Carbon` and `Gemini4Argon`. Hydrogen has a free tier. Carbon and Argon are paid only.
+>
+> - **Thinking levels.** Hydrogen accepts `low`, `medium`, `high` and `xhigh`. Carbon and Argon accept
+>   `low`, `medium` and `high`, and return HTTP 400 for `xhigh`. Google says no Gemini 4 model
+>   supports `minimal`. Hydrogen and Carbon returned HTTP 400 for it in our live tests. We did not test
+>   Argon. Hydrogen thinks at `high` by default. Carbon and Argon think at `medium`.
+> - **No explicit caching.** `ICachingService.CreateAsync` returns HTTP 400 for these models. Gemini 4
+>   uses implicit caching for prompts of 4,096 tokens or more.
+> - **Sampling fields.** The models ignore `temperature`, `topP` and `topK`.
+> - **Price change.** Carbon and Argon cost twice as much from 1 December 2026. The cost governor
+>   switches rates at 00:00 UTC on that day. See [cost governance](docs/articles/cost-governance.md).
+> - **The default model stays `gemini-3.8-flash`.** Google now recommends Hydrogen. But Hydrogen thinks
+>   at `high` by default, so one call can use more tokens. It also costs twice as much per token until
+>   1 January 2027. The default will change only after someone measures the same prompts on both
+>   models. To use Hydrogen now, set `Model = GeminiConstants.Models.Gemini4Hydrogen`.
+
+> **Storage.** Since 26 October 2026, Google stores `generateContent` requests by default for new paid
+> projects. Set `Store = false` in `GeminiRequestOptions` to opt a request out. A `null` value sends
+> nothing, so the project setting applies.
+
 > **Gemini 3.** The library does not allow-list model names, so new models work without a library
 > update. It supports `ThinkingLevel` and `MediaResolution`. It also captures the model's encrypted
 > `thoughtSignature`. You can replay it for multi-turn function calling through the `Content`-based
