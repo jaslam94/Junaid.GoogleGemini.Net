@@ -604,13 +604,15 @@ low or false now).
 
 ## 9. What should be next
 
+Update, 2026-11-18: step 1 and step 5 shipped in 6.8.1. `PLAN-gemini-4.md` replaces the rest of
+this section. It is checked against newer pages and live calls, and it corrects some claims below.
+
 ### Step 1: patch 6.8.1 (this week)
 
 Goal: stop silent failures. Small and safe.
 
-Status: built on the branch `release/6.8.1` as version 6.8.1, and not yet merged or released. Items 1
-to 4 and 6 are done. Item 5 (close issue 61) is not done, because closing an issue is a visible
-action on GitHub. Two things were found while building it, and are also in the release:
+Status: shipped as 6.8.1 on 2026-11-16 (PR #64). All six items are done. Issue 61 was closed on
+2026-11-16. Two things were found while building it, and are also in the release:
 
 - The 300-second limit was enforced twice, by a `[Range]` attribute and by the validator. Both
   changed.
@@ -670,6 +672,8 @@ Goal: make the new models work and keep cost tracking honest. Size: medium.
 | Lyria music, `gemma-4` | Small each | Parity. | Low demand. |
 
 ### Step 5: the keyless "Google drift watch" (high value, low cost)
+
+Status: shipped in 6.8.1. Its first scheduled run, on 2026-11-17, found a real change (issue #65).
 
 Add a weekly workflow that needs no API key. It would:
 
