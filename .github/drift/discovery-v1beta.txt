@@ -1,5 +1,5 @@
 # Source: https://generativelanguage.googleapis.com/$discovery/rest?version=v1beta
-# Revision: 20261113
+# Revision: 20261118
 # One line per method, field or enum value. Written by google_drift_watch.py --update.
 enum AudioResponseFormat.delivery DELIVERY_UNSPECIFIED
 enum AudioResponseFormat.delivery INLINE
@@ -85,6 +85,9 @@ enum Document.state STATE_ACTIVE
 enum Document.state STATE_FAILED
 enum Document.state STATE_PENDING
 enum Document.state STATE_UNSPECIFIED
+enum DocumentMetadata.contentLayers CONTENT_LAYER_UNSPECIFIED
+enum DocumentMetadata.contentLayers PAGE_IMAGE
+enum DocumentMetadata.contentLayers PAGE_TEXT
 enum DynamicRetrievalConfig.mode MODE_DYNAMIC
 enum DynamicRetrievalConfig.mode MODE_UNSPECIFIED
 enum EgressRule.mode DISABLED
@@ -305,6 +308,10 @@ enum Source.type GCS
 enum Source.type INLINE
 enum Source.type REPOSITORY
 enum Source.type TYPE_UNSPECIFIED
+enum SpreadsheetMetadata.contentLayers CONTENT_LAYER_UNSPECIFIED
+enum SpreadsheetMetadata.contentLayers DATA
+enum SpreadsheetMetadata.contentLayers FORMULAS
+enum SpreadsheetMetadata.contentLayers VISUAL
 enum TextResponseFormat.mimeType APPLICATION_JSON
 enum TextResponseFormat.mimeType MIME_TYPE_UNSPECIFIED
 enum TextResponseFormat.mimeType TEXT_PLAIN
@@ -346,6 +353,10 @@ enum V1mainMediaResolution.level MEDIA_RESOLUTION_LOW
 enum V1mainMediaResolution.level MEDIA_RESOLUTION_MEDIUM
 enum V1mainMediaResolution.level MEDIA_RESOLUTION_ULTRA_HIGH
 enum V1mainMediaResolution.level MEDIA_RESOLUTION_UNSPECIFIED
+enum VideoMetadata.contentLayers AUDIO
+enum VideoMetadata.contentLayers CONTENT_LAYER_UNSPECIFIED
+enum VideoMetadata.contentLayers FRAMES
+enum VideoMetadata.contentLayers TRANSCRIPT
 method DELETE v1beta/environments/{id}:delete
 method DELETE v1beta/{+name}
 method GET v1beta/cachedContents
@@ -391,6 +402,7 @@ method POST v1beta/{+model}:generateText
 method POST v1beta/{+model}:predict
 method POST v1beta/{+model}:predictLongRunning
 method POST v1beta/{+model}:streamGenerateContent
+method POST v1beta/{+name}/auth_tokens
 method POST v1beta/{+name}:cancel
 method POST v1beta/{+name}:transferOwnership
 method POST v1beta/{+parent}/permissions
@@ -398,6 +410,8 @@ method PUT v1beta/{+parent}/files/{+path}
 prop AsyncBatchEmbedContentRequest.batch
 prop AttributionSourceId.groundingPassage
 prop AttributionSourceId.semanticRetrieverChunk
+prop AudioMetadata.endOffset
+prop AudioMetadata.startOffset
 prop AudioResponseFormat.bitRate
 prop AudioResponseFormat.delivery
 prop AudioResponseFormat.mimeType
@@ -580,6 +594,9 @@ prop Document.name
 prop Document.sizeBytes
 prop Document.state
 prop Document.updateTime
+prop DocumentMetadata.contentLayers
+prop DocumentMetadata.endPage
+prop DocumentMetadata.startPage
 prop DownloadMediaResponse.blob
 prop DownloadParameters.allowGzipCompression
 prop DownloadParameters.ignoreRange
@@ -705,9 +722,14 @@ prop FunctionResponseBlob.mimeType
 prop FunctionResponseFileData.displayName
 prop FunctionResponseFileData.fileUri
 prop FunctionResponseFileData.mimeType
+prop FunctionResponsePart.audioMetadata
+prop FunctionResponsePart.documentMetadata
 prop FunctionResponsePart.fileData
 prop FunctionResponsePart.inlineData
 prop FunctionResponsePart.mediaProcessing
+prop FunctionResponsePart.mediaResolution
+prop FunctionResponsePart.spreadsheetMetadata
+prop FunctionResponsePart.videoMetadata
 prop GdataMedia.algorithm
 prop GdataMedia.bigstoreObjectRef
 prop GdataMedia.blobRef
@@ -981,8 +1003,10 @@ prop Operation.error
 prop Operation.metadata
 prop Operation.name
 prop Operation.response
+prop Part.audioMetadata
 prop Part.audioTranscription
 prop Part.codeExecutionResult
+prop Part.documentMetadata
 prop Part.executableCode
 prop Part.fileData
 prop Part.functionCall
@@ -992,6 +1016,7 @@ prop Part.mediaProcessing
 prop Part.mediaResolution
 prop Part.partMetadata
 prop Part.speechMetadata
+prop Part.spreadsheetMetadata
 prop Part.text
 prop Part.thought
 prop Part.thoughtSignature
@@ -1091,6 +1116,9 @@ prop SpeechConfig.multiSpeakerVoiceConfig
 prop SpeechConfig.voiceConfig
 prop SpeechMetadata.speaker
 prop SpeechMetadata.style
+prop SpreadsheetMetadata.contentLayers
+prop SpreadsheetMetadata.sheetIndex
+prop SpreadsheetMetadata.visibleCells
 prop Status.code
 prop Status.details
 prop Status.message
@@ -1191,6 +1219,7 @@ prop V1mainTuningSnapshot.epoch
 prop V1mainTuningSnapshot.meanLoss
 prop V1mainTuningSnapshot.step
 prop VideoFileMetadata.videoDuration
+prop VideoMetadata.contentLayers
 prop VideoMetadata.endOffset
 prop VideoMetadata.fps
 prop VideoMetadata.startOffset
