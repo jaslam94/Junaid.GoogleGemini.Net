@@ -1,24 +1,11 @@
-using System.Diagnostics;
 using System.Net;
 using System.Text;
 using System.Text.Json.Nodes;
-using Junaid.GoogleGemini.Net.Models.Requests;
-using Junaid.GoogleGemini.Net.Services.Interfaces;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace Junaid.GoogleGemini.Net.IntegrationTests;
 
-/// <summary>
-/// Probes of the three Gemini 4 models, for <c>PLAN-gemini-4.md</c>. They exist to find out what
-/// Google really does, so they print what comes back and assert almost nothing. Run them on their own:
-/// <c>gh workflow run integration.yml --ref BRANCH -f paid=true -f filter=FullyQualifiedName~Gemini4Probe</c>.
-///
-/// Cost: every probe except the continuation probe costs a fraction of a cent. The continuation probe
-/// asks for up to 70,000 output tokens on <c>gemini-4-carbon</c>. That is about $0.70 before
-/// 2026-12-01 and about twice that after, and it stops after four hops.
-/// The probes call the REST API directly where the library has no field yet (the continuation token).
-/// </summary>
 /// <summary>
 /// Skips unless the key, the paid-tier flag and <c>GeminiProbe=1</c> are all set. The workflow sets
 /// <c>GeminiProbe</c> only when you give it a <c>filter</c>, so an ordinary full run never pays for a probe.
@@ -42,92 +29,22 @@ public sealed class RequiresProbeOptInAttribute : FactAttribute
     }
 }
 
+/// <summary>
+/// A probe of the Gemini 4 long-decode continuation, for <c>PLAN-gemini-4.md</c>. It finds out what Google
+/// really does, so it prints what comes back and asserts almost nothing. The checks of the other Gemini 4
+/// behaviors moved to <c>Gemini4BehaviorLiveTests</c> in 6.9.0. This probe stays for 6.11.0. Run it on its
+/// own: <c>gh workflow run integration.yml --ref BRANCH -f paid=true -f filter=FullyQualifiedName~Gemini4Probe</c>.
+///
+/// Cost: the probe asks for up to 70,000 output tokens on <c>gemini-4-carbon</c>. That is about $0.70
+/// before 2026-12-01 and about twice that after, and it stops after four hops.
+/// It calls the REST API directly, because the library has no field for the continuation token yet.
+/// </summary>
 [Collection("Live")]
-public class Gemini4ProbeLiveTests(GeminiFixture fixture, ITestOutputHelper output)
+public class Gemini4ProbeLiveTests(ITestOutputHelper output)
 {
-    private const string Hydrogen = "gemini-4-hydrogen";
     private const string Carbon = "gemini-4-carbon";
-    private const string Argon = "gemini-4-argon";
-    private const string Ok = "Reply with the single word OK.";
 
     private static readonly Uri Base = new("https://generativelanguage.googleapis.com/v1beta/");
-
-    private IGeminiService Gemini => fixture.Get<IGeminiService>();
-
-    [RequiresProbeOptIn]
-    public async Task Probe1_EachModel_AnswersThroughTheLibrary()
-    {
-        foreach (var model in new[] { Hydrogen, Carbon, Argon })
-        {
-            var response = await Gemini.GenerateAsync(Ok, new GeminiRequestOptions { Model = model, ThinkingLevel = "low" });
-            var u = response.Usage;
-            response.TryGetText(out var text);
-            output.WriteLine(
-                $"[{model}] text='{text?.Trim()}' finish={response.FinishReason} modelVersion={response.ModelVersion} " +
-                $"prompt={u?.PromptTokenCount} candidates={u?.CandidatesTokenCount} thoughts={u?.ThoughtsTokenCount} " +
-                $"cached={u?.CachedContentTokenCount} total={u?.TotalTokenCount}");
-        }
-    }
-
-    [RequiresProbeOptIn]
-    public async Task Probe2_OutputCap_NonStreaming()
-    {
-        // Google's prose says a non-streaming call to Carbon or Argon with maxOutputTokens above 32,768
-        // and no continuation token returns HTTP 400. Google's own REST example sends 262,144 on hop 1.
-        // The prompt is trivial, so a 200 here costs almost nothing.
-        foreach (var (model, max) in new[] { (Carbon, 32768), (Carbon, 40000), (Carbon, 262144), (Argon, 40000), (Hydrogen, 40000), (Hydrogen, 100000) })
-        {
-            var (status, json, raw) = await PostAsync($"models/{model}:generateContent", Request(Ok, max, "low"));
-            Report($"cap {model} max={max}", status, json, raw);
-        }
-    }
-
-    [RequiresProbeOptIn]
-    public async Task Probe3_ThinkingAndSamplingFields()
-    {
-        var cases = new List<(string Label, string Model, Action<JsonObject> Tweak)>
-        {
-            ("minimal on Hydrogen", Hydrogen, r => Level(r, "minimal")),
-            ("minimal on Carbon", Carbon, r => Level(r, "minimal")),
-            ("xhigh on Carbon", Carbon, r => Level(r, "xhigh")),
-            ("xhigh on Argon", Argon, r => Level(r, "xhigh")),
-            ("xhigh on Hydrogen", Hydrogen, r => Level(r, "xhigh")),
-            ("thinkingBudget with thinkingLevel on Carbon", Carbon, r => r["generationConfig"]!["thinkingConfig"]!["thinkingBudget"] = 1024),
-            ("temperature, topP, topK on Carbon", Carbon, r =>
-            {
-                var g = r["generationConfig"]!.AsObject();
-                g["temperature"] = 0.5;
-                g["topP"] = 0.8;
-                g["topK"] = 40;
-            }),
-        };
-
-        foreach (var (label, model, tweak) in cases)
-        {
-            var request = Request(Ok, 4000, "low");
-            tweak(request);
-            var (status, json, raw) = await PostAsync($"models/{model}:generateContent", request);
-            Report(label, status, json, raw);
-        }
-
-        static void Level(JsonObject r, string level) => r["generationConfig"]!["thinkingConfig"]!["thinkingLevel"] = level;
-    }
-
-    [RequiresProbeOptIn]
-    public async Task Probe4_ExplicitCaching_IsRefused()
-    {
-        foreach (var model in new[] { Hydrogen, Carbon })
-        {
-            var body = new JsonObject
-            {
-                ["model"] = $"models/{model}",
-                ["contents"] = new JsonArray { new JsonObject { ["role"] = "user", ["parts"] = new JsonArray { new JsonObject { ["text"] = "hello" } } } },
-                ["ttl"] = "60s",
-            };
-            var (status, json, raw) = await PostAsync("cachedContents", body);
-            Report($"cachedContents create for {model}", status, json, raw);
-        }
-    }
 
     [RequiresProbeOptIn]
     public async Task Probe5_Continuation_OnCarbon()
