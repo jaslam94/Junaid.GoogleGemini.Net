@@ -75,8 +75,9 @@ namespace Junaid.GoogleGemini.Net.Models.Requests
 
         /// <summary>
         /// Reasoning depth for Gemini 3+ (see <c>GeminiConstants.ThinkingLevels</c>): "minimal", "low",
-        /// "medium", or "high". Mutually exclusive with <see cref="ThinkingBudget"/>. Not every model
-        /// accepts every level. <c>gemini-3.8-flash</c> returns HTTP 400 for "minimal".
+        /// "medium", "high", or "xhigh". Mutually exclusive with <see cref="ThinkingBudget"/>. Not every
+        /// model accepts every level. <c>gemini-3.8-flash</c> and the Gemini 4 models return HTTP 400 for
+        /// "minimal". Only <c>gemini-4-hydrogen</c> accepts "xhigh".
         /// </summary>
         public string? ThinkingLevel { get; set; }
 

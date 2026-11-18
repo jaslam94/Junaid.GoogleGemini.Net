@@ -32,7 +32,35 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// </summary>
         public static class Models
         {
-            // Gemini 3 family (current). These names are informational; model names are not validated
+            // Gemini 4 family. These names are informational, like the rest of this class.
+            /// <summary>
+            /// The fast, everyday Gemini 4 model, and the one Google now recommends as a default. It has a
+            /// free tier and a paid tier. It thinks at <c>high</c> by default, so a call can use more tokens
+            /// than the same call on <see cref="Gemini38Flash"/>. It accepts the thinking levels low,
+            /// medium, high and xhigh (see <see cref="ThinkingLevels.XHigh"/>), and returns HTTP 400 for
+            /// minimal (live-verified, 2026-11-16). It ignores temperature, topP and topK. Explicit caching
+            /// is not supported. Implicit caching works for prompts of 4,096 tokens or more.
+            /// </summary>
+            public const string Gemini4Hydrogen = "gemini-4-hydrogen";
+            /// <summary>
+            /// The most capable Gemini 4 model, for complex coding, math and long agent runs. It has no
+            /// free tier. It thinks at <c>medium</c> by default. It accepts the thinking levels low,
+            /// medium and high, and returns HTTP 400 for minimal and for xhigh (live-verified,
+            /// 2026-11-16). Explicit caching is not supported. Implicit caching works for prompts of 4,096
+            /// tokens or more. The price doubles at 00:00 UTC on December 1, 2026.
+            /// </summary>
+            public const string Gemini4Carbon = "gemini-4-carbon";
+            /// <summary>
+            /// The efficient Gemini 4 reasoning model. Google says it answers faster and uses fewer tokens
+            /// per turn than <see cref="Gemini4Carbon"/>. It has no free tier. It thinks at
+            /// <c>medium</c> by default. It accepts the thinking levels low, medium and high, and returns
+            /// HTTP 400 for minimal and for xhigh (live-verified, 2026-11-16). Explicit caching is not
+            /// supported. Implicit caching works for prompts of 4,096 tokens or more. The price doubles at
+            /// 00:00 UTC on December 1, 2026.
+            /// </summary>
+            public const string Gemini4Argon = "gemini-4-argon";
+
+            // Gemini 3 family. These names are informational; model names are not validated
             // against any allow-list, so newer models work without a library update.
             /// <summary>
             /// GA (September 2, 2026), the most capable Flash model: "engineered for long-horizon
@@ -190,6 +218,9 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
             /// <summary>A non-exhaustive list of common content-generation models (informational).</summary>
             public static readonly string[] ContentGenerationModels =
             {
+                Gemini4Hydrogen,
+                Gemini4Carbon,
+                Gemini4Argon,
                 Gemini38Flash,
                 Gemini36Flash,
                 Gemini31Pro,
@@ -460,15 +491,22 @@ namespace Junaid.GoogleGemini.Net.Infrastructure.Utilities
         /// <c>gemini-nano-banana-2.1</c> accepts minimal, medium and high. To cut thinking on
         /// <c>gemini-3.8-flash</c>, <c>GeminiRequestOptions.ThinkingBudget = 0</c> was accepted (HTTP 200)
         /// and usually produced no thought tokens, but one call in eight still thought. Google's docs do not
-        /// describe that, so treat it as observed behavior, not a guarantee.
+        /// describe that, so treat it as observed behavior, not a guarantee. All three Gemini 4 models
+        /// (<c>gemini-4-hydrogen</c>, <c>gemini-4-carbon</c> and <c>gemini-4-argon</c>) return HTTP 400
+        /// for <see cref="Minimal"/> (live-verified, 2026-11-16).
         /// </summary>
         public static class ThinkingLevels
         {
-            /// <summary>Not supported by <c>gemini-3.8-flash</c> (HTTP 400).</summary>
+            /// <summary>Not supported by <c>gemini-3.8-flash</c> or by any Gemini 4 model (HTTP 400).</summary>
             public const string Minimal = "minimal";
             public const string Low = "low";
             public const string Medium = "medium";
             public const string High = "high";
+            /// <summary>
+            /// Only <c>gemini-4-hydrogen</c> accepts this level. <c>gemini-4-carbon</c> and
+            /// <c>gemini-4-argon</c> return HTTP 400 (live-verified, 2026-11-16).
+            /// </summary>
+            public const string XHigh = "xhigh";
         }
 
         /// <summary>

@@ -209,6 +209,93 @@ public class GeminiCostGovernorScheduleTests
         Assert.Equal(0.60m, Cost(FirstSecondOfProRouting));     // 0.3 x 0.75 + 0.1 x 3.75
     }
 
+    // Gemini 4 Carbon and Argon double in price on 2026-12-01. Google gives no time zone, and the change
+    // raises the price, so the governor switches at the earliest plausible instant, 00:00 UTC. Rates are
+    // from Google's pricing page, 2026-11-18.
+    private static readonly DateTime LastSecondBeforeGemini4Rise = new(2026, 11, 30, 23, 59, 59, DateTimeKind.Utc);
+    private static readonly DateTime FirstSecondOfGemini4Rise = new(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    [Theory]
+    [InlineData("gemini-4-carbon")]
+    [InlineData("gemini-4-argon")]
+    public void Gemini4FrontierModels_DoubleInPrice_AtMidnightUtcOnTheFirstOfDecember(string model)
+    {
+        // 1M in and 1M out. Until 2026-11-30: $2.00 + $10.00. From 2026-12-01: $4.00 + $20.00.
+        Assert.Equal(12.00m, CostOfOneMillionInOneMillionOut(model, new DateTime(2026, 11, 18, 0, 0, 0, DateTimeKind.Utc)));
+        Assert.Equal(12.00m, CostOfOneMillionInOneMillionOut(model, LastSecondBeforeGemini4Rise));
+        Assert.Equal(24.00m, CostOfOneMillionInOneMillionOut(model, FirstSecondOfGemini4Rise));
+        Assert.Equal(24.00m, CostOfOneMillionInOneMillionOut(model, new DateTime(2027, 6, 1, 0, 0, 0, DateTimeKind.Utc)));
+    }
+
+    [Theory]
+    [InlineData("gemini-4-carbon")]
+    [InlineData("gemini-4-argon")]
+    public void Gemini4FrontierModels_PriceCachedTokensAtTheCachedRate_OnBothSidesOfTheRise(string model)
+    {
+        // 1M prompt tokens, of which 500,000 are cached, and 1M output tokens.
+        // Before: 0.5 x 2.00 + 0.5 x 0.10 + 1 x 10.00 = 11.05. After: 0.5 x 4.00 + 0.5 x 0.20 + 1 x 20.00 = 22.10.
+        decimal Cost(DateTime now) => new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend(model, new UsageMetadata { PromptTokenCount = 1_000_000, CandidatesTokenCount = 1_000_000, CachedContentTokenCount = 500_000 });
+
+        Assert.Equal(11.05m, Cost(LastSecondBeforeGemini4Rise));
+        Assert.Equal(22.10m, Cost(FirstSecondOfGemini4Rise));
+    }
+
+    [Fact]
+    public void Gemini4Models_CountThoughtTokensAsOutput_OnBothSidesOfTheRise()
+    {
+        // 100,000 prompt, 100,000 answer and 300,000 thought tokens. Output is 400,000 tokens.
+        // Before: 0.1 x 2.00 + 0.4 x 10.00 = 4.20. After: 0.1 x 4.00 + 0.4 x 20.00 = 8.40.
+        decimal Cost(DateTime now) => new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend("gemini-4-carbon", new UsageMetadata { PromptTokenCount = 100_000, CandidatesTokenCount = 100_000, ThoughtsTokenCount = 300_000 });
+
+        Assert.Equal(4.20m, Cost(LastSecondBeforeGemini4Rise));
+        Assert.Equal(8.40m, Cost(FirstSecondOfGemini4Rise));
+    }
+
+    [Theory]
+    [InlineData("2026-11-18T00:00:00Z")]
+    [InlineData("2026-11-30T23:59:59Z")]
+    [InlineData("2026-12-01T00:00:00Z")]
+    [InlineData("2027-06-01T00:00:00Z")]
+    public void Gemini4Hydrogen_HasOneRate_OnEveryDate(string instant)
+    {
+        // $1.50 in and $7.50 out, with no schedule.
+        var now = DateTime.Parse(instant, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal);
+
+        Assert.Equal(9.00m, CostOfOneMillionInOneMillionOut("gemini-4-hydrogen", now));
+    }
+
+    [Fact]
+    public void Gemini4Hydrogen_PricesCachedTokensAtTheCachedRate()
+    {
+        // 0.5 x 1.50 + 0.5 x 0.075 + 1 x 7.50 = 8.2875, before and after the Carbon and Argon rise.
+        decimal Cost(DateTime now) => new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend("gemini-4-hydrogen", new UsageMetadata { PromptTokenCount = 1_000_000, CandidatesTokenCount = 1_000_000, CachedContentTokenCount = 500_000 });
+
+        Assert.Equal(8.2875m, Cost(LastSecondBeforeGemini4Rise));
+        Assert.Equal(8.2875m, Cost(FirstSecondOfGemini4Rise));
+    }
+
+    [Fact]
+    public void Gemini4Models_HaveNoHighVolumeTier()
+    {
+        // Google prices the full 1M context at one rate. 900,000 prompt tokens must not trigger a tier.
+        decimal Cost(string model, DateTime now) => new GeminiCostGovernor(new BudgetOptions { Enabled = true }, (_, _) => { }, utcNowProvider: () => now)
+            .RecordSpend(model, new UsageMetadata { PromptTokenCount = 900_000, CandidatesTokenCount = 0 });
+
+        Assert.Equal(1.35m, Cost("gemini-4-hydrogen", FirstSecondOfGemini4Rise));    // 0.9 x 1.50
+        Assert.Equal(1.80m, Cost("gemini-4-carbon", LastSecondBeforeGemini4Rise));   // 0.9 x 2.00
+        Assert.Equal(3.60m, Cost("gemini-4-argon", FirstSecondOfGemini4Rise));       // 0.9 x 4.00
+    }
+
+    [Fact]
+    public void Gemini4Models_AreKnownToTheGovernor()
+    {
+        foreach (var model in new[] { "gemini-4-hydrogen", "gemini-4-carbon", "gemini-4-argon" })
+            Assert.True(GeminiCostGovernor.DefaultPricing.ContainsKey(model), model);
+    }
+
     [Theory]
     [InlineData("2026-11-15T00:00:00Z")]
     [InlineData("2026-12-01T07:59:59Z")]

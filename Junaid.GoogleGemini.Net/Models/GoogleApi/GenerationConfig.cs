@@ -233,7 +233,7 @@ public class ThinkingConfig
 
     /// <summary>
     /// Reasoning depth (Gemini 3+): one of the <c>GeminiConstants.ThinkingLevels</c> values
-    /// ("minimal"/"low"/"medium"/"high"). Mutually exclusive with <see cref="ThinkingBudget"/>.
+    /// ("minimal"/"low"/"medium"/"high"/"xhigh"). Mutually exclusive with <see cref="ThinkingBudget"/>.
     /// </summary>
     [JsonPropertyName("thinkingLevel")]
     public string? ThinkingLevel { get; set; }

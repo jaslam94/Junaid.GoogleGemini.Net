@@ -75,6 +75,14 @@ public sealed class GeminiCostGovernor : ICostGovernor
     // eight hours of calls to a model that Google has already retired.
     private static readonly DateTime Gemini25ProRoutingStartsUtc = new(2026, 12, 1, 8, 0, 0, DateTimeKind.Utc);
 
+    // Google's pricing page says Gemini 4 Carbon and Gemini 4 Argon cost double "starting December 1,
+    // 2026". It gives no time zone. This change RAISES the price, so a late switch would undercount a
+    // budget. For that reason we use the earliest plausible instant, 00:00 UTC. This is the opposite
+    // case of Gemini25ProRoutingStartsUtc above, which LOWERS a price and so uses 08:00 UTC. If Google
+    // switches later than 00:00 UTC, the budget counts a few hours of calls at the higher rate. That
+    // error is on the safe side.
+    private static readonly DateTime Gemini4FrontierPriceRiseUtc = new(2026, 12, 1, 0, 0, 0, DateTimeKind.Utc);
+
     // One rate card now, and one that takes over on StandardPricingStartsUtc.
     private static ModelPricing Introductory(
         decimal input, decimal output, decimal cached,
@@ -93,11 +101,28 @@ public sealed class GeminiCostGovernor : ICostGovernor
             },
         };
 
+    // The rate card that Carbon and Argon share: $2.00 in, $10.00 out and $0.10 cached until
+    // 2026-11-30, then $4.00, $20.00 and $0.20.
+    private static ModelPricing Gemini4FrontierPricing() =>
+        new()
+        {
+            InputPerMillionTokensUsd = 2.00m,
+            OutputPerMillionTokensUsd = 10.00m,
+            CachedInputPerMillionTokensUsd = 0.10m,
+            NextPricingEffectiveFromUtc = Gemini4FrontierPriceRiseUtc,
+            NextPricing = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 4.00m,
+                OutputPerMillionTokensUsd = 20.00m,
+                CachedInputPerMillionTokensUsd = 0.20m,
+            },
+        };
+
     /// <summary>
     /// Built-in USD-per-1,000,000-token pricing, re-verified against
     /// <see href="https://ai.google.dev/gemini-api/docs/pricing">Google's published pricing page</see>
     /// on 2026-10-10 (paid tier, Standard rate), and compared again on 2026-11-15 (no rate changed).
-    /// Entries with an introductory price carry the rate that
+    /// The three Gemini 4 models were added and checked against the same page on 2026-11-18. Entries with an introductory price carry the rate that
     /// starts on 2027-01-01 in <see cref="ModelPricing.NextPricing"/>, and the governor switches to it
     /// on that date. This snapshot WILL still go stale as Google updates prices. Override via
     /// <see cref="BudgetOptions.ModelPricingOverrides"/> for accuracy, especially in production.
@@ -105,6 +130,19 @@ public sealed class GeminiCostGovernor : ICostGovernor
     public static readonly IReadOnlyDictionary<string, ModelPricing> DefaultPricing =
         new Dictionary<string, ModelPricing>(StringComparer.Ordinal)
         {
+            // Gemini 4. Hydrogen has one rate and no schedule. Carbon and Argon share one rate that
+            // doubles at 00:00 UTC on 2026-12-01 (see Gemini4FrontierPriceRiseUtc). None of the three has
+            // a high-volume tier: Google prices the full 1M context at one rate. Explicit caching is not
+            // supported, so the cached rate applies to implicit cache hits only.
+            ["gemini-4-hydrogen"] = new ModelPricing
+            {
+                InputPerMillionTokensUsd = 1.50m,
+                OutputPerMillionTokensUsd = 7.50m,
+                CachedInputPerMillionTokensUsd = 0.075m,
+            },
+            ["gemini-4-carbon"] = Gemini4FrontierPricing(),
+            ["gemini-4-argon"] = Gemini4FrontierPricing(),
+
             // gemini-3.6-flash and gemini-3.8-flash share one introductory rate through December 31,
             // 2026: $0.75 in, $3.75 out, $0.075 cached. The standard rate ($1.50, $7.50, $0.15) starts
             // January 1, 2027 and is already scheduled here.

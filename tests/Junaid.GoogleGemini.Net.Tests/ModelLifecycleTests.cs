@@ -83,6 +83,34 @@ public class ModelLifecycleTests
         Assert.Contains("gemini-embedding-001", GeminiConstants.Models.EmbeddingModels);
     }
 
+    [Theory]
+    [InlineData("Gemini4Hydrogen", "gemini-4-hydrogen")]
+    [InlineData("Gemini4Carbon", "gemini-4-carbon")]
+    [InlineData("Gemini4Argon", "gemini-4-argon")]
+    public void TheGemini4ModelIds_MatchGoogle_AndAreListed(string constant, string expected)
+    {
+        var value = typeof(GeminiConstants.Models).GetField(constant, BindingFlags.Public | BindingFlags.Static)!.GetRawConstantValue();
+
+        Assert.Equal(expected, value);
+        Assert.Contains(expected, GeminiConstants.Models.ContentGenerationModels);
+        Assert.Null(ObsoleteMessage(constant));
+    }
+
+    [Fact]
+    public void TheDefaultModel_StaysGemini38Flash()
+    {
+        // Google recommends Hydrogen now, but the default changes only with measured costs (PLAN-gemini-4.md).
+        Assert.Equal("gemini-3.8-flash", GeminiConstants.Defaults.Model);
+        Assert.Equal("gemini-3.8-flash", GeminiConstants.Models.Recommended);
+        Assert.Equal("gemini-3.5-flash-lite", GeminiConstants.Models.Fastest);
+    }
+
+    [Fact]
+    public void ThinkingLevels_IncludeXHigh_WithTheValueGoogleExpects()
+    {
+        Assert.Equal("xhigh", GeminiConstants.ThinkingLevels.XHigh);
+    }
+
     [Fact]
     public void ContentGenerationModels_DoesNotListTheModelsThatGoogleRoutesAway()
     {
